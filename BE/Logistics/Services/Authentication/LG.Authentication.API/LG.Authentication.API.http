@@ -1,0 +1,6 @@
+@LG.Authentication.API_HostAddress = http://localhost:5016
+
+GET {{LG.Authentication.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
