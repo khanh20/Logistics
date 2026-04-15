@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LG.Authentication.Domain\LG.Authentication.Domain.csproj" />
+    <ProjectReference Include="..\LG.Authentication.Infrastructure\LG.Authentication.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
