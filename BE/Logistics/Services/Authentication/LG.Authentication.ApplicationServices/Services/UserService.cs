@@ -8,24 +8,21 @@ using Microsoft.Extensions.Logging;
 namespace LG.Authentication.ApplicationServices.Services;
 
 public class UserService(
-    IUserRepository      userRepo,
-    IUnitOfWork          uow,
-    IAuditLogService     audit,
-    ICurrentUserService  currentUser,
+    IUserRepository userRepo,
+    IAuditLogRepository auditRepo,   
+    IUnitOfWork uow,
+    ICurrentUserService currentUser,
     ILogger<UserService> logger
 ) : IUserService
 {
     public async Task<PagedResponse<UserListResponse>> GetAllAsync(int page, int pageSize, CancellationToken ct = default)
     {
-        var users      = await userRepo.GetAllAsync(page, pageSize, ct);
+        var users = await userRepo.GetAllAsync(page, pageSize, ct);
         var totalCount = await userRepo.CountAsync(ct);
 
-        var items = new List<UserListResponse>();
-        foreach (var u in users)
-        {
-            var roles = u.UserRoles.Select(ur => ur.Role.Name).ToList();
-            items.Add(UserMapper.ToListResponse(u, roles));
-        }
+        var items = users.Select(u =>
+            UserMapper.ToListResponse(u, u.UserRoles.Select(ur => ur.Role.Name).ToList())
+        ).ToList();
 
         return new PagedResponse<UserListResponse>(
             items, page, pageSize, totalCount,
@@ -36,9 +33,7 @@ public class UserService(
     {
         var user = await userRepo.GetByIdAsync(id, ct)
                    ?? throw new NotFoundException(nameof(User), id);
-
-        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
-        return UserMapper.ToResponse(user, roles);
+        return UserMapper.ToResponse(user, user.UserRoles.Select(ur => ur.Role.Name).ToList());
     }
 
     public async Task<UserResponse> GetMeAsync(Guid userId, CancellationToken ct = default) =>
@@ -49,19 +44,24 @@ public class UserService(
         var user = await userRepo.GetByIdAsync(userId, ct)
                    ?? throw new NotFoundException(nameof(User), userId);
 
-        var oldData = System.Text.Json.JsonSerializer.Serialize(new { user.FullName, user.Phone, user.AvatarUrl });
+        var oldData = System.Text.Json.JsonSerializer.Serialize(
+            new { user.FullName, user.Phone, user.AvatarUrl });
+        var newData = System.Text.Json.JsonSerializer.Serialize(
+            new { req.FullName, req.Phone, req.AvatarUrl });
 
-        user.UpdateProfile(req.FullName, req.Phone, req.AvatarUrl);
-        await userRepo.UpdateAsync(user, ct);
-        await uow.SaveChangesAsync(ct);
+        await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            user.UpdateProfile(req.FullName, req.Phone, req.AvatarUrl);
+            await userRepo.UpdateAsync(user, innerCt);
 
-        var newData = System.Text.Json.JsonSerializer.Serialize(new { req.FullName, req.Phone, req.AvatarUrl });
-        await audit.LogAsync(userId, "UPDATE", "users", userId, oldData, newData, null, null, ct);
+            var log = AuditLog.Create(userId, "UPDATE", "users", userId,
+                oldData, newData, null, null);
+            await auditRepo.AddAsync(log, innerCt);
+        }, ct);
 
         logger.LogInformation("Profile updated for user: {UserId}", userId);
 
-        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
-        return UserMapper.ToResponse(user, roles);
+        return UserMapper.ToResponse(user, user.UserRoles.Select(ur => ur.Role.Name).ToList());
     }
 
     public async Task<UserResponse> UpdateStatusAsync(Guid userId, UpdateUserStatusRequest req,
@@ -74,23 +74,26 @@ public class UserService(
 
         switch (req.Status.ToLowerInvariant())
         {
-            case "active":    user.Activate(); break;
-            case "banned":    user.Ban();      break;
-            case "suspended": user.Suspend();  break;
+            case "active": user.Activate(); break;
+            case "banned": user.Ban(); break;
+            case "suspended": user.Suspend(); break;
             default: throw new ValidationException($"Unknown status: {req.Status}");
         }
 
-        await userRepo.UpdateAsync(user, ct);
-        await uow.SaveChangesAsync(ct);
+        await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            await userRepo.UpdateAsync(user, innerCt);
 
-        await audit.LogAsync(adminId, "UPDATE_STATUS", "users", userId,
-            System.Text.Json.JsonSerializer.Serialize(new { Status = oldStatus }),
-            System.Text.Json.JsonSerializer.Serialize(new { req.Status }), null, null, ct);
+            var log = AuditLog.Create(adminId, "UPDATE_STATUS", "users", userId,
+                System.Text.Json.JsonSerializer.Serialize(new { Status = oldStatus }),
+                System.Text.Json.JsonSerializer.Serialize(new { req.Status }),
+                null, null);
+            await auditRepo.AddAsync(log, innerCt);
+        }, ct);
 
         logger.LogInformation("Status updated for user: {UserId} → {Status}", userId, req.Status);
 
-        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToList();
-        return UserMapper.ToResponse(user, roles);
+        return UserMapper.ToResponse(user, user.UserRoles.Select(ur => ur.Role.Name).ToList());
     }
 
     public async Task DeleteAsync(Guid userId, Guid adminId, CancellationToken ct = default)
@@ -101,10 +104,15 @@ public class UserService(
         if (userId == adminId)
             throw new ValidationException("Cannot delete your own account.");
 
-        await userRepo.DeleteAsync(user, ct);
-        await uow.SaveChangesAsync(ct);
+        await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            await userRepo.DeleteAsync(user, innerCt);
 
-        await audit.LogAsync(adminId, "DELETE", "users", userId, null, null, null, null, ct);
+            var log = AuditLog.Create(adminId, "DELETE", "users", userId,
+                System.Text.Json.JsonSerializer.Serialize(new { user.Email, user.FullName }),
+                null, null, null);
+            await auditRepo.AddAsync(log, innerCt);
+        }, ct);
 
         logger.LogInformation("User deleted: {UserId} by admin: {AdminId}", userId, adminId);
     }

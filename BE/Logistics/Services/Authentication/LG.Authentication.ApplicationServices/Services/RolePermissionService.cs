@@ -8,12 +8,12 @@ using Microsoft.Extensions.Logging;
 namespace LG.Authentication.ApplicationServices.Services;
 
 public class RoleService(
-    IRoleRepository         roleRepo,
-    IUserRoleRepository     userRoleRepo,
-    IUserRepository         userRepo,
-    IUnitOfWork             uow,
-    IAuditLogService        audit,
-    ILogger<RoleService>    logger
+    IRoleRepository roleRepo,
+    IUserRoleRepository userRoleRepo,
+    IUserRepository userRepo,
+    IAuditLogRepository auditRepo,
+    IUnitOfWork uow,
+    ILogger<RoleService> logger
 ) : IRoleService
 {
     public async Task<List<RoleResponse>> GetAllAsync(CancellationToken ct = default)
@@ -76,25 +76,25 @@ public class RoleService(
 
     public async Task AssignRoleAsync(AssignRoleRequest req, Guid adminId, CancellationToken ct = default)
     {
-        if (!await userRepo.ExistsByEmailAsync(string.Empty, ct))
-        {
-            // just check user exists by id
-        }
+        // Validate trước transaction
         var user = await userRepo.GetByIdAsync(req.UserId, ct)
                    ?? throw new NotFoundException(nameof(User), req.UserId);
-
         var role = await roleRepo.GetByIdAsync(req.RoleId, ct)
                    ?? throw new NotFoundException(nameof(Role), req.RoleId);
 
         if (await userRoleRepo.ExistsAsync(req.UserId, req.RoleId, ct))
             return;  // idempotent
 
-        await userRoleRepo.AddAsync(UserRole.Create(req.UserId, req.RoleId, adminId), ct);
-        await uow.SaveChangesAsync(ct);
+        await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            await userRoleRepo.AddAsync(UserRole.Create(req.UserId, req.RoleId, adminId), innerCt);
 
-        await audit.LogAsync(adminId, "ASSIGN_ROLE", "user_roles", req.UserId,
-            null, System.Text.Json.JsonSerializer.Serialize(new { req.RoleId, role.Name }),
-            null, null, ct);
+            var log = AuditLog.Create(adminId, "ASSIGN_ROLE", "user_roles", req.UserId,
+                null,
+                System.Text.Json.JsonSerializer.Serialize(new { req.RoleId, role.Name }),
+                null, null);
+            await auditRepo.AddAsync(log, innerCt);
+        }, ct);
 
         logger.LogInformation("Role {Role} assigned to user {User} by {Admin}", role.Name, req.UserId, adminId);
     }
@@ -102,15 +102,18 @@ public class RoleService(
     public async Task RemoveRoleAsync(RemoveRoleRequest req, Guid adminId, CancellationToken ct = default)
     {
         var userRoles = await userRoleRepo.GetByUserIdAsync(req.UserId, ct);
-        var target    = userRoles.FirstOrDefault(ur => ur.RoleId == req.RoleId);
+        var target = userRoles.FirstOrDefault(ur => ur.RoleId == req.RoleId);
         if (target is null) return;  // idempotent
 
-        await userRoleRepo.RemoveAsync(target, ct);
-        await uow.SaveChangesAsync(ct);
+        await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            await userRoleRepo.RemoveAsync(target, innerCt);
 
-        await audit.LogAsync(adminId, "REMOVE_ROLE", "user_roles", req.UserId,
-            System.Text.Json.JsonSerializer.Serialize(new { req.RoleId }), null,
-            null, null, ct);
+            var log = AuditLog.Create(adminId, "REMOVE_ROLE", "user_roles", req.UserId,
+                System.Text.Json.JsonSerializer.Serialize(new { req.RoleId }),
+                null, null, null);
+            await auditRepo.AddAsync(log, innerCt);
+        }, ct);
 
         logger.LogInformation("Role removed from user {User} by {Admin}", req.UserId, adminId);
     }
@@ -125,11 +128,11 @@ public class RoleService(
 // ─────────────────────────────────────────────────────────────────────────────
 
 public class PermissionService(
-    IPermissionRepository     permRepo,
+    IPermissionRepository permRepo,
     IRolePermissionRepository rpRepo,
-    IRoleRepository           roleRepo,
-    IUserRepository           userRepo,
-    IUnitOfWork               uow,
+    IRoleRepository roleRepo,
+    IUserRepository userRepo,
+    IUnitOfWork uow,
     ILogger<PermissionService> logger
 ) : IPermissionService
 {
@@ -148,7 +151,7 @@ public class PermissionService(
     public async Task<List<PermissionResponse>> GetByUserAsync(Guid userId, CancellationToken ct = default)
     {
         var codes = await userRepo.GetPermissionCodesAsync(userId, ct);
-        var all   = await permRepo.GetAllAsync(ct);
+        var all = await permRepo.GetAllAsync(ct);
         return all.Where(p => codes.Contains(p.Code)).Select(PermissionMapper.ToResponse).ToList();
     }
 
@@ -160,9 +163,9 @@ public class PermissionService(
         if (role.IsSystem)
             throw new ForbiddenException("Cannot modify permissions of a system role.");
 
-        // Resolve codes → permission entities
-        var allPerms  = await permRepo.GetAllAsync(ct);
-        var permDict  = allPerms.ToDictionary(p => p.Code);
+        // Validate tất cả codes trước khi mở transaction
+        var allPerms = await permRepo.GetAllAsync(ct);
+        var permDict = allPerms.ToDictionary(p => p.Code);
         var requested = new HashSet<Guid>();
 
         foreach (var code in req.PermissionCodes)
@@ -172,25 +175,28 @@ public class PermissionService(
             requested.Add(perm.Id);
         }
 
-        var current = (await rpRepo.GetByRoleIdAsync(req.RoleId, ct))
-                      .ToDictionary(rp => rp.PermissionId);
+        await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            var current = (await rpRepo.GetByRoleIdAsync(req.RoleId, innerCt))
+                          .ToDictionary(rp => rp.PermissionId);
 
-        // Remove permissions no longer in the list
-        var toRemove = current.Values.Where(rp => !requested.Contains(rp.PermissionId)).ToList();
-        if (toRemove.Count > 0)
-            await rpRepo.RemoveRangeAsync(toRemove, ct);
+            var toRemove = current.Values
+                .Where(rp => !requested.Contains(rp.PermissionId))
+                .ToList();
 
-        // Add new permissions
-        var toAdd = requested
-            .Where(pid => !current.ContainsKey(pid))
-            .Select(pid => RolePermission.Create(req.RoleId, pid))
-            .ToList();
-        if (toAdd.Count > 0)
-            await rpRepo.AddRangeAsync(toAdd, ct);
+            var toAdd = requested
+                .Where(pid => !current.ContainsKey(pid))
+                .Select(pid => RolePermission.Create(req.RoleId, pid))
+                .ToList();
 
-        await uow.SaveChangesAsync(ct);
+            if (toRemove.Count > 0)
+                await rpRepo.RemoveRangeAsync(toRemove, innerCt);
 
-        logger.LogInformation("Permissions synced for role {RoleId}: +{Add} -{Remove}",
-            req.RoleId, toAdd.Count, toRemove.Count);
+            if (toAdd.Count > 0)
+                await rpRepo.AddRangeAsync(toAdd, innerCt);
+
+            logger.LogInformation("Permissions synced for role {RoleId}: +{Add} -{Remove}",
+                req.RoleId, toAdd.Count, toRemove.Count);
+        }, ct);
     }
 }
