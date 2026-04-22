@@ -10,6 +10,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{7125BCB1-BEC8-4E75-A366-C3C71BDA94B1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{21119B81-BBA4-45B8-A956-DA1684B28D8E}"
+	ProjectSection(SolutionItems) = preProject
+		REAME.md = REAME.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Authentication", "Authentication", "{6EC1B5AE-1294-482E-9BB4-7BACBA5F4B82}"
 EndProject
@@ -42,6 +45,14 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LG.PlatformOrder.Infrastructure", "Services\PlatformOrder\LG.PlatformOrder.Infrastructure\LG.PlatformOrder.Infrastructure.csproj", "{0A2AFCFB-63E5-4D54-B922-8C31FEC9712B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LG.PlatformOrder.API", "Services\PlatformOrder\LG.PlatformOrder.API\LG.PlatformOrder.API.csproj", "{53AE2C94-E800-4430-BAFA-1D65D971D4B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LG.Untils", "Library\LG.Untils\LG.Untils.csproj", "{A94520EE-C256-4E86-9C39-C3376AB776F6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{38AEF533-336A-49A9-90C2-E82D624F4AE3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LG.InfrastructureBase", "Library\Infrastructure\LG.InfrastructureBase\LG.InfrastructureBase.csproj", "{A06D74D5-69AF-4280-A165-7F3A4646A008}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LG.EntitiesBase", "Library\Infrastructure\LG.EntitiesBase\LG.EntitiesBase.csproj", "{7F8B1F01-1AC6-41C5-91BE-01DB9F7AB938}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -101,6 +112,18 @@ Global
 		{53AE2C94-E800-4430-BAFA-1D65D971D4B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{53AE2C94-E800-4430-BAFA-1D65D971D4B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{53AE2C94-E800-4430-BAFA-1D65D971D4B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A94520EE-C256-4E86-9C39-C3376AB776F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A94520EE-C256-4E86-9C39-C3376AB776F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A94520EE-C256-4E86-9C39-C3376AB776F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A94520EE-C256-4E86-9C39-C3376AB776F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A06D74D5-69AF-4280-A165-7F3A4646A008}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A06D74D5-69AF-4280-A165-7F3A4646A008}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A06D74D5-69AF-4280-A165-7F3A4646A008}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A06D74D5-69AF-4280-A165-7F3A4646A008}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F8B1F01-1AC6-41C5-91BE-01DB9F7AB938}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F8B1F01-1AC6-41C5-91BE-01DB9F7AB938}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F8B1F01-1AC6-41C5-91BE-01DB9F7AB938}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F8B1F01-1AC6-41C5-91BE-01DB9F7AB938}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -122,6 +145,10 @@ Global
 		{A1EF2CBA-943B-42C9-A7B4-6CFFA7B96FB3} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{0A2AFCFB-63E5-4D54-B922-8C31FEC9712B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{53AE2C94-E800-4430-BAFA-1D65D971D4B3} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{A94520EE-C256-4E86-9C39-C3376AB776F6} = {C5604397-62E3-4677-A431-5324CAA51554}
+		{38AEF533-336A-49A9-90C2-E82D624F4AE3} = {C5604397-62E3-4677-A431-5324CAA51554}
+		{A06D74D5-69AF-4280-A165-7F3A4646A008} = {38AEF533-336A-49A9-90C2-E82D624F4AE3}
+		{7F8B1F01-1AC6-41C5-91BE-01DB9F7AB938} = {38AEF533-336A-49A9-90C2-E82D624F4AE3}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9AEC799D-6416-4C50-8138-A4495FA3A76A}

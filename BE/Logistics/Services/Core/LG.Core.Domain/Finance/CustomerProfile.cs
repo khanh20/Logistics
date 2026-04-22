@@ -1,5 +1,6 @@
-﻿using LG.Shared.Constants.Common.Database;
-using LG.Untils.Enum.EnumFinance;
+﻿using LG.EntitiesBase;
+using LG.Shared.Constants.Common.Database;
+using LG.Untils.EnumFinance;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -13,11 +14,10 @@ namespace LG.Core.Domain.finance
 {
 
     [Table(nameof(CustomerProfile), Schema = DbSchemas.LGFinance)]
-    public class CustomerProfile
+    public class CustomerProfile : ICreatedBy, IModifiedBy, ISoftDelted
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public Guid Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         public Guid UserId { get; set; }
@@ -36,7 +36,7 @@ namespace LG.Core.Domain.finance
 
         public Gender? Gender { get; set; }
 
-        public PreferredChannel PreferredChannel { get; set; } = PreferredChannel.zalo;
+        public PreferredChannel PreferredChannel { get; set; } = PreferredChannel.Zalo;
 
         [MaxLength(100)]
         public string? ZaloUserId { get; set; }
@@ -50,11 +50,12 @@ namespace LG.Core.Domain.finance
 
         public int TotalOrders { get; set; } = 0;
 
-        public DateTime? LastOrderAt { get; set; }
-
-        [Required]
-        public DateTime CreatedAt { get; set; }
-
-        public DateTime? UpdatedAt { get; set; }
+        public DateTime? DeletedDate { get; set; }
+        public bool Deleted { get; set; }
+        public int? DeletedBy { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public int? CreatedBy { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+        public int? ModifiedBy { get; set; }
     }
 }
