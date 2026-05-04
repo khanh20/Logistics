@@ -140,6 +140,63 @@ public record UpsertAttributeRequest(
     int     SortOrder = 0
 );
 
+public record AddVariantRequest(
+    [Required, MaxLength(500)] string VariantName,
+    [MaxLength(500)] string? TranslatedName,
+    [Required, Range(0.01, 999999)] decimal PriceCny,
+    [MaxLength(200)] string? SkuIdOnPlatform = null,
+    int? StockRaw = null,
+    [MaxLength(500)] string? ImageUrl = null,
+    int SortOrder = 0
+);
+
+public record UpdateVariantRequest(
+    [Required, MaxLength(500)] string VariantName,
+    [MaxLength(500)] string? TranslatedName,
+    [Required, Range(0.01, 999999)] decimal PriceCny,
+    int? StockRaw = null,
+    bool IsAvailable = true,
+    [MaxLength(500)] string? ImageUrl = null,
+    int SortOrder = 0
+);
+
+public record SyncPriceTiersRequest(
+    ///Gửi toàn bộ tier list — replace hoàn toàn tier cũ.
+    [Required] List<UpsertPriceTierRequest> Tiers
+);
+
+public record AddImageRequest(
+    [Required, MaxLength(2000)] string SourceUrl,
+    bool IsPrimary = false,
+    int SortOrder = 0,
+    [MaxLength(64)] string? SourceUrlHash = null
+);
+
+public record SetImageCdnRequest(
+    [Required, MaxLength(500)] string LocalCdnUrl,
+    short? WidthPx = null,
+    short? HeightPx = null,
+    int? FileSizeKb = null
+);
+
+public record ReorderImagesRequest(
+    ///Danh sách { ImageId, NewSortOrder } — client gửi thứ tự mới.
+    [Required] List<ImageOrderItem> Items
+);
+
+public record ImageOrderItem(
+    [Required] Guid Id,
+    int SortOrder
+);
+
+public record AddAttributeRequest(
+    [MaxLength(200)] string? KeyCn,
+    [MaxLength(200)] string? KeyVn,
+    string? ValueCn,
+    string? ValueVn,
+    int SortOrder = 0
+);
+
 // ── Mappers ───────────────────────────────────────────────────────────────────
 public static class ProductMapper
 {

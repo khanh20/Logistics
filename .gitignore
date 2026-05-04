@@ -15,3 +15,4 @@ obj/
 Thumbs.db
 /BE/Logistics/Services/Authentication/LG.Authentication.API/.env
 /BE/Logistics/Services/Module1/LG.Module1.API/.env
+/BE/Logistics/Services/Module1/LG.Module1.API/appsettings.json
