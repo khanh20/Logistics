@@ -10,6 +10,11 @@ public class RakutenOptions
     /// Pass qua query param "applicationId" trong mọi request.
     public string ApplicationId { get; set; } = string.Empty;
 
+    /// Rakuten Access Key — bắt buộc từ phiên bản API mới.
+    /// Lấy tại webservice.rakuten.co.jp/app/list
+    /// Pass qua query param "accessKey" hoặc header.
+    public string AccessKey { get; set; } = string.Empty;
+
     /// Optional — affiliate ID nếu muốn earn commission.
     public string? AffiliateId { get; set; }
 
