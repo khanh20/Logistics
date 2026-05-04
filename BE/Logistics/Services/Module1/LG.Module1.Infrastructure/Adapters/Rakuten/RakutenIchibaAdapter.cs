@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 namespace LG.Module1.Infrastructure.Adapters.Rakuten;
 
-/// Adapter cho Rakuten Ichiba — chỉ cần ApplicationId, không cần OAuth.
+/// Adapter cho Rakuten Ichiba — cần ApplicationId + AccessKey.
 /// API doc: https://webservice.rakuten.co.jp/documentation/ichiba-item-search
 public partial class RakutenIchibaAdapter : IPlatformAdapter
 {
@@ -52,6 +52,7 @@ public partial class RakutenIchibaAdapter : IPlatformAdapter
         var pg = Math.Max(page, 1);
 
         var url = $"{SearchEndpoint}?applicationId={_opts.ApplicationId}" +
+                  $"&accessKey={_opts.AccessKey}" +
                   $"&keyword={Uri.EscapeDataString(keyword)}" +
                   $"&hits={hits}&page={pg}&format=json";
 
@@ -78,6 +79,7 @@ public partial class RakutenIchibaAdapter : IPlatformAdapter
 
         // Rakuten không có endpoint detail riêng — search bằng itemCode
         var url = $"{SearchEndpoint}?applicationId={_opts.ApplicationId}" +
+                  $"&accessKey={_opts.AccessKey}" +
                   $"&itemCode={Uri.EscapeDataString(platformProductId)}&format=json";
 
         var response = await SendAsync(url, ct);
@@ -119,6 +121,11 @@ public partial class RakutenIchibaAdapter : IPlatformAdapter
             return null;
         }
 
+        // Rakuten docs: ghép catchcopy vào itemName để có full title
+        var title = string.IsNullOrWhiteSpace(item.CatchCopy)
+            ? item.ItemName
+            : $"{item.ItemName} {item.CatchCopy}";
+
         // Ưu tiên medium > small. Mỗi loại trả nhiều ảnh.
         var images = item.MediumImages
             .Concat(item.SmallImages)
@@ -135,7 +142,7 @@ public partial class RakutenIchibaAdapter : IPlatformAdapter
 
         return new RawProductResult(
             PlatformProductId: item.ItemCode,
-            Title: item.ItemName,
+            Title: title,
             PriceOriginal: item.ItemPrice,
             CurrencyCode: "JPY",
             ProductUrl: item.ItemUrl,
@@ -156,7 +163,7 @@ public partial class RakutenIchibaAdapter : IPlatformAdapter
     // ── HTTP helpers ──────────────────────────────────────────────────────────
     private void EnsureConfigured()
     {
-        if (string.IsNullOrEmpty(_opts.ApplicationId))
+        if (string.IsNullOrEmpty(_opts.ApplicationId) || string.IsNullOrEmpty(_opts.AccessKey))
             throw new AdapterNotConfiguredException(PlatformName);
     }
 

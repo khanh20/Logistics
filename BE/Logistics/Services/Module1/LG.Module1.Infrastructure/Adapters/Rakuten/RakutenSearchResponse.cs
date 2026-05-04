@@ -22,6 +22,7 @@ internal class RakutenItemWrapper
 internal class RakutenItem
 {
     [JsonPropertyName("itemName")] public string ItemName { get; set; } = "";
+    [JsonPropertyName("catchcopy")] public string? CatchCopy { get; set; }
     [JsonPropertyName("itemCode")] public string ItemCode { get; set; } = "";
     [JsonPropertyName("itemPrice")] public decimal ItemPrice { get; set; }
     [JsonPropertyName("itemUrl")] public string ItemUrl { get; set; } = "";
