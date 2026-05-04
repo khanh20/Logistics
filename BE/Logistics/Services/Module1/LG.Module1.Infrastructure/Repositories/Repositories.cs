@@ -128,8 +128,18 @@ public class PlatformRepository(Module1DbContext db) : IPlatformRepository
     public Task<Platform?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         db.Platforms.FirstOrDefaultAsync(x => x.Id == id, ct);
 
+    public Task<List<Platform>> GetAllAsync(CancellationToken ct = default) =>
+        db.Platforms
+          .Include(x => x.Shops)
+          .Include(x => x.Accounts)
+          .OrderBy(x => x.Name).ToListAsync(ct);
+
     public Task<List<Platform>> GetAllActiveAsync(CancellationToken ct = default) =>
-        db.Platforms.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync(ct);
+        db.Platforms
+          .Include(x => x.Shops)
+          .Include(x => x.Accounts)
+          .Where(x => x.IsActive)
+          .OrderBy(x => x.Name).ToListAsync(ct);
 
     public Task<List<Platform>> GetByApiProviderAsync(ApiProvider provider, CancellationToken ct = default) =>
         db.Platforms.Where(x => x.IsActive && x.ApiProvider == provider).ToListAsync(ct);
@@ -159,7 +169,7 @@ public class PlatformShopRepository(Module1DbContext db) : IPlatformShopReposito
     public async Task AddAsync(PlatformShop s, CancellationToken ct = default) =>
         await db.PlatformShops.AddAsync(s, ct);
 
-    public Task UpdateAsync(PlatformShop s, CancellationToken ct = default)
+    public Task UpdateAsync(PlatformShop s, CancellationToken ct = default) 
     {
         db.PlatformShops.Update(s);
         return Task.CompletedTask;
@@ -169,6 +179,10 @@ public class PlatformShopRepository(Module1DbContext db) : IPlatformShopReposito
 // ── PlatformAccount ───────────────────────────────────────────────────────────
 public class PlatformAccountRepository(Module1DbContext db) : IPlatformAccountRepository
 {
+    public Task<PlatformAccount?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.PlatformAccounts.Include(a => a.Platform)
+            .FirstOrDefaultAsync(a => a.Id == id, ct);
+
     public Task<PlatformAccount?> GetAvailableAccountAsync(Guid platformId, decimal requiredAmount, CancellationToken ct = default) =>
         db.PlatformAccounts
           .Where(x => x.PlatformId == platformId && x.IsActive && !x.IsFrozen
@@ -307,6 +321,12 @@ public class ProductVariantRepository(Module1DbContext db) : IProductVariantRepo
         return Task.CompletedTask;
     }
 
+    public Task DeleteAsync(ProductVariant v, CancellationToken ct = default)
+    {
+        db.ProductVariants.Remove(v);
+        return Task.CompletedTask;
+    }
+
     public async Task RemoveByProductAsync(Guid productId, CancellationToken ct = default)
     {
         var variants = await db.ProductVariants.Where(x => x.ProductId == productId).ToListAsync(ct);
@@ -317,12 +337,28 @@ public class ProductVariantRepository(Module1DbContext db) : IProductVariantRepo
 // ── ProductPriceTier ──────────────────────────────────────────────────────────
 public class ProductPriceTierRepository(Module1DbContext db) : IProductPriceTierRepository
 {
+    public Task<ProductPriceTier?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.ProductPriceTiers.FirstOrDefaultAsync(x => x.Id == id, ct);
+
     public Task<List<ProductPriceTier>> GetByVariantAsync(Guid variantId, CancellationToken ct = default) =>
         db.ProductPriceTiers.Where(x => x.VariantId == variantId)
                             .OrderBy(x => x.MinQuantity).ToListAsync(ct);
+    public async Task AddAsync(ProductPriceTier tier, CancellationToken ct = default) =>
+        await db.ProductPriceTiers.AddAsync(tier, ct);
 
     public async Task AddRangeAsync(IEnumerable<ProductPriceTier> tiers, CancellationToken ct = default) =>
         await db.ProductPriceTiers.AddRangeAsync(tiers, ct);
+    public Task UpdateAsync(ProductPriceTier tier, CancellationToken ct = default)
+    {
+        db.ProductPriceTiers.Update(tier);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(ProductPriceTier tier, CancellationToken ct = default)
+    {
+        db.ProductPriceTiers.Remove(tier);
+        return Task.CompletedTask;
+    }
 
     public async Task RemoveByVariantAsync(Guid variantId, CancellationToken ct = default)
     {
@@ -334,9 +370,14 @@ public class ProductPriceTierRepository(Module1DbContext db) : IProductPriceTier
 // ── ProductImage ──────────────────────────────────────────────────────────────
 public class ProductImageRepository(Module1DbContext db) : IProductImageRepository
 {
+    public Task<ProductImage?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.ProductImages.FirstOrDefaultAsync(x => x.Id == id, ct);
+
     public Task<List<ProductImage>> GetByProductAsync(Guid productId, CancellationToken ct = default) =>
         db.ProductImages.Where(x => x.ProductId == productId)
                         .OrderBy(x => x.SortOrder).ToListAsync(ct);
+    public async Task AddAsync(ProductImage image, CancellationToken ct = default) =>
+        await db.ProductImages.AddAsync(image, ct);
 
     public async Task AddRangeAsync(IEnumerable<ProductImage> images, CancellationToken ct = default) =>
         await db.ProductImages.AddRangeAsync(images, ct);
@@ -347,10 +388,51 @@ public class ProductImageRepository(Module1DbContext db) : IProductImageReposito
         return Task.CompletedTask;
     }
 
+    public Task DeleteAsync(ProductImage img, CancellationToken ct = default)
+    {
+        db.ProductImages.Remove(img);
+        return Task.CompletedTask;
+    }
+
     public async Task RemoveByProductAsync(Guid productId, CancellationToken ct = default)
     {
         var imgs = await db.ProductImages.Where(x => x.ProductId == productId).ToListAsync(ct);
         db.ProductImages.RemoveRange(imgs);
+    }
+}
+
+// ── ProductAttribute ──────────────────────────────────────────────────────────
+public class ProductAttributeRepository(Module1DbContext db) : IProductAttributeRepository
+{
+    public Task<ProductAttribute?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.ProductAttributes.FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public Task<List<ProductAttribute>> GetByProductAsync(Guid productId, CancellationToken ct = default) =>
+        db.ProductAttributes.Where(x => x.ProductId == productId)
+                            .OrderBy(x => x.SortOrder).ToListAsync(ct);
+
+    public async Task AddAsync(ProductAttribute a, CancellationToken ct = default) =>
+        await db.ProductAttributes.AddAsync(a, ct);
+
+    public async Task AddRangeAsync(IEnumerable<ProductAttribute> attributes, CancellationToken ct = default) =>
+        await db.ProductAttributes.AddRangeAsync(attributes, ct);
+
+    public Task UpdateAsync(ProductAttribute a, CancellationToken ct = default)
+    {
+        db.ProductAttributes.Update(a);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(ProductAttribute a, CancellationToken ct = default)
+    {
+        db.ProductAttributes.Remove(a);
+        return Task.CompletedTask;
+    }
+
+    public async Task RemoveByProductAsync(Guid productId, CancellationToken ct = default)
+    {
+        var attrs = await db.ProductAttributes.Where(x => x.ProductId == productId).ToListAsync(ct);
+        db.ProductAttributes.RemoveRange(attrs);
     }
 }
 

@@ -21,7 +21,6 @@
 	</ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Shared\LG.Shared.Constants\LG.Shared.Constants.csproj" />
-    <ProjectReference Include="..\LG.Module1.ApplicationServices\LG.Module1.ApplicationServices.csproj" />
     <ProjectReference Include="..\LG.Module1.Domain\LG.Module1.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>

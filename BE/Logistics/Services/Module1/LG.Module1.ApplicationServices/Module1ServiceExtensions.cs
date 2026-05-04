@@ -1,12 +1,17 @@
-using System.Text;
 using LG.Module1.ApplicationServices.Interfaces;
 using LG.Module1.ApplicationServices.Services;
+using LG.Module1.Domain.Adapters;
 using LG.Module1.Domain.Repositories;
+using LG.Module1.Infrastructure.Adapters.Ebay;
+using LG.Module1.Infrastructure.Adapters.Rakuten;
 using LG.Module1.Infrastructure.Data;
 using LG.Module1.Infrastructure.Repositories;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Text;
+using Polly;
 
 namespace LG.Module1.Infrastructure;
 
@@ -58,7 +63,11 @@ public static class Module1ServiceExtensions
         services.AddScoped<IProductVariantRepository, ProductVariantRepository>();
         services.AddScoped<IProductPriceTierRepository, ProductPriceTierRepository>();
         services.AddScoped<IProductImageRepository, ProductImageRepository>();
+        services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
         services.AddScoped<IModule1UnitOfWork, Module1UnitOfWork>();
+
+        services.AddDataProtection()
+           .SetApplicationName("LG.Module1");
 
         // ── Application Services ──────────────────────────────────────────────
         services.AddScoped<IProductCategoryService, ProductCategoryService>();
@@ -66,8 +75,49 @@ public static class Module1ServiceExtensions
         services.AddScoped<IExchangeRateService, ExchangeRateService>();
         services.AddScoped<IDepositConfigService, DepositConfigService>();
         services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<IProductVariantService, ProductVariantService>();
+        services.AddScoped<IProductImageService, ProductImageService>();
+        services.AddScoped<IProductAttributeService, ProductAttributeService>();
+        services.AddScoped<IPlatformService, PlatformService>();
+        AddAdapters(services, config);
+        services.AddScoped<IProductIngestionService, ProductIngestionService>();
 
         return services;
+    }
+
+    private static void AddAdapters(IServiceCollection services, IConfiguration config)
+    {
+        services.AddMemoryCache();   // Cho EbayTokenService cache token
+
+        // ── Rakuten ──────────────────────────────────────────────────────────
+        services.Configure<RakutenOptions>(config.GetSection(RakutenOptions.SectionName));
+        services.AddHttpClient<IPlatformAdapter, RakutenIchibaAdapter>()
+            .AddPolicyHandler(GetRetryPolicy("Rakuten"));
+
+        // ── eBay ─────────────────────────────────────────────────────────────
+        services.Configure<EbayOptions>(config.GetSection(EbayOptions.SectionName));
+
+        // Token service dùng HttpClient riêng (KHÔNG retry token request — auth fail không nên retry)
+        services.AddHttpClient<IEbayTokenService, EbayTokenService>();
+
+        // Browse adapter dùng HttpClient với retry
+        services.AddHttpClient<IPlatformAdapter, EbayBrowseAdapter>()
+            .AddPolicyHandler(GetRetryPolicy("eBay"));
+    }
+
+    /// Polly retry policy cho transient HTTP errors (5xx, network issues).
+    /// KHÔNG retry 4xx (auth fail, bad request) — không có ích.
+    /// 429 (rate limit) cũng không retry — caller cần biết để hiển thị message cho user
+    private static Polly.IAsyncPolicy<HttpResponseMessage> GetRetryPolicy(string platformName)
+    {
+        return Polly.Extensions.Http.HttpPolicyExtensions
+            .HandleTransientHttpError()   // 5xx, 408, network errors
+            .WaitAndRetryAsync(
+                retryCount: 2,
+                sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                onRetry: (outcome, timespan, retryAttempt, _) =>
+                {
+                });
     }
 
     // ── NormalizePg — giống Auth service ─────────────────────────────────────

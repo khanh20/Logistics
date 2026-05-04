@@ -1,4 +1,5 @@
 using LG.Module1.Domain.Entities;
+using System.Threading.Tasks;
 
 namespace LG.Module1.Domain.Repositories;
 
@@ -50,6 +51,7 @@ public interface IExchangeRateHistoryRepository
 public interface IPlatformRepository
 {
     Task<Platform?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<Platform>> GetAllAsync(CancellationToken ct = default);
     Task<List<Platform>> GetAllActiveAsync(CancellationToken ct = default);
     Task<List<Platform>> GetByApiProviderAsync(ApiProvider provider, CancellationToken ct = default);
     Task AddAsync(Platform platform, CancellationToken ct = default);
@@ -67,6 +69,7 @@ public interface IPlatformShopRepository
 
 public interface IPlatformAccountRepository
 {
+    Task<PlatformAccount?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<PlatformAccount?> GetAvailableAccountAsync(Guid platformId, decimal requiredAmount, CancellationToken ct = default);
     Task<List<PlatformAccount>> GetByPlatformAsync(Guid platformId, CancellationToken ct = default);
     Task AddAsync(PlatformAccount account, CancellationToken ct = default);
@@ -99,21 +102,40 @@ public interface IProductVariantRepository
     Task AddAsync(ProductVariant variant, CancellationToken ct = default);
     Task AddRangeAsync(IEnumerable<ProductVariant> variants, CancellationToken ct = default);
     Task UpdateAsync(ProductVariant variant, CancellationToken ct = default);
+    Task DeleteAsync(ProductVariant variant, CancellationToken ct = default);
     Task RemoveByProductAsync(Guid productId, CancellationToken ct = default);
 }
 
 public interface IProductPriceTierRepository
 {
+    Task<ProductPriceTier?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<ProductPriceTier>> GetByVariantAsync(Guid variantId, CancellationToken ct = default);
+    Task AddAsync(ProductPriceTier tier, CancellationToken ct = default);
     Task AddRangeAsync(IEnumerable<ProductPriceTier> tiers, CancellationToken ct = default);
+    Task UpdateAsync(ProductPriceTier tier, CancellationToken ct = default);
+    Task DeleteAsync(ProductPriceTier tier, CancellationToken ct = default);
     Task RemoveByVariantAsync(Guid variantId, CancellationToken ct = default);
 }
 
 public interface IProductImageRepository
 {
+    Task<ProductImage?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<ProductImage>> GetByProductAsync(Guid productId, CancellationToken ct = default);
+    Task AddAsync(ProductImage image, CancellationToken ct = default);
     Task AddRangeAsync(IEnumerable<ProductImage> images, CancellationToken ct = default);
     Task UpdateAsync(ProductImage image, CancellationToken ct = default);
+    Task DeleteAsync(ProductImage image, CancellationToken ct = default);
+    Task RemoveByProductAsync(Guid productId, CancellationToken ct = default);
+}
+
+public interface IProductAttributeRepository
+{
+    Task<ProductAttribute?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<ProductAttribute>> GetByProductAsync(Guid productId, CancellationToken ct = default);
+    Task AddAsync(ProductAttribute attribute, CancellationToken ct = default);
+    Task AddRangeAsync(IEnumerable<ProductAttribute> attributes, CancellationToken ct = default);
+    Task UpdateAsync(ProductAttribute attribute, CancellationToken ct = default);
+    Task DeleteAsync(ProductAttribute attribute, CancellationToken ct = default);
     Task RemoveByProductAsync(Guid productId, CancellationToken ct = default);
 }
 

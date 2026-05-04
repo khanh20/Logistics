@@ -147,6 +147,15 @@ public class ProductVariant
         UpdatedAt   = DateTime.UtcNow;
     }
 
+    public void UpdateInfo(string variantName, string? translatedName, string? imageUrl, int sortOrder)
+    {
+        VariantName = variantName.Trim();
+        TranslatedName = translatedName?.Trim();
+        ImageUrl = imageUrl?.Trim();
+        SortOrder = sortOrder;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void SetTranslation(string translatedName)
     {
         TranslatedName = translatedName.Trim();
@@ -233,6 +242,9 @@ public class ProductImage
         HeightPx    = height;
         FileSizeKb  = fileSizeKb;
     }
+    public void SetAsPrimary() => IsPrimary = true;
+    public void ClearPrimary() => IsPrimary = false;
+    public void SetSortOrder(int order) => SortOrder = order;
 }
 
 // ─── ProductAttribute ─────────────────────────────────────────────────────────
@@ -258,4 +270,12 @@ public class ProductAttribute
             ProductId = productId, KeyCn = keyCn, KeyVn = keyVn,
             ValueCn = valueCn, ValueVn = valueVn, SortOrder = sortOrder,
         };
+    public void Update(string? keyCn, string? keyVn, string? valueCn, string? valueVn, int sortOrder)
+    {
+        KeyCn = keyCn;
+        KeyVn = keyVn;
+        ValueCn = valueCn;
+        ValueVn = valueVn;
+        SortOrder = sortOrder;
+    }
 }
