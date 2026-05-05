@@ -18,7 +18,7 @@ public partial class RakutenIchibaAdapter : IPlatformAdapter
     private readonly RakutenOptions _opts;
     private readonly ILogger<RakutenIchibaAdapter> _logger;
 
-    private const string SearchEndpoint = "/IchibaItem/Search/20260401";
+    private const string SearchEndpoint = "/ichibams/api/IchibaItem/Search/20260401";
 
     public RakutenIchibaAdapter(
         HttpClient http,
@@ -150,7 +150,7 @@ public partial class RakutenIchibaAdapter : IPlatformAdapter
             ShopIdOnPlatform: item.ShopCode,
             ShopName: item.ShopName,
             ShopUrl: item.ShopUrl,
-            CategoryNameOriginal: item.GenreId,
+            CategoryNameOriginal: item.GenreId.ToString(),
             Rating: item.ReviewAverage,
             ReviewCount: item.ReviewCount,
             SoldCount: null,   // Rakuten không trả sold count qua API
