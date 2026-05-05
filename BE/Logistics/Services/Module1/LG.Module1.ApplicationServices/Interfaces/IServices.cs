@@ -47,6 +47,12 @@ public interface IProductService
     /// Tự động kiểm tra hàng cấm sau khi upsert.
     Task<ProductDetailResponse>  UpsertFromRawAsync(UpsertProductRequest req, CancellationToken ct = default);
 
+    /// Lấy chi tiết sản phẩm cho Admin — KHÔNG tăng ViewCount.
+    Task<ProductDetailResponse>  GetDetailForAdminAsync(Guid id, CancellationToken ct = default);
+
+    /// Cập nhật thông tin cơ bản (translation, seo, category) theo Id — Admin only.
+    Task<ProductDetailResponse>  UpdateInfoAsync(Guid id, UpdateProductInfoRequest req, CancellationToken ct = default);
+
     Task<ProductDetailResponse>  SetFeaturedAsync(Guid id, bool featured, CancellationToken ct = default);
     Task                         DeactivateAsync(Guid id, CancellationToken ct = default);
     Task                         IncrementViewAsync(Guid id, CancellationToken ct = default);

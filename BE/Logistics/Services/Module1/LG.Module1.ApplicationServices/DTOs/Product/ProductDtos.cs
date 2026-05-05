@@ -197,6 +197,15 @@ public record AddAttributeRequest(
     int SortOrder = 0
 );
 
+/// Cập nhật thông tin cơ bản của sản phẩm (Admin only) — dùng cho PATCH /api/products/{id}/info.
+/// Chỉ cho phép chỉnh các trường Admin có thể thay đổi; OriginalTitle/Slug/OriginalUrl
+/// đến từ platform nên không thể sửa tại đây.
+public record UpdateProductInfoRequest(
+    [MaxLength(500)] string? TranslatedTitle,
+    [MaxLength(1000)] string? SeoDescription,
+    [Required] Guid CategoryId
+);
+
 // ── Mappers ───────────────────────────────────────────────────────────────────
 public static class ProductMapper
 {

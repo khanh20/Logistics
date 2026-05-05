@@ -74,6 +74,9 @@ public class ProductMaster
         Touch();
     }
 
+    /// Chuyển sản phẩm sang danh mục khác (dùng bởi Admin).
+    public void SetCategory(Guid categoryId) { CategoryId = categoryId; Touch(); }
+
     public void SetFeatured(bool featured) { IsFeatured = featured; Touch(); }
     public void Deactivate()               { IsActive   = false;    Touch(); }
     public void Activate()                 { IsActive   = true;     Touch(); }

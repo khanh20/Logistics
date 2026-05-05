@@ -38,7 +38,7 @@ internal class RakutenItem
     [JsonPropertyName("reviewCount")] public int? ReviewCount { get; set; }
     [JsonPropertyName("reviewAverage")] public decimal? ReviewAverage { get; set; }
 
-    [JsonPropertyName("genreId")] public string? GenreId { get; set; }
+    [JsonPropertyName("genreId")] public int? GenreId { get; set; }
 
     [JsonPropertyName("shipOverseasFlag")] public int? ShipOverseasFlag { get; set; }   // 1 = có ship intl
     [JsonPropertyName("availability")] public int Availability { get; set; } = 1;
