@@ -3,18 +3,18 @@ namespace LG.Module1.Domain.Entities;
 // ─── Platform ─────────────────────────────────────────────────────────────────
 public class Platform
 {
-    public Guid    Id               { get; private set; } = Guid.NewGuid();
-    public string  Name             { get; private set; } = default!;
-    public string  BaseUrl          { get; private set; } = default!;
-    public ApiProvider ApiProvider  { get; private set; }
-    public string? ApiKey           { get; private set; }   // encrypted at rest
-    public string? ApiSecret        { get; private set; }   // encrypted at rest
-    public string? CrawlConfigJson  { get; private set; }
-    public bool    IsActive         { get; private set; } = true;
-    public string? LogoUrl          { get; private set; }
-    public DateTime CreatedAt       { get; private set; } = DateTime.UtcNow;
+    public Guid Id { get; private set; } = Guid.NewGuid();
+    public string Name { get; private set; } = default!;
+    public string BaseUrl { get; private set; } = default!;
+    public ApiProvider ApiProvider { get; private set; }
+    public string? ApiKey { get; private set; }   // encrypted at rest
+    public string? ApiSecret { get; private set; }   // encrypted at rest
+    public string? CrawlConfigJson { get; private set; }
+    public bool IsActive { get; private set; } = true;
+    public string? LogoUrl { get; private set; }
+    public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
 
-    public ICollection<PlatformShop>    Shops    { get; private set; } = new List<PlatformShop>();
+    public ICollection<PlatformShop> Shops { get; private set; } = new List<PlatformShop>();
     public ICollection<PlatformAccount> Accounts { get; private set; } = new List<PlatformAccount>();
 
     private Platform() { }
@@ -24,8 +24,12 @@ public class Platform
                                    string? logoUrl = null) =>
         new()
         {
-            Name = name.Trim(), BaseUrl = baseUrl.Trim(), ApiProvider = apiProvider,
-            ApiKey = apiKey, ApiSecret = apiSecret, LogoUrl = logoUrl,
+            Name = name.Trim(),
+            BaseUrl = baseUrl.Trim(),
+            ApiProvider = apiProvider,
+            ApiKey = apiKey,
+            ApiSecret = apiSecret,
+            LogoUrl = logoUrl,
         };
 
     public void Update(string name, string baseUrl, ApiProvider apiProvider, bool isActive)
@@ -34,10 +38,12 @@ public class Platform
         ApiProvider = apiProvider; IsActive = isActive;
     }
 
+    public void SetLogoUrl(string? logoUrl) => LogoUrl = logoUrl;
+
     /// Không trả ApiKey/ApiSecret ra ngoài — chỉ update trong nội bộ.
     public void SetCredentials(string? apiKey, string? apiSecret)
     {
-        ApiKey    = apiKey;
+        ApiKey = apiKey;
         ApiSecret = apiSecret;
     }
 }
@@ -47,22 +53,22 @@ public enum ApiProvider { Apify, PublicApi, Manual }
 // ─── PlatformShop ─────────────────────────────────────────────────────────────
 public class PlatformShop
 {
-    public Guid    Id                    { get; private set; } = Guid.NewGuid();
-    public Guid    PlatformId            { get; private set; }
-    public string  ShopIdOnPlatform      { get; private set; } = default!;
-    public string  ShopName              { get; private set; } = default!;
-    public string? ShopUrl               { get; private set; }
-    public decimal InternalRating        { get; private set; } = 5.00m;
-    public int     TotalProductsCrawled  { get; private set; }
-    public decimal? AvgShipDays         { get; private set; }
-    public decimal DisputeRate           { get; private set; }
-    public bool    IsBlacklisted         { get; private set; }
-    public string? BlacklistReason       { get; private set; }
-    public DateTime? BlacklistedAt       { get; private set; }
-    public DateTime CreatedAt            { get; private set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt            { get; private set; } = DateTime.UtcNow;
+    public Guid Id { get; private set; } = Guid.NewGuid();
+    public Guid PlatformId { get; private set; }
+    public string ShopIdOnPlatform { get; private set; } = default!;
+    public string ShopName { get; private set; } = default!;
+    public string? ShopUrl { get; private set; }
+    public decimal InternalRating { get; private set; } = 5.00m;
+    public int TotalProductsCrawled { get; private set; }
+    public decimal? AvgShipDays { get; private set; }
+    public decimal DisputeRate { get; private set; }
+    public bool IsBlacklisted { get; private set; }
+    public string? BlacklistReason { get; private set; }
+    public DateTime? BlacklistedAt { get; private set; }
+    public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
 
-    public Platform                  Platform { get; private set; } = default!;
+    public Platform Platform { get; private set; } = default!;
     public ICollection<ProductMaster> Products { get; private set; } = new List<ProductMaster>();
 
     private PlatformShop() { }
@@ -79,25 +85,25 @@ public class PlatformShop
 
     public void Blacklist(string reason)
     {
-        IsBlacklisted  = true;
+        IsBlacklisted = true;
         BlacklistReason = reason;
-        BlacklistedAt  = DateTime.UtcNow;
+        BlacklistedAt = DateTime.UtcNow;
         Touch();
     }
 
     public void Unblacklist()
     {
-        IsBlacklisted   = false;
+        IsBlacklisted = false;
         BlacklistReason = null;
-        BlacklistedAt   = null;
+        BlacklistedAt = null;
         Touch();
     }
 
     public void UpdateStats(int totalCrawled, decimal avgShipDays, decimal disputeRate)
     {
         TotalProductsCrawled = totalCrawled;
-        AvgShipDays  = avgShipDays;
-        DisputeRate  = disputeRate;
+        AvgShipDays = avgShipDays;
+        DisputeRate = disputeRate;
         Touch();
     }
 
@@ -114,17 +120,17 @@ public class PlatformShop
 // ─── PlatformAccount ──────────────────────────────────────────────────────────
 public class PlatformAccount
 {
-    public Guid    Id              { get; private set; } = Guid.NewGuid();
-    public Guid    PlatformId      { get; private set; }
-    public string  Username        { get; private set; } = default!;
+    public Guid Id { get; private set; } = Guid.NewGuid();
+    public Guid PlatformId { get; private set; }
+    public string Username { get; private set; } = default!;
     public string? PasswordEncrypted { get; private set; }
-    public decimal AlipayBalance   { get; private set; }
+    public decimal AlipayBalance { get; private set; }
     public decimal DailySpendLimit { get; private set; }
     public decimal DailySpentToday { get; private set; }
-    public bool    IsFrozen        { get; private set; }
-    public bool    IsActive        { get; private set; } = true;
-    public DateTime? LastLoginAt   { get; private set; }
-    public DateTime CreatedAt      { get; private set; } = DateTime.UtcNow;
+    public bool IsFrozen { get; private set; }
+    public bool IsActive { get; private set; } = true;
+    public DateTime? LastLoginAt { get; private set; }
+    public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
 
     public Platform Platform { get; private set; } = default!;
 
@@ -135,8 +141,10 @@ public class PlatformAccount
                                           string? passwordEncrypted = null) =>
         new()
         {
-            PlatformId = platformId, Username = username.Trim(),
-            DailySpendLimit = dailySpendLimit, PasswordEncrypted = passwordEncrypted,
+            PlatformId = platformId,
+            Username = username.Trim(),
+            DailySpendLimit = dailySpendLimit,
+            PasswordEncrypted = passwordEncrypted,
         };
 
     public void RecordSpend(decimal amount)
@@ -146,7 +154,7 @@ public class PlatformAccount
 
     public void ResetDailySpend() => DailySpentToday = 0;
 
-    public void Freeze()   { IsFrozen = true;  }
+    public void Freeze() { IsFrozen = true; }
     public void Unfreeze() { IsFrozen = false; }
 
     public void UpdateBalance(decimal balance) => AlipayBalance = balance;

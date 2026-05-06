@@ -321,6 +321,30 @@ public class ProductService(
         }, ct);
     }
 
+    public async Task<ProductDetailResponse> GetDetailForAdminAsync(Guid id, CancellationToken ct = default)
+    {
+        var product = await productRepo.GetByIdWithDetailsAsync(id, ct)
+                      ?? throw new ProductNotFoundException(id);
+        return ProductMapper.ToDetail(product);
+    }
+
+    public async Task<ProductDetailResponse> UpdateInfoAsync(Guid id, UpdateProductInfoRequest req, CancellationToken ct = default)
+    {
+        var product = await productRepo.GetByIdWithDetailsAsync(id, ct)
+                      ?? throw new ProductNotFoundException(id);
+
+        product.SetTranslation(req.TranslatedTitle ?? string.Empty, req.SeoDescription);
+        product.SetCategory(req.CategoryId);
+
+        await productRepo.UpdateAsync(product, ct);
+        await uow.SaveChangesAsync(ct);
+
+        logger.LogInformation("Product info updated by admin: {ProductId}", id);
+
+        // Reload để trả response đầy đủ với navigation props
+        return await GetDetailForAdminAsync(id, ct);
+    }
+
     public async Task<ProductDetailResponse> SetFeaturedAsync(Guid id, bool featured, CancellationToken ct = default)
     {
         var product = await productRepo.GetByIdAsync(id, ct)

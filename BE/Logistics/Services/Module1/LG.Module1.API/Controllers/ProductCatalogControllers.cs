@@ -65,6 +65,33 @@ public class ProductsController(IProductService productService) : Module1BaseCon
     }
 
 
+    /// Lấy chi tiết sản phẩm cho admin.
+    [HttpGet("{id:guid}/admin-detail")]
+    [Authorize(Policy = Permissions.ProductManage)]
+    [ProducesResponseType(typeof(ApiResponse<ProductDetailResponse>), 200)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(403)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> GetDetailForAdmin(Guid id, CancellationToken ct)
+    {
+        var result = await productService.GetDetailForAdminAsync(id, ct);
+        return Ok(ApiResponse<ProductDetailResponse>.Ok(result));
+    }
+
+    /// Cập nhật thông tin cơ bản sản phẩm (TranslatedTitle, SeoDescription, CategoryId).
+    [HttpPatch("{id:guid}/info")]
+    [Authorize(Policy = Permissions.ProductManage)]
+    [ProducesResponseType(typeof(ApiResponse<ProductDetailResponse>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(403)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> UpdateInfo(Guid id, [FromBody] UpdateProductInfoRequest req, CancellationToken ct)
+    {
+        var result = await productService.UpdateInfoAsync(id, req, ct);
+        return Ok(ApiResponse<ProductDetailResponse>.Ok(result, "Thông tin sản phẩm đã cập nhật."));
+    }
+
     [HttpPost]
     [Authorize(Policy = Permissions.ProductManage)]
     [ProducesResponseType(typeof(ApiResponse<ProductDetailResponse>), 200)]
