@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using LG.Untils.EnumFinance;
 using System;
@@ -15,10 +15,11 @@ namespace LG.Core.Domain.Finance
     public class CustomerKYC : ICreatedBy, IModifiedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
-        public Guid CustomerId { get; set; }
+        public int CustomerId { get; set; }
 
         public KycLevel KycLevel { get; set; } = KycLevel.None; // Mức độ KYC (None, Basic, Advanced)
 
@@ -46,7 +47,7 @@ namespace LG.Core.Domain.Finance
 
         public string? RejectionReason { get; set; } // Lý do từ chối (nếu trạng thái là Rejected)
 
-        public Guid? ReviewedBy { get; set; } // ID người duyệt hồ sơ KYC (nếu đã được duyệt hoặc từ chối)
+        public int? ReviewedBy { get; set; } // ID người duyệt hồ sơ KYC (nếu đã được duyệt hoặc từ chối)
 
         public DateTime? ReviewedAt { get; set; } // Thời điểm duyệt hồ sơ KYC (nếu đã được duyệt hoặc từ chối) 
 

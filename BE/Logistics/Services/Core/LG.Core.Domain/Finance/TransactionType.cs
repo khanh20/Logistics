@@ -15,7 +15,7 @@ namespace LG.Core.Domain.Finance
     public class TransactionType : ICreatedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; }
 
         [Required]
         [MaxLength(50)]

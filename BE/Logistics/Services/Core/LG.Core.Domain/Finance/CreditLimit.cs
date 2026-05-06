@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -14,10 +14,10 @@ namespace LG.Core.Domain.Finance
     public class CreditLimit : ICreatedBy, IModifiedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; } 
 
         [Required]
-        public Guid CustomerId { get; set; }                    // Khách hàng được cấp hạn mức tín dụng (1-1)
+        public int CustomerId { get; set; }                    // Khách hàng được cấp hạn mức tín dụng (1-1)
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]
@@ -28,7 +28,7 @@ namespace LG.Core.Domain.Finance
 
         public short DueDateDays { get; set; } = 30;          // Số ngày được nợ trước khi quá hạn
 
-        public Guid? GrantedBy { get; set; }                   // Nhân viên cấp hạn mức tín dụng
+        public int? GrantedBy { get; set; }                   // Nhân viên cấp hạn mức tín dụng
 
         [Required]
         public DateTime GrantedAt { get; set; }                // Thời điểm cấp hạn mức

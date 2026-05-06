@@ -20,11 +20,11 @@ namespace LG.Core.ApplicationServices.Finance.Interfaces
         /// <summary>
         /// Lấy thông tin KYC hiện tại của customer
         /// </summary>
-        Task<CustomerKycDto?> GetKycAsync(Guid customerId);
+        Task<CustomerKycDto?> GetKycAsync(int customerId);
 
         /// <summary>
         /// Cập nhật/tạo mới KYC của customer từ dữ liệu đã review
         /// </summary>
-        Task<CustomerKycDto> SubmitKycAsync(Guid customerId, UpdateKycFromOcrRequest request);
+        Task<CustomerKycDto> SubmitKycAsync(int customerId, UpdateKycFromOcrRequest request);
     }
 }

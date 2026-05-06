@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
@@ -13,7 +13,7 @@ namespace LG.Core.Domain.Finance
     public class DailyRevenueReport
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; } 
 
         [Required]
         public DateTime ReportDate { get; set; } 

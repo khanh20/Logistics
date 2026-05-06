@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -15,12 +15,13 @@ namespace LG.Core.Domain.Finance
     public class RefundProcess : ICreatedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
-        public Guid WalletId { get; set; }                      // Ví nhận hoàn tiền
+        public int WalletId { get; set; }                      // Ví nhận hoàn tiền
 
-        public Guid? TriggeredBy { get; set; }                  // Nhân viên khởi tạo hoàn tiền
+        public int? TriggeredBy { get; set; }                  // Nhân viên khởi tạo hoàn tiền
 
         public RefundReasonEnum? Reason { get; set; }           // Lý do hoàn tiền
 
@@ -29,7 +30,7 @@ namespace LG.Core.Domain.Finance
         public string ReferenceType { get; set; }               // Loại đối tượng liên quan (VD: Order, ...)
 
         [Required]
-        public Guid ReferenceId { get; set; }                   // ID đối tượng liên quan
+        public int ReferenceId { get; set; }                   // ID đối tượng liên quan
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]
@@ -48,7 +49,7 @@ namespace LG.Core.Domain.Finance
         [Required]
         public RefundStatusEnum Status { get; set; } = RefundStatusEnum.Pending; // Trạng thái hoàn tiền
 
-        public Guid? WalletTransactionId { get; set; }         // Giao dịch ví tương ứng khi hoàn thành
+        public int? WalletTransactionId { get; set; }         // Giao dịch ví tương ứng khi hoàn thành
 
         public DateTime? RefundedAt { get; set; }              // Thời điểm hoàn tiền thành công
 

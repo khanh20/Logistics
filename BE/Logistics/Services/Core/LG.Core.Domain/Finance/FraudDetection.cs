@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -15,13 +15,14 @@ namespace LG.Core.Domain.Finance
     public class FraudDetection : ICreatedBy, IModifiedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
-        public Guid WalletId { get; set; }                      // Ví liên quan đến hành vi gian lận
+        public int WalletId { get; set; }                      // Ví liên quan đến hành vi gian lận
 
         [Required]
-        public Guid CustomerId { get; set; }                    // Khách hàng bị phát hiện gian lận
+        public int CustomerId { get; set; }                    // Khách hàng bị phát hiện gian lận
 
         public FraudTypeEnum? FraudType { get; set; }           // Loại gian lận phát hiện được
 
@@ -37,7 +38,7 @@ namespace LG.Core.Domain.Finance
         [Required]
         public FraudStatusEnum Status { get; set; } = FraudStatusEnum.Open; // Trạng thái xử lý
 
-        public Guid? ReviewedBy { get; set; }                  // Nhân viên xem xét vụ việc
+        public int? ReviewedBy { get; set; }                  // Nhân viên xem xét vụ việc
 
         public DateTime? ReviewedAt { get; set; }              // Thời điểm xem xét
 

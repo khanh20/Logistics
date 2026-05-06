@@ -4,8 +4,8 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.Customer
 {
     public class CustomerKycDto
     {
-        public Guid Id { get; set; }
-        public Guid CustomerId { get; set; }
+        public int Id { get; set; }
+        public int CustomerId { get; set; }
 
         /// <summary>Số CCCD/CMND/Hộ chiếu</summary>
         public string? IdNumber { get; set; }

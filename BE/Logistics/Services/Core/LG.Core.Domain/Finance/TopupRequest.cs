@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -15,13 +15,14 @@ namespace LG.Core.Domain.Finance
     public class TopupRequest : ICreatedBy, IModifiedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
-        public Guid WalletId { get; set; }                      // Ví nhận tiền nạp
+        public int WalletId { get; set; }                      // Ví nhận tiền nạp
 
         [Required]
-        public Guid BankAccountId { get; set; }                 // Tài khoản ngân hàng đích để chuyển vào
+        public int BankAccountId { get; set; }                 // Tài khoản ngân hàng đích để chuyển vào
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]
@@ -47,7 +48,7 @@ namespace LG.Core.Domain.Finance
         [Required]
         public DateTime ExpiresAt { get; set; }                // Thời điểm hết hạn yêu cầu nạp
 
-        public Guid? WalletTransactionId { get; set; }         // Giao dịch ví được tạo khi nạp thành công
+        public int? WalletTransactionId { get; set; }         // Giao dịch ví được tạo khi nạp thành công
 
         public DateTime? CreatedDate { get; set; }
         public int? CreatedBy { get; set; }

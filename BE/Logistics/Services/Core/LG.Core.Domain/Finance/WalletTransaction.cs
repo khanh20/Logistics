@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -14,13 +14,14 @@ namespace LG.Core.Domain.Finance
     public class WalletTransaction : ICreatedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
-        public Guid WalletId { get; set; }                      // Ví thực hiện giao dịch
+        public int WalletId { get; set; }                      // Ví thực hiện giao dịch
 
         [Required]
-        public Guid TypeId { get; set; }                        // Loại giao dịch (FK → TransactionType)
+        public int TypeId { get; set; }                        // Loại giao dịch (FK → TransactionType)
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]
@@ -39,7 +40,7 @@ namespace LG.Core.Domain.Finance
         public string ReferenceType { get; set; }               // Loại đối tượng liên quan (VD: Order, Topup, ...)
 
         [Required]
-        public Guid ReferenceId { get; set; }                   // ID đối tượng liên quan
+        public int ReferenceId { get; set; }                   // ID đối tượng liên quan
 
         [MaxLength(500)]
         public string? Note { get; set; }                       // Ghi chú giao dịch

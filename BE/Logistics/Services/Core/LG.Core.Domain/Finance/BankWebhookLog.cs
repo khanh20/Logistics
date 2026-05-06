@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -15,10 +15,10 @@ namespace LG.Core.Domain.Finance
     public class BankWebhookLog : ICreatedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; }
 
         [Required]
-        public Guid BankAccountId { get; set; }                 // Tài khoản ngân hàng nhận webhook
+        public int BankAccountId { get; set; }                 // Tài khoản ngân hàng nhận webhook
 
         [Required]
         [MaxLength(200)]
@@ -37,7 +37,7 @@ namespace LG.Core.Domain.Finance
 
         public DateTime? TransactionDate { get; set; }         // Thời điểm giao dịch theo ngân hàng
 
-        public Guid? MatchedTopupId { get; set; }              // Yêu cầu nạp tiền được khớp (nếu có)
+        public int? MatchedTopupId { get; set; }              // Yêu cầu nạp tiền được khớp (nếu có)
 
         public WebhookProcessingStatusEnum? ProcessingStatus { get; set; } // Trạng thái xử lý webhook
 

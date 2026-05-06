@@ -27,10 +27,10 @@ namespace LG.Core.API.Controllers.Finance
         /// <summary>
         /// Lấy thông tin KYC hiện tại của customer
         /// </summary>
-        [HttpGet("{customerId:guid}")]
+        [HttpGet("{customerId:int}")]
         [ProducesResponseType(typeof(CustomerKycDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetKyc([FromRoute] Guid customerId)
+        public async Task<IActionResult> GetKyc([FromRoute] int customerId)
         {
             var kyc = await _kycService.GetKycAsync(customerId);
             if (kyc == null)
@@ -44,12 +44,12 @@ namespace LG.Core.API.Controllers.Finance
         /// Upload ảnh CCCD mặt trước → OCR → trả về dữ liệu đã đọc để FE preview.
         /// Chưa lưu vào DB — gọi /submit sau khi user xác nhận.
         /// </summary>
-        [HttpPost("{customerId:guid}/scan-cccd")]
+        [HttpPost("{customerId:int}/scan-cccd")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ScanCccdResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> ScanCccd(
-            [FromRoute] Guid customerId,
+            [FromRoute] int customerId,
             IFormFile frontImage)
         {
             if (frontImage == null || frontImage.Length == 0)
@@ -89,11 +89,11 @@ namespace LG.Core.API.Controllers.Finance
         /// <summary>
         /// Lưu thông tin KYC sau khi user đã review dữ liệu OCR
         /// </summary>
-        [HttpPost("{customerId:guid}/submit")]
+        [HttpPost("{customerId:int}/submit")]
         [ProducesResponseType(typeof(CustomerKycDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> SubmitKyc(
-            [FromRoute] Guid customerId,
+            [FromRoute] int customerId,
             [FromBody] UpdateKycFromOcrRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.IdNumber) && string.IsNullOrWhiteSpace(request.FullNameOnId))
@@ -107,7 +107,7 @@ namespace LG.Core.API.Controllers.Finance
     // ── Response DTO riêng cho scan-cccd (bao gồm thêm field debug) ──────────────
     public class ScanCccdResponse
     {
-        public Guid CustomerId { get; set; }
+        public int CustomerId { get; set; }
         public string? IdNumber { get; set; }
         public string? FullNameOnId { get; set; }
         public DateTime? DateOfBirthOnId { get; set; }

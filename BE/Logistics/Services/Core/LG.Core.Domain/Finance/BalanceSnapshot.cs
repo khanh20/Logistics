@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -14,7 +14,8 @@ namespace LG.Core.Domain.Finance
     public class BalanceSnapshot : ICreatedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
         public DateOnly SnapshotDate { get; set; }              // Ngày chụp snapshot (duy nhất)
@@ -42,7 +43,7 @@ namespace LG.Core.Domain.Finance
 
         public bool IsReconciled { get; set; } = false;       // Đã được đối soát chưa
 
-        public Guid? ReconciledBy { get; set; }               // Nhân viên thực hiện đối soát
+        public int? ReconciledBy { get; set; }               // Nhân viên thực hiện đối soát
 
         [Required]
         public DateTime SnapshotAt { get; set; }              // Thời điểm chính xác khi chụp snapshot

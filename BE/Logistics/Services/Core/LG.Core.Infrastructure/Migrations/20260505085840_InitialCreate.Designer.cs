@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LG.Core.Infrastructure.Migrations
 {
     [DbContext(typeof(CoreDbContext))]
-    [Migration("20260422100638_AddTableCustomerKYC")]
-    partial class AddTableCustomerKYC
+    [Migration("20260505085840_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -27,9 +27,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.BalanceSnapshot", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -40,8 +42,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<bool>("IsReconciled")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid?>("ReconciledBy")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("ReconciledBy")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("SnapshotAt")
                         .HasColumnType("timestamp with time zone");
@@ -74,9 +76,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.BankAccount", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AccountHolder")
                         .IsRequired()
@@ -121,15 +125,17 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.BankWebhookLog", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal?>("AmountVnd")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<Guid>("BankAccountId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("BankAccountId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("BankRef")
                         .HasMaxLength(100)
@@ -146,8 +152,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<Guid?>("MatchedTopupId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("MatchedTopupId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("timestamp with time zone");
@@ -172,9 +178,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.CreditLimit", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -185,8 +193,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("CurrentDebtVnd")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
 
                     b.Property<short>("DueDateDays")
                         .HasColumnType("smallint");
@@ -197,8 +205,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime>("GrantedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("GrantedBy")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("GrantedBy")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -219,9 +227,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.CustomerAddress", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AddressLine")
                         .IsRequired()
@@ -233,8 +243,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("Deleted")
                         .HasColumnType("boolean");
@@ -290,9 +300,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.CustomerKYC", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -300,8 +312,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("DateOfBirthOnId")
                         .HasColumnType("timestamp with time zone");
@@ -340,8 +352,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("ReviewedBy")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("ReviewedBy")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SelfieUrl")
                         .HasMaxLength(500)
@@ -361,9 +373,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.DailyRevenueReport", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -414,9 +428,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.DebtRecord", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -424,11 +440,11 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("CreditLimitId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CreditLimitId")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("DebtAmountVnd")
                         .HasColumnType("decimal(18,0)");
@@ -442,8 +458,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<bool>("IsPaid")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid?>("LinkedOrderId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("LinkedOrderId")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("ModifiedBy")
                         .HasColumnType("integer");
@@ -467,9 +483,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.FeeRule", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -515,8 +533,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<Guid?>("PlatformId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("PlatformId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("ServiceFeePct")
                         .HasColumnType("decimal(5,4)");
@@ -524,8 +542,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("StorageDailyPerKgVnd")
                         .HasColumnType("decimal(10,0)");
 
-                    b.Property<Guid?>("VipTierId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("VipTierId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -534,9 +552,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.FraudDetection", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int>("Action")
                         .HasColumnType("integer");
@@ -547,8 +567,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("EvidenceJson")
                         .HasColumnType("text");
@@ -568,8 +588,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("ReviewedBy")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("ReviewedBy")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("RiskScore")
                         .HasColumnType("decimal(5,2)");
@@ -577,8 +597,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("WalletId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("WalletId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -587,9 +607,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.PaymentLock", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -612,8 +634,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("ReleaseReason")
                         .HasColumnType("integer");
@@ -624,8 +646,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("WalletId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("WalletId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -634,9 +656,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.PlatformReconcile", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AlipayStatementUrl")
                         .HasMaxLength(500)
@@ -654,11 +678,11 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
-                    b.Property<Guid>("PlatformAccountId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("PlatformAccountId")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("PlatformId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("PlatformId")
+                        .HasColumnType("integer");
 
                     b.Property<DateOnly>("ReconcileDate")
                         .HasColumnType("date");
@@ -666,8 +690,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("ReconciledAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("ReconciledBy")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("ReconciledBy")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("ServiceFeeCollectedVnd")
                         .HasColumnType("decimal(18,0)");
@@ -688,9 +712,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.RefundProcess", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -713,8 +739,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int?>("Reason")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("ReferenceId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("ReferenceId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ReferenceType")
                         .IsRequired()
@@ -727,14 +753,14 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("TriggeredBy")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("TriggeredBy")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("WalletId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("WalletId")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid?>("WalletTransactionId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("WalletTransactionId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -743,9 +769,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.TopupRequest", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AmountVnd")
                         .HasColumnType("decimal(18,0)");
@@ -753,8 +781,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<bool>("AutoMatched")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("BankAccountId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("BankAccountId")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -790,11 +818,11 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<Guid>("WalletId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("WalletId")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid?>("WalletTransactionId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("WalletTransactionId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -803,9 +831,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.TransactionType", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -836,9 +866,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.VipTier", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("CashbackPct")
                         .HasColumnType("decimal(5,4)");
@@ -886,9 +918,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.Wallet", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("AvailableBalance")
                         .HasColumnType("decimal(18,0)");
@@ -904,8 +938,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("FrozenBalance")
                         .HasColumnType("decimal(18,0)");
@@ -938,9 +972,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.WalletTransaction", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,0)");
@@ -961,19 +997,19 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<Guid>("ReferenceId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("ReferenceId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ReferenceType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<Guid>("TypeId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("TypeId")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("WalletId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("WalletId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -982,9 +1018,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.WithdrawRequest", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AccountHolder")
                         .IsRequired()
@@ -994,8 +1032,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("AmountVnd")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<Guid?>("ApprovedBy")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("ApprovedBy")
+                        .HasColumnType("integer");
 
                     b.Property<string>("BankAccountNo")
                         .IsRequired()
@@ -1013,8 +1051,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("FeeVnd")
                         .HasColumnType("decimal(18,0)");
@@ -1041,11 +1079,11 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<Guid>("WalletId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("WalletId")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid?>("WalletTransactionId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("WalletTransactionId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -1054,9 +1092,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.ZaloNotification", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -1064,8 +1104,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("DeliveredAt")
                         .HasColumnType("timestamp with time zone");
@@ -1101,9 +1141,11 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.finance.CustomerProfile", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("CreatedBy")
                         .HasColumnType("integer");
@@ -1152,17 +1194,17 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<Guid?>("ReferredById")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("ReferredById")
+                        .HasColumnType("integer");
 
                     b.Property<int>("TotalOrders")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid?>("VipTierId")
-                        .HasColumnType("uuid");
+                    b.Property<int?>("VipTierId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("ZaloUserId")
                         .HasMaxLength(100)

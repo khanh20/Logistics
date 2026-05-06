@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -15,13 +15,14 @@ namespace LG.Core.Domain.Finance
     public class PaymentLock : ICreatedBy, IModifiedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
-        public Guid WalletId { get; set; }                      // Ví bị khóa tiền
+        public int WalletId { get; set; }                      // Ví bị khóa tiền
 
         [Required]
-        public Guid OrderId { get; set; }                       // Đơn hàng liên quan (FK → customer_orders)
+        public int OrderId { get; set; }                       // Đơn hàng liên quan (FK → customer_orders)
 
         [Required]
         public PaymentLockTypeEnum LockType { get; set; }       // Loại khóa: Đặt cọc hoặc Thanh toán cuối

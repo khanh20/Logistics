@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using LG.Untils.EnumFinance;
 using System;
@@ -17,16 +17,16 @@ namespace LG.Core.Domain.finance
     public class CustomerProfile : ICreatedBy, IModifiedBy, ISoftDelted
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; } 
 
         [Required]
-        public Guid UserId { get; set; }
+        public int UserId { get; set; }
 
         [Required]
         [MaxLength(30)]
         public string CustomerCode { get; set; }
 
-        public Guid? VipTierId { get; set; }
+        public int? VipTierId { get; set; }
 
         [Required]
         [MaxLength(255)]
@@ -44,7 +44,7 @@ namespace LG.Core.Domain.finance
         [MaxLength(20)]
         public string? ReferralCode { get; set; }
 
-        public Guid? ReferredById { get; set; }
+        public int? ReferredById { get; set; }
 
         public decimal LifetimeValueVnd { get; set; } = 0;
 

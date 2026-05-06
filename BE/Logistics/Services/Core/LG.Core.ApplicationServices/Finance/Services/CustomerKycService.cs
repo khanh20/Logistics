@@ -46,7 +46,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
         }
 
         // ── Get KYC ──────────────────────────────────────────────────────────────
-        public async Task<CustomerKycDto?> GetKycAsync(Guid customerId)
+        public async Task<CustomerKycDto?> GetKycAsync(int customerId)
         {
             var kyc = await _db.CustomerKycs
                 .AsNoTracking()
@@ -59,7 +59,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
         /// <summary>
         /// Tạo mới hoặc cập nhật KYC sau khi user review dữ liệu OCR
         /// </summary>
-        public async Task<CustomerKycDto> SubmitKycAsync(Guid customerId, UpdateKycFromOcrRequest request)
+        public async Task<CustomerKycDto> SubmitKycAsync(int customerId, UpdateKycFromOcrRequest request)
         {
             var kyc = await _db.CustomerKycs
                 .FirstOrDefaultAsync(k => k.CustomerId == customerId);
@@ -69,7 +69,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
                 // Tạo mới
                 kyc = new CustomerKYC
                 {
-                    Id = Guid.NewGuid(),
+                    // Id = int.Newint(),
                     CustomerId = customerId,
                     KycLevel = KycLevel.Basic,
                     Status = KycStatus.Pending,

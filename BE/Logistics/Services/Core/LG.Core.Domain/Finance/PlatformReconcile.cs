@@ -1,4 +1,4 @@
-﻿using LG.Untils.EnumFinance;
+using LG.Untils.EnumFinance;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -15,16 +15,17 @@ namespace LG.Core.Domain.Finance
     public class PlatformReconcile : ICreatedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
         public DateOnly ReconcileDate { get; set; }             // Ngày đối soát
 
         [Required]
-        public Guid PlatformId { get; set; }                    // Nền tảng mua hàng (VD: Taobao, 1688, ...)
+        public int PlatformId { get; set; }                    // Nền tảng mua hàng (VD: Taobao, 1688, ...)
 
         [Required]
-        public Guid PlatformAccountId { get; set; }            // Tài khoản nền tảng sử dụng để mua
+        public int PlatformAccountId { get; set; }            // Tài khoản nền tảng sử dụng để mua
 
         [Required]
         [Column(TypeName = "decimal(12,2)")]
@@ -49,7 +50,7 @@ namespace LG.Core.Domain.Finance
 
         public string? Notes { get; set; }                     // Ghi chú thêm
 
-        public Guid? ReconciledBy { get; set; }               // Nhân viên thực hiện đối soát
+        public int? ReconciledBy { get; set; }               // Nhân viên thực hiện đối soát
 
         public DateTime? ReconciledAt { get; set; }           // Thời điểm hoàn tất đối soát
 

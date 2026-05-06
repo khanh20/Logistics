@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -14,15 +14,15 @@ namespace LG.Core.Domain.Finance
     public class FeeRule : ICreatedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; }
 
         [Required]
         [MaxLength(100)]
         public string Name { get; set; }                        // Tên bộ quy tắc phí
 
-        public Guid? VipTierId { get; set; }                    // Áp dụng riêng cho hạng VIP (null = tất cả)
+        public int? VipTierId { get; set; }                    // Áp dụng riêng cho hạng VIP (null = tất cả)
 
-        public Guid? PlatformId { get; set; }                   // Áp dụng riêng cho nền tảng (null = tất cả)
+        public int? PlatformId { get; set; }                   // Áp dụng riêng cho nền tảng (null = tất cả)
 
         [Required]
         [Column(TypeName = "decimal(5,4)")]

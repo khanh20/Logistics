@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -14,15 +14,15 @@ namespace LG.Core.Domain.Finance
     public class DebtRecord : ICreatedBy, IModifiedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public int Id { get; set; }
 
         [Required]
-        public Guid CustomerId { get; set; }                    // Khách hàng mang nợ
+        public int CustomerId { get; set; }                    // Khách hàng mang nợ
 
         [Required]
-        public Guid CreditLimitId { get; set; }                 // Hạn mức tín dụng liên quan
+        public int CreditLimitId { get; set; }                 // Hạn mức tín dụng liên quan
 
-        public Guid? LinkedOrderId { get; set; }               // Đơn hàng phát sinh khoản nợ
+        public int? LinkedOrderId { get; set; }               // Đơn hàng phát sinh khoản nợ
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]

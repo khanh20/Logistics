@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -15,10 +15,11 @@ namespace LG.Core.Domain.Finance
     public class ZaloNotification : ICreatedBy
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
 
         [Required]
-        public Guid CustomerId { get; set; }                    // Khách hàng nhận thông báo
+        public int CustomerId { get; set; }                    // Khách hàng nhận thông báo
 
         [Required]
         [MaxLength(100)]

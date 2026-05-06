@@ -1,75 +1,27 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace LG.Core.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddTable : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "CreatedAt",
-                schema: "finance",
-                table: "CustomerProfile");
-
-            migrationBuilder.RenameColumn(
-                name: "UpdatedAt",
-                schema: "finance",
-                table: "CustomerProfile",
-                newName: "ModifiedDate");
-
-            migrationBuilder.RenameColumn(
-                name: "LastOrderAt",
-                schema: "finance",
-                table: "CustomerProfile",
-                newName: "DeletedDate");
-
-            migrationBuilder.AddColumn<int>(
-                name: "CreatedBy",
-                schema: "finance",
-                table: "CustomerProfile",
-                type: "integer",
-                nullable: true);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "CreatedDate",
-                schema: "finance",
-                table: "CustomerProfile",
-                type: "timestamp with time zone",
-                nullable: true);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "Deleted",
-                schema: "finance",
-                table: "CustomerProfile",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<int>(
-                name: "DeletedBy",
-                schema: "finance",
-                table: "CustomerProfile",
-                type: "integer",
-                nullable: true);
-
-            migrationBuilder.AddColumn<int>(
-                name: "ModifiedBy",
-                schema: "finance",
-                table: "CustomerProfile",
-                type: "integer",
-                nullable: true);
+            migrationBuilder.EnsureSchema(
+                name: "finance");
 
             migrationBuilder.CreateTable(
                 name: "BalanceSnapshot",
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     SnapshotDate = table.Column<DateOnly>(type: "date", nullable: false),
                     TotalAvailableVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     TotalFrozenVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
@@ -78,7 +30,7 @@ namespace LG.Core.Infrastructure.Migrations
                     TotalWalletsWithBalance = table.Column<int>(type: "integer", nullable: false),
                     VarianceFromPrev = table.Column<decimal>(type: "numeric(18,0)", nullable: true),
                     IsReconciled = table.Column<bool>(type: "boolean", nullable: false),
-                    ReconciledBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    ReconciledBy = table.Column<int>(type: "integer", nullable: true),
                     SnapshotAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedBy = table.Column<int>(type: "integer", nullable: true)
@@ -93,7 +45,8 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     BankName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     BankCode = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     AccountNumber = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
@@ -114,15 +67,16 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    BankAccountId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    BankAccountId = table.Column<int>(type: "integer", nullable: false),
                     IdempotencyKey = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     RawPayload = table.Column<string>(type: "text", nullable: false),
                     BankRef = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     AmountVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: true),
                     TransferContent = table.Column<string>(type: "text", nullable: true),
                     TransactionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    MatchedTopupId = table.Column<Guid>(type: "uuid", nullable: true),
+                    MatchedTopupId = table.Column<int>(type: "integer", nullable: true),
                     ProcessingStatus = table.Column<int>(type: "integer", nullable: true),
                     ProcessedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -138,12 +92,13 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CustomerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
                     MaxCreditVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     CurrentDebtVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     DueDateDays = table.Column<short>(type: "smallint", nullable: false),
-                    GrantedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    GrantedBy = table.Column<int>(type: "integer", nullable: true),
                     GrantedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ExpiresAt = table.Column<DateOnly>(type: "date", nullable: true),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
@@ -162,8 +117,9 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CustomerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
                     Label = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     RecipientName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     Phone = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
@@ -187,11 +143,13 @@ namespace LG.Core.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "CustomerKycs",
+                name: "CustomerKYC",
+                schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CustomerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
                     KycLevel = table.Column<int>(type: "integer", nullable: false),
                     IdNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
                     FullNameOnId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
@@ -202,7 +160,7 @@ namespace LG.Core.Infrastructure.Migrations
                     VideoVerificationUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     RejectionReason = table.Column<string>(type: "text", nullable: true),
-                    ReviewedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    ReviewedBy = table.Column<int>(type: "integer", nullable: true),
                     ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     KycExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -212,7 +170,39 @@ namespace LG.Core.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CustomerKycs", x => x.Id);
+                    table.PrimaryKey("PK_CustomerKYC", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CustomerProfile",
+                schema: "finance",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<int>(type: "integer", nullable: false),
+                    CustomerCode = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    VipTierId = table.Column<int>(type: "integer", nullable: true),
+                    FullName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    DateOfBirth = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Gender = table.Column<int>(type: "integer", nullable: true),
+                    PreferredChannel = table.Column<int>(type: "integer", nullable: false),
+                    ZaloUserId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    ReferralCode = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    ReferredById = table.Column<int>(type: "integer", nullable: true),
+                    LifetimeValueVnd = table.Column<decimal>(type: "numeric", nullable: false),
+                    TotalOrders = table.Column<int>(type: "integer", nullable: false),
+                    DeletedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Deleted = table.Column<bool>(type: "boolean", nullable: false),
+                    DeletedBy = table.Column<int>(type: "integer", nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedBy = table.Column<int>(type: "integer", nullable: true),
+                    ModifiedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ModifiedBy = table.Column<int>(type: "integer", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomerProfile", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -220,7 +210,8 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     ReportDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     ServiceFeeRevenueVnd = table.Column<decimal>(type: "numeric", nullable: false),
                     ShipFeeRevenueVnd = table.Column<decimal>(type: "numeric", nullable: false),
@@ -246,10 +237,11 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CustomerId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CreditLimitId = table.Column<Guid>(type: "uuid", nullable: false),
-                    LinkedOrderId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
+                    CreditLimitId = table.Column<int>(type: "integer", nullable: false),
+                    LinkedOrderId = table.Column<int>(type: "integer", nullable: true),
                     DebtAmountVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     DueDate = table.Column<DateOnly>(type: "date", nullable: false),
                     IsPaid = table.Column<bool>(type: "boolean", nullable: false),
@@ -272,10 +264,11 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    VipTierId = table.Column<Guid>(type: "uuid", nullable: true),
-                    PlatformId = table.Column<Guid>(type: "uuid", nullable: true),
+                    VipTierId = table.Column<int>(type: "integer", nullable: true),
+                    PlatformId = table.Column<int>(type: "integer", nullable: true),
                     ServiceFeePct = table.Column<decimal>(type: "numeric(5,4)", nullable: false),
                     IntlShipPerKgVnd = table.Column<decimal>(type: "numeric(10,0)", nullable: false),
                     IntlShipVolDivisor = table.Column<short>(type: "smallint", nullable: false),
@@ -302,15 +295,16 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    WalletId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CustomerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    WalletId = table.Column<int>(type: "integer", nullable: false),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
                     FraudType = table.Column<int>(type: "integer", nullable: true),
                     RiskScore = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
                     EvidenceJson = table.Column<string>(type: "text", nullable: true),
                     Action = table.Column<int>(type: "integer", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
-                    ReviewedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    ReviewedBy = table.Column<int>(type: "integer", nullable: true),
                     ReviewedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     ResolutionNote = table.Column<string>(type: "text", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -328,9 +322,10 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    WalletId = table.Column<Guid>(type: "uuid", nullable: false),
-                    OrderId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    WalletId = table.Column<int>(type: "integer", nullable: false),
+                    OrderId = table.Column<int>(type: "integer", nullable: false),
                     LockType = table.Column<int>(type: "integer", nullable: false),
                     LockedAmountVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
@@ -352,10 +347,11 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     ReconcileDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    PlatformId = table.Column<Guid>(type: "uuid", nullable: false),
-                    PlatformAccountId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PlatformId = table.Column<int>(type: "integer", nullable: false),
+                    PlatformAccountId = table.Column<int>(type: "integer", nullable: false),
                     CnySpent = table.Column<decimal>(type: "numeric(12,2)", nullable: false),
                     VndEquivalent = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     ServiceFeeCollectedVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
@@ -363,7 +359,7 @@ namespace LG.Core.Infrastructure.Migrations
                     AlipayStatementUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     Notes = table.Column<string>(type: "text", nullable: true),
-                    ReconciledBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    ReconciledBy = table.Column<int>(type: "integer", nullable: true),
                     ReconciledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedBy = table.Column<int>(type: "integer", nullable: true)
@@ -378,18 +374,19 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    WalletId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TriggeredBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    WalletId = table.Column<int>(type: "integer", nullable: false),
+                    TriggeredBy = table.Column<int>(type: "integer", nullable: true),
                     Reason = table.Column<int>(type: "integer", nullable: true),
                     ReferenceType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    ReferenceId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ReferenceId = table.Column<int>(type: "integer", nullable: false),
                     GrossAmountVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     PenaltyPct = table.Column<decimal>(type: "numeric(5,4)", nullable: false),
                     PenaltyVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     NetRefundVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
-                    WalletTransactionId = table.Column<Guid>(type: "uuid", nullable: true),
+                    WalletTransactionId = table.Column<int>(type: "integer", nullable: true),
                     RefundedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedBy = table.Column<int>(type: "integer", nullable: true)
@@ -404,9 +401,10 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    WalletId = table.Column<Guid>(type: "uuid", nullable: false),
-                    BankAccountId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    WalletId = table.Column<int>(type: "integer", nullable: false),
+                    BankAccountId = table.Column<int>(type: "integer", nullable: false),
                     AmountVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     TransferContent = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     QrUrl = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
@@ -415,7 +413,7 @@ namespace LG.Core.Infrastructure.Migrations
                     MatchedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     MatchedBankRef = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    WalletTransactionId = table.Column<Guid>(type: "uuid", nullable: true),
+                    WalletTransactionId = table.Column<int>(type: "integer", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedBy = table.Column<int>(type: "integer", nullable: true),
                     ModifiedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -431,7 +429,8 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Code = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Direction = table.Column<int>(type: "integer", nullable: true),
@@ -449,7 +448,8 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Level = table.Column<short>(type: "smallint", nullable: false),
                     MinSpendVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
@@ -473,8 +473,9 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CustomerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
                     Currency = table.Column<string>(type: "character varying(3)", maxLength: 3, nullable: false),
                     AvailableBalance = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     FrozenBalance = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
@@ -498,14 +499,15 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    WalletId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TypeId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    WalletId = table.Column<int>(type: "integer", nullable: false),
+                    TypeId = table.Column<int>(type: "integer", nullable: false),
                     Amount = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     BalanceBefore = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     BalanceAfter = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     ReferenceType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    ReferenceId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ReferenceId = table.Column<int>(type: "integer", nullable: false),
                     Note = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedBy = table.Column<int>(type: "integer", nullable: true)
@@ -520,9 +522,10 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    WalletId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CustomerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    WalletId = table.Column<int>(type: "integer", nullable: false),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
                     BankName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     BankAccountNo = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     AccountHolder = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
@@ -531,10 +534,10 @@ namespace LG.Core.Infrastructure.Migrations
                     NetAmountVnd = table.Column<decimal>(type: "numeric(18,0)", nullable: false),
                     Status = table.Column<int>(type: "integer", nullable: false),
                     RejectedReason = table.Column<string>(type: "text", nullable: true),
-                    ApprovedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    ApprovedBy = table.Column<int>(type: "integer", nullable: true),
                     TransferRef = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     ProcessedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    WalletTransactionId = table.Column<Guid>(type: "uuid", nullable: true),
+                    WalletTransactionId = table.Column<int>(type: "integer", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     CreatedBy = table.Column<int>(type: "integer", nullable: true),
                     ModifiedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -550,8 +553,9 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    CustomerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
                     ZaloUserId = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     TemplateType = table.Column<int>(type: "integer", nullable: true),
                     TemplateData = table.Column<string>(type: "text", nullable: true),
@@ -593,7 +597,12 @@ namespace LG.Core.Infrastructure.Migrations
                 schema: "finance");
 
             migrationBuilder.DropTable(
-                name: "CustomerKycs");
+                name: "CustomerKYC",
+                schema: "finance");
+
+            migrationBuilder.DropTable(
+                name: "CustomerProfile",
+                schema: "finance");
 
             migrationBuilder.DropTable(
                 name: "DailyRevenueReport",
@@ -650,51 +659,6 @@ namespace LG.Core.Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "ZaloNotification",
                 schema: "finance");
-
-            migrationBuilder.DropColumn(
-                name: "CreatedBy",
-                schema: "finance",
-                table: "CustomerProfile");
-
-            migrationBuilder.DropColumn(
-                name: "CreatedDate",
-                schema: "finance",
-                table: "CustomerProfile");
-
-            migrationBuilder.DropColumn(
-                name: "Deleted",
-                schema: "finance",
-                table: "CustomerProfile");
-
-            migrationBuilder.DropColumn(
-                name: "DeletedBy",
-                schema: "finance",
-                table: "CustomerProfile");
-
-            migrationBuilder.DropColumn(
-                name: "ModifiedBy",
-                schema: "finance",
-                table: "CustomerProfile");
-
-            migrationBuilder.RenameColumn(
-                name: "ModifiedDate",
-                schema: "finance",
-                table: "CustomerProfile",
-                newName: "UpdatedAt");
-
-            migrationBuilder.RenameColumn(
-                name: "DeletedDate",
-                schema: "finance",
-                table: "CustomerProfile",
-                newName: "LastOrderAt");
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "CreatedAt",
-                schema: "finance",
-                table: "CustomerProfile",
-                type: "timestamp with time zone",
-                nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
         }
     }
 }
