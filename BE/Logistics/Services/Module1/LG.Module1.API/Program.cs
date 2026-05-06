@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
+using LG.Module1.API.BackgroundJobs;
 using LG.Module1.API.Middleware;
 using LG.Module1.Infrastructure;
 using LG.Module1.Infrastructure.Data;
@@ -164,6 +165,10 @@ builder.Services.AddSwaggerGen(opt =>
 
 // ── Health checks ─────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks().AddDbContextCheck<Module1DbContext>("postgres-mod1");
+
+// ── Background jobs ─────────────────────────────────────────────────
+builder.Services.AddHostedService<OrderTimeoutJob>();
+builder.Services.AddHostedService<OrderAssignmentJob>();
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 3. BUILD

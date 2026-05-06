@@ -157,6 +157,9 @@ public class PlatformShopConfig : IEntityTypeConfiguration<PlatformShop>
         b.Property(x => x.AvgShipDays).HasPrecision(5, 2);
         b.Property(x => x.DisputeRate).HasPrecision(5, 4);
         b.HasIndex(x => new { x.PlatformId, x.ShopIdOnPlatform }).IsUnique();
+        b.Property(x => x.IntegrationMode).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.IntegrationApiUrl).HasMaxLength(500);
+        b.Property(x => x.IntegrationApiTokenEncrypted).HasMaxLength(2000);
     }
 }
 
@@ -253,5 +256,133 @@ public class ProductAttributeConfig : IEntityTypeConfiguration<ProductAttribute>
         b.HasKey(x => x.Id);
         b.Property(x => x.KeyCn).HasMaxLength(200);
         b.Property(x => x.KeyVn).HasMaxLength(200);
+    }
+}
+
+public class CartConfig : IEntityTypeConfiguration<Cart>
+{
+    public void Configure(EntityTypeBuilder<Cart> b)
+    {
+        b.ToTable("carts");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        b.HasIndex(x => new { x.CustomerId, x.Status });
+
+        b.HasMany(x => x.Items).WithOne(x => x.Cart)
+         .HasForeignKey(x => x.CartId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class CartItemConfig : IEntityTypeConfiguration<CartItem>
+{
+    public void Configure(EntityTypeBuilder<CartItem> b)
+    {
+        b.ToTable("cart_items");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.ProductTitleSnapshot).HasMaxLength(500).IsRequired();
+        b.Property(x => x.VariantNameSnapshot).HasMaxLength(500);
+        b.Property(x => x.ImageUrlSnapshot).HasMaxLength(500);
+        b.Property(x => x.PriceCnySnapshot).HasPrecision(12, 2).IsRequired();
+        b.HasIndex(x => new { x.CartId, x.VariantId }).IsUnique();
+
+        // CartItem references PlatformShop for ShopId (no cascade — shop delete should be restricted)
+        b.HasOne(x => x.Shop).WithMany()
+         .HasForeignKey(x => x.ShopId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.Product).WithMany()
+         .HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.Variant).WithMany()
+         .HasForeignKey(x => x.VariantId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public class CustomerOrderConfig : IEntityTypeConfiguration<CustomerOrder>
+{
+    public void Configure(EntityTypeBuilder<CustomerOrder> b)
+    {
+        b.ToTable("customer_orders");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.OrderCode).HasMaxLength(30).IsRequired();
+        b.HasIndex(x => x.OrderCode).IsUnique();
+        b.Property(x => x.ShopName).HasMaxLength(255).IsRequired();
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(30);
+        b.Property(x => x.PlacementMode).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.TotalCny).HasPrecision(12, 2);
+        b.Property(x => x.RateVndPerCny).HasPrecision(10, 2);
+        b.Property(x => x.FinalAmountVnd).HasPrecision(14, 0);
+        b.Property(x => x.DepositPct).HasPrecision(5, 4);
+        b.Property(x => x.DepositVnd).HasPrecision(14, 0);
+        b.Property(x => x.DeliveryAddressNote).HasMaxLength(500);
+        b.Property(x => x.CustomerNote).HasMaxLength(1000);
+        b.Property(x => x.StaffNote).HasMaxLength(1000);
+        b.Property(x => x.CancelReason).HasMaxLength(500);
+
+        b.HasIndex(x => x.CustomerId);
+        b.HasIndex(x => x.AssignedStaffId);
+        b.HasIndex(x => x.Status);
+
+        b.HasOne(x => x.Shop).WithMany()
+         .HasForeignKey(x => x.ShopId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.PlatformOrder).WithOne(x => x.CustomerOrder)
+         .HasForeignKey<PlatformOrder>(x => x.CustomerOrderId).OnDelete(DeleteBehavior.Cascade);
+        b.HasMany(x => x.Items).WithOne(x => x.Order)
+         .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+        b.HasMany(x => x.History).WithOne(x => x.Order)
+         .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+        b.HasMany(x => x.Fees).WithOne(x => x.Order)
+         .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class OrderItemConfig : IEntityTypeConfiguration<OrderItem>
+{
+    public void Configure(EntityTypeBuilder<OrderItem> b)
+    {
+        b.ToTable("order_items");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.ProductTitleSnapshot).HasMaxLength(500).IsRequired();
+        b.Property(x => x.VariantNameSnapshot).HasMaxLength(500);
+        b.Property(x => x.ImageUrl).HasMaxLength(500);
+        b.Property(x => x.UnitPriceCny).HasPrecision(12, 2);
+        b.Property(x => x.TotalCny).HasPrecision(12, 4);
+    }
+}
+
+public class PlatformOrderConfig : IEntityTypeConfiguration<PlatformOrder>
+{
+    public void Configure(EntityTypeBuilder<PlatformOrder> b)
+    {
+        b.ToTable("platform_orders");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.PlatformOrderId).HasMaxLength(200);
+        b.Property(x => x.TrackingNumber).HasMaxLength(200);
+        b.Property(x => x.TrackingCarrier).HasMaxLength(100);
+        b.Property(x => x.TrackingUrl).HasMaxLength(500);
+        b.Property(x => x.IssueNote).HasMaxLength(1000);
+        b.Property(x => x.Notes).HasMaxLength(1000);
+    }
+}
+
+public class OrderStatusHistoryConfig : IEntityTypeConfiguration<OrderStatusHistory>
+{
+    public void Configure(EntityTypeBuilder<OrderStatusHistory> b)
+    {
+        b.ToTable("order_status_histories");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.FromStatus).HasConversion<string?>().HasMaxLength(30);
+        b.Property(x => x.ToStatus).HasConversion<string>().HasMaxLength(30);
+        b.Property(x => x.Note).HasMaxLength(500);
+        b.HasIndex(x => x.OrderId);
+    }
+}
+
+public class OrderFeeDetailConfig : IEntityTypeConfiguration<OrderFeeDetail>
+{
+    public void Configure(EntityTypeBuilder<OrderFeeDetail> b)
+    {
+        b.ToTable("order_fee_details");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.FeeType).HasMaxLength(50).IsRequired();
+        b.Property(x => x.AmountVnd).HasPrecision(14, 0);
+        b.Property(x => x.Note).HasMaxLength(500);
     }
 }

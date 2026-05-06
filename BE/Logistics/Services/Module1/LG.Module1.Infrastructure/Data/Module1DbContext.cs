@@ -22,6 +22,13 @@ public class Module1DbContext(DbContextOptions<Module1DbContext> options) : DbCo
     public DbSet<ProductPriceTier>  ProductPriceTiers => Set<ProductPriceTier>();
     public DbSet<ProductImage>      ProductImages    => Set<ProductImage>();
     public DbSet<ProductAttribute>  ProductAttributes => Set<ProductAttribute>();
+    public DbSet<Cart>     Carts     => Set<Cart>();
+    public DbSet<CartItem> CartItems => Set<CartItem>();
+    public DbSet<CustomerOrder>      CustomerOrders      => Set<CustomerOrder>();
+    public DbSet<OrderItem>          OrderItems          => Set<OrderItem>();
+    public DbSet<PlatformOrder>      PlatformOrders      => Set<PlatformOrder>();
+    public DbSet<OrderStatusHistory> OrderStatusHistories => Set<OrderStatusHistory>();
+    public DbSet<OrderFeeDetail>     OrderFeeDetails     => Set<OrderFeeDetail>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {

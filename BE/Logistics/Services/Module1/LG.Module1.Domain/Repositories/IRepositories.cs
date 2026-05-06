@@ -139,6 +139,51 @@ public interface IProductAttributeRepository
     Task RemoveByProductAsync(Guid productId, CancellationToken ct = default);
 }
 
+// ── Cart repos ────────────────────────────────────────────────────────────────
+public interface ICartRepository
+{
+    /// Lấy cart Active của customer (có Items + Variant + Product).
+    Task<Cart?> GetActiveByCustomerAsync(Guid customerId, CancellationToken ct = default);
+    Task<Cart?> GetByIdAsync(Guid cartId, CancellationToken ct = default);
+    Task AddAsync(Cart cart, CancellationToken ct = default);
+    Task UpdateAsync(Cart cart, CancellationToken ct = default);
+
+    /// Lấy danh sách CartItem theo danh sách id — dùng khi checkout một phần.
+    Task<List<CartItem>> GetItemsByIdsAsync(Guid cartId, IEnumerable<Guid> itemIds, CancellationToken ct = default);
+}
+
+// ── CustomerOrder repos ───────────────────────────────────────────────────────
+public interface ICustomerOrderRepository
+{
+    Task<CustomerOrder?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<CustomerOrder?> GetByIdWithDetailsAsync(Guid id, CancellationToken ct = default);
+    Task<CustomerOrder?> GetByOrderCodeAsync(string orderCode, CancellationToken ct = default);
+
+    Task<(List<CustomerOrder> Items, int TotalCount)> SearchAsync(
+        Guid? customerId, Guid? assignedStaffId, OrderStatus? status,
+        DateTime? fromDate, DateTime? toDate,
+        int page, int pageSize, CancellationToken ct = default);
+
+    /// Lấy các đơn chưa được assign và đang ở trạng thái PendingPayment/Paid.
+    Task<List<CustomerOrder>> GetUnassignedPaidOrdersAsync(int take, CancellationToken ct = default);
+
+    /// Lấy các đơn PendingPayment đã quá timeout (phút).
+    Task<List<CustomerOrder>> GetTimedOutPendingOrdersAsync(int timeoutMinutes, CancellationToken ct = default);
+
+    Task AddAsync(CustomerOrder order, CancellationToken ct = default);
+    Task UpdateAsync(CustomerOrder order, CancellationToken ct = default);
+}
+
+// ── PlatformOrder repos ───────────────────────────────────────────────────────
+public interface IPlatformOrderRepository
+{
+    Task<PlatformOrder?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<PlatformOrder?> GetByCustomerOrderAsync(Guid customerOrderId, CancellationToken ct = default);
+    Task<List<PlatformOrder>> GetByStaffAsync(Guid staffId, OrderStatus? status, int page, int pageSize, CancellationToken ct = default);
+    Task AddAsync(PlatformOrder order, CancellationToken ct = default);
+    Task UpdateAsync(PlatformOrder order, CancellationToken ct = default);
+}
+
 // ── Unit of Work ──────────────────────────────────────────────────────────────
 public interface IModule1UnitOfWork
 {
