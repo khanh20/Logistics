@@ -233,6 +233,7 @@ app.UseSwaggerUI(c =>
 app.MapGet("/healthz", () => Results.Ok(new { status = "healthy", service = "core", time = DateTime.UtcNow }));
 app.MapHealthChecks("/health");
 
+app.UseStaticFiles();
 app.UseRouting();
 app.UseCors("FE");
 app.UseAuthentication();

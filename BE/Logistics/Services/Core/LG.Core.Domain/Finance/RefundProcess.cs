@@ -16,12 +16,12 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int WalletId { get; set; }                      // Ví nhận hoàn tiền
+        public Guid WalletId { get; set; }                      // Ví nhận hoàn tiền
 
-        public int? TriggeredBy { get; set; }                  // Nhân viên khởi tạo hoàn tiền
+        public Guid? TriggeredBy { get; set; }                  // Nhân viên khởi tạo hoàn tiền
 
         public RefundReasonEnum? Reason { get; set; }           // Lý do hoàn tiền
 
@@ -30,7 +30,7 @@ namespace LG.Core.Domain.Finance
         public string ReferenceType { get; set; }               // Loại đối tượng liên quan (VD: Order, ...)
 
         [Required]
-        public int ReferenceId { get; set; }                   // ID đối tượng liên quan
+        public Guid ReferenceId { get; set; }                   // ID đối tượng liên quan
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]
@@ -49,12 +49,12 @@ namespace LG.Core.Domain.Finance
         [Required]
         public RefundStatusEnum Status { get; set; } = RefundStatusEnum.Pending; // Trạng thái hoàn tiền
 
-        public int? WalletTransactionId { get; set; }         // Giao dịch ví tương ứng khi hoàn thành
+        public Guid? WalletTransactionId { get; set; }         // Giao dịch ví tương ứng khi hoàn thành
 
         public DateTime? RefundedAt { get; set; }              // Thời điểm hoàn tiền thành công
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }
 

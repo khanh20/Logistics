@@ -16,13 +16,13 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int WalletId { get; set; }                      // Ví bị khóa tiền
+        public Guid WalletId { get; set; }                      // Ví bị khóa tiền
 
         [Required]
-        public int OrderId { get; set; }                       // Đơn hàng liên quan (FK → customer_orders)
+        public Guid OrderId { get; set; }                       // Đơn hàng liên quan (FK → customer_orders)
 
         [Required]
         public PaymentLockTypeEnum LockType { get; set; }       // Loại khóa: Đặt cọc hoặc Thanh toán cuối
@@ -42,8 +42,8 @@ namespace LG.Core.Domain.Finance
         public ReleaseReasonEnum? ReleaseReason { get; set; }  // Lý do giải phóng tiền
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

@@ -21,7 +21,7 @@ function createClient(baseURL: string) {
         window.location.href = "/login";
       }
       return Promise.reject(err.response?.data ?? err);
-    }
+    },
   );
 
   return client;
@@ -29,10 +29,10 @@ function createClient(baseURL: string) {
 
 // Auth service — port 7237
 export const authClient = createClient(
-  import.meta.env.VITE_AUTH_API_URL ?? "https://localhost:7237"
+  import.meta.env.VITE_AUTH_API_URL ?? "https://localhost:7237",
 );
 
 // Module1 service — port 7167
 export const apiModule1Client = createClient(
-  import.meta.env.VITE_MODULE1_API_URL ?? "https://localhost:7167"
+  import.meta.env.VITE_MODULE1_API_URL ?? "https://localhost:7167",
 );

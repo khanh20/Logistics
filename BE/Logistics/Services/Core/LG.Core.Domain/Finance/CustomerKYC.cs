@@ -16,10 +16,10 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int CustomerId { get; set; }
+        public Guid CustomerId { get; set; }
 
         public KycLevel KycLevel { get; set; } = KycLevel.None; // Mức độ KYC (None, Basic, Advanced)
 
@@ -30,6 +30,18 @@ namespace LG.Core.Domain.Finance
         public string? FullNameOnId { get; set; } // Họ tên trên giấy tờ tùy thân
 
         public DateTime? DateOfBirthOnId { get; set; } // Ngày sinh trên giấy tờ tùy thân
+
+        [MaxLength(10)]
+        public string? Gender { get; set; } // Giới tính
+
+        [MaxLength(100)]
+        public string? Nationality { get; set; } // Quốc tịch
+
+        [MaxLength(500)]
+        public string? PlaceOfOrigin { get; set; } // Quê quán
+
+        [MaxLength(500)]
+        public string? PlaceOfResidence { get; set; } // Nơi thường trú
 
         [MaxLength(500)]
         public string? IdFrontUrl { get; set; } // URL ảnh mặt trước giấy tờ tùy thân
@@ -47,15 +59,15 @@ namespace LG.Core.Domain.Finance
 
         public string? RejectionReason { get; set; } // Lý do từ chối (nếu trạng thái là Rejected)
 
-        public int? ReviewedBy { get; set; } // ID người duyệt hồ sơ KYC (nếu đã được duyệt hoặc từ chối)
+        public Guid? ReviewedBy { get; set; } // ID người duyệt hồ sơ KYC (nếu đã được duyệt hoặc từ chối)
 
         public DateTime? ReviewedAt { get; set; } // Thời điểm duyệt hồ sơ KYC (nếu đã được duyệt hoặc từ chối) 
 
         public DateTime? KycExpiresAt { get; set; } // Thời điểm hết hạn KYC (nếu có, dùng để yêu cầu khách hàng cập nhật lại thông tin KYC sau một khoảng thời gian)
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
 
 
     }

@@ -15,7 +15,7 @@ namespace LG.Core.Domain.Finance
     public class BankAccount : ICreatedBy
     {
         [Key]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         [MaxLength(100)]
@@ -38,9 +38,14 @@ namespace LG.Core.Domain.Finance
 
         public WebhookServiceEnum? WebhookService { get; set; } // Dịch vụ webhook nhận biến động số dư
 
+        [Required]
+        public BankAccountType Type { get; set; } = BankAccountType.System; // Loại tài khoản (System vs Customer)
+
+        public Guid? UserId { get; set; } // Liên kết với User (nếu Type = Customer)
+
         public bool IsActive { get; set; } = true;             // Tài khoản đang hoạt động
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }

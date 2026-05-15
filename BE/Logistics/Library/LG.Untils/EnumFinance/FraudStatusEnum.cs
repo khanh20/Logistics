@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,9 +8,9 @@ namespace LG.Untils.EnumFinance
 {
     public enum FraudStatusEnum
     {
-        Open,
-        Investigating,
-        Confirmed,
-        FalsePositive
+        Open = 1,
+        Investigating = 2,
+        Confirmed = 3,
+        FalsePositive = 4
     }
 }

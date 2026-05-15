@@ -15,7 +15,7 @@ namespace LG.Core.Domain.Finance
     public class BankWebhookLog : ICreatedBy
     {
         [Key]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         public int BankAccountId { get; set; }                 // Tài khoản ngân hàng nhận webhook
@@ -37,14 +37,14 @@ namespace LG.Core.Domain.Finance
 
         public DateTime? TransactionDate { get; set; }         // Thời điểm giao dịch theo ngân hàng
 
-        public int? MatchedTopupId { get; set; }              // Yêu cầu nạp tiền được khớp (nếu có)
+        public Guid? MatchedTopupId { get; set; }              // Yêu cầu nạp tiền được khớp (nếu có)
 
         public WebhookProcessingStatusEnum? ProcessingStatus { get; set; } // Trạng thái xử lý webhook
 
         public DateTime? ProcessedAt { get; set; }            // Thời điểm xử lý xong
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }
 

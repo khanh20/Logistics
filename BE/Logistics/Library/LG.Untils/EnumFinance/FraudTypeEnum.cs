@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,11 +8,11 @@ namespace LG.Untils.EnumFinance
 {
     public enum FraudTypeEnum
     {
-        MultipleTopupCancel,
-        SuspiciousWithdraw,
-        AccountTakeover,
-        ReferralAbuse,
-        VelocityAbuse,
-        Other
+        MultipleTopupCancel = 1,
+        SuspiciousWithdraw = 2,
+        AccountTakeover = 3,
+        ReferralAbuse = 4,
+        VelocityAbuse = 5,
+        Other = 6
     }
 }

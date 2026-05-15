@@ -14,15 +14,15 @@ namespace LG.Core.Domain.Finance
     public class FeeRule : ICreatedBy
     {
         [Key]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         [MaxLength(100)]
         public string Name { get; set; }                        // Tên bộ quy tắc phí
 
-        public int? VipTierId { get; set; }                    // Áp dụng riêng cho hạng VIP (null = tất cả)
+        public Guid? VipTierId { get; set; }                    // Áp dụng riêng cho hạng VIP (null = tất cả)
 
-        public int? PlatformId { get; set; }                   // Áp dụng riêng cho nền tảng (null = tất cả)
+        public Guid? PlatformId { get; set; }                   // Áp dụng riêng cho nền tảng (null = tất cả)
 
         [Required]
         [Column(TypeName = "decimal(5,4)")]
@@ -63,6 +63,6 @@ namespace LG.Core.Domain.Finance
         public DateOnly? EffectiveTo { get; set; }              // Ngày kết thúc (null = không giới hạn)
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }

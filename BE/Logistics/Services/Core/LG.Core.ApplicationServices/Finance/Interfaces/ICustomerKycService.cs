@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using LG.Core.ApplicationServices.Finance.DTOs.Customer;
-using LG.Core.ApplicationServices.Finance.OCR;
+using Microsoft.AspNetCore.Http;
 
 namespace LG.Core.ApplicationServices.Finance.Interfaces
 {
@@ -12,19 +12,28 @@ namespace LG.Core.ApplicationServices.Finance.Interfaces
     public interface ICustomerKycService
     {
         /// <summary>
-        /// Đọc ảnh CCCD mặt trước bằng OCR và trả về dữ liệu đã trích xuất
-        /// (chưa lưu vào DB — để FE preview và xác nhận)
+        /// Đọc ảnh CCCD mặt trước bằng OCR và trả về dữ liệu đã trích xuất, đồng thời lưu cả 2 ảnh
         /// </summary>
-        Task<CccdOcrResult> ScanCccdAsync(Stream frontImageStream);
+        Task<ScanIDResult> ScanCccdAsync(IFormFile frontImage, IFormFile? backImage);
 
         /// <summary>
-        /// Lấy thông tin KYC hiện tại của customer
+        /// Lấy KYC theo customerId (Id của CustomerProfile)
         /// </summary>
-        Task<CustomerKycDto?> GetKycAsync(int customerId);
+        Task<CustomerKycDto?> GetKycAsync(Guid customerId);
 
         /// <summary>
-        /// Cập nhật/tạo mới KYC của customer từ dữ liệu đã review
+        /// Lấy KYC theo userId (Id của User trong Auth service — từ JWT sub claim)
         /// </summary>
-        Task<CustomerKycDto> SubmitKycAsync(int customerId, UpdateKycFromOcrRequest request);
+        Task<CustomerKycDto?> GetKycByUserIdAsync(Guid userId);
+
+        /// <summary>
+        /// Submit KYC theo customerId
+        /// </summary>
+        Task<CustomerKycDto> SubmitKycAsync(Guid customerId, UpdateKycFromOcrRequest request);
+
+        /// <summary>
+        /// Submit KYC theo userId (từ JWT)
+        /// </summary>
+        Task<CustomerKycDto> SubmitKycByUserIdAsync(Guid userId, UpdateKycFromOcrRequest request);
     }
 }

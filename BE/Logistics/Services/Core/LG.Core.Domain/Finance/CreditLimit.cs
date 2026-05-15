@@ -14,10 +14,10 @@ namespace LG.Core.Domain.Finance
     public class CreditLimit : ICreatedBy, IModifiedBy
     {
         [Key]
-        public int Id { get; set; } 
+        public Guid Id { get; set; } = Guid.NewGuid(); 
 
         [Required]
-        public int CustomerId { get; set; }                    // Khách hàng được cấp hạn mức tín dụng (1-1)
+        public Guid CustomerId { get; set; }                    // Khách hàng được cấp hạn mức tín dụng (1-1)
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]
@@ -28,7 +28,7 @@ namespace LG.Core.Domain.Finance
 
         public short DueDateDays { get; set; } = 30;          // Số ngày được nợ trước khi quá hạn
 
-        public int? GrantedBy { get; set; }                   // Nhân viên cấp hạn mức tín dụng
+        public Guid? GrantedBy { get; set; }                   // Nhân viên cấp hạn mức tín dụng
 
         [Required]
         public DateTime GrantedAt { get; set; }                // Thời điểm cấp hạn mức
@@ -38,8 +38,8 @@ namespace LG.Core.Domain.Finance
         public bool IsActive { get; set; } = true;            // Hạn mức có đang hiệu lực không
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

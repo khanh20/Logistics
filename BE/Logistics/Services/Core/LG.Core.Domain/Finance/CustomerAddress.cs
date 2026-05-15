@@ -1,4 +1,4 @@
-using LG.Core.Domain.finance;
+using LG.Core.Domain.Finance;
 using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
@@ -15,10 +15,10 @@ namespace LG.Core.Domain.Finance
     public class CustomerAddress : ICreatedBy, IModifiedBy, ISoftDelted
     {
         [Key]
-        public int Id { get; set; } 
+        public Guid Id { get; set; } = Guid.NewGuid(); 
 
         [Required]
-        public int CustomerId { get; set; }
+        public Guid CustomerId { get; set; }
 
         [MaxLength(100)]
         public string? Label { get; set; } // Nhãn địa chỉ (VD: Nhà riêng, Công ty, ...)
@@ -48,10 +48,10 @@ namespace LG.Core.Domain.Finance
         public bool IsActive { get; set; } = true; // Địa chỉ có đang được sử dụng hay không
         public DateTime? DeletedDate { get; set; }
         public bool Deleted { get; set; }
-        public int? DeletedBy { get; set; }
+        public Guid? DeletedBy { get; set; }
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

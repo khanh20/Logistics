@@ -15,10 +15,10 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int CustomerId { get; set; }                    // Khách hàng sở hữu ví (1-1)
+        public Guid CustomerId { get; set; }                    // Khách hàng sở hữu ví (1-1)
 
         [Required]
         [MaxLength(3)]
@@ -50,8 +50,8 @@ namespace LG.Core.Domain.Finance
         public string? FrozenReason { get; set; }              // Lý do đóng băng ví
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

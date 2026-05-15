@@ -1,4 +1,3 @@
-﻿using LG.Core.Domain.finance;
 using LG.Core.Domain.Finance;
 using LG.InfrastructureBase;
 using Microsoft.AspNetCore.Http;
@@ -22,7 +21,7 @@ namespace LG.Core.Infrastructure
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
         public DbSet<VipTier> VipTiers { get; set; }
         public DbSet<RefundProcess> RefundProcesses { get; set; }
-        public DbSet<ZaloNotification> ZaloNotifications { get; set; }
+        public DbSet<EmailNotification> EmailNotifications { get; set; }
         public DbSet<WithdrawRequest> WithdrawRequests { get; set; }
         public DbSet<TopupRequest> TopupRequests { get; set; }
         public DbSet<PlatformReconcile> PlatformReconcile { get; set; }

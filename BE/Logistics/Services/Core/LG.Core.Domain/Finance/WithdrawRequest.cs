@@ -16,13 +16,13 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int WalletId { get; set; }                      // Ví bị trừ tiền
+        public Guid WalletId { get; set; }                      // Ví bị trừ tiền
 
         [Required]
-        public int CustomerId { get; set; }                    // Khách hàng yêu cầu rút tiền
+        public Guid CustomerId { get; set; }                    // Khách hàng yêu cầu rút tiền
 
         [Required]
         [MaxLength(100)]
@@ -52,18 +52,18 @@ namespace LG.Core.Domain.Finance
 
         public string? RejectedReason { get; set; }           // Lý do từ chối (nếu có)
 
-        public int? ApprovedBy { get; set; }                 // Nhân viên phê duyệt
+        public Guid? ApprovedBy { get; set; }                 // Nhân viên phê duyệt
 
         [MaxLength(100)]
         public string? TransferRef { get; set; }              // Mã tham chiếu chuyển khoản ngân hàng
 
         public DateTime? ProcessedAt { get; set; }            // Thời điểm xử lý hoàn tất
 
-        public int? WalletTransactionId { get; set; }        // Giao dịch ví tương ứng
+        public Guid? WalletTransactionId { get; set; }        // Giao dịch ví tương ứng
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

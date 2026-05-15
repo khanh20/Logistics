@@ -16,13 +16,13 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int WalletId { get; set; }                      // Ví liên quan đến hành vi gian lận
+        public Guid WalletId { get; set; }                      // Ví liên quan đến hành vi gian lận
 
         [Required]
-        public int CustomerId { get; set; }                    // Khách hàng bị phát hiện gian lận
+        public Guid CustomerId { get; set; }                    // Khách hàng bị phát hiện gian lận
 
         public FraudTypeEnum? FraudType { get; set; }           // Loại gian lận phát hiện được
 
@@ -38,15 +38,15 @@ namespace LG.Core.Domain.Finance
         [Required]
         public FraudStatusEnum Status { get; set; } = FraudStatusEnum.Open; // Trạng thái xử lý
 
-        public int? ReviewedBy { get; set; }                  // Nhân viên xem xét vụ việc
+        public Guid? ReviewedBy { get; set; }                  // Nhân viên xem xét vụ việc
 
         public DateTime? ReviewedAt { get; set; }              // Thời điểm xem xét
 
         public string? ResolutionNote { get; set; }            // Kết luận sau xem xét
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

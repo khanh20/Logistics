@@ -15,7 +15,7 @@ namespace LG.InfrastructureBase
     public class ApplicationDbContext : DbContext
     {
         protected readonly IHttpContextAccessor _httpContextAccessor = null!;
-        protected readonly int? UserId = null;
+        protected readonly Guid? UserId = null;
 
         public ApplicationDbContext()
         {
@@ -28,8 +28,8 @@ namespace LG.InfrastructureBase
             if (_httpContextAccessor != null)
             {
                 var claims = _httpContextAccessor.HttpContext?.User?.Identity as ClaimsIdentity;
-                var claim = claims?.FindFirst("user_id");
-                if (claim != null && int.TryParse(claim.Value, out int userId))
+                var claim = claims?.FindFirst(ClaimTypes.NameIdentifier) ?? claims?.FindFirst("sub") ?? claims?.FindFirst("user_id");
+                if (claim != null && Guid.TryParse(claim.Value, out Guid userId))
                 {
                     UserId = userId;
                 }

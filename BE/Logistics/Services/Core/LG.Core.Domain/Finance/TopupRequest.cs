@@ -16,13 +16,13 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int WalletId { get; set; }                      // Ví nhận tiền nạp
+        public Guid WalletId { get; set; }                      // Ví nhận tiền nạp
 
         [Required]
-        public int BankAccountId { get; set; }                 // Tài khoản ngân hàng đích để chuyển vào
+        public Guid BankAccountId { get; set; }                 // Tài khoản ngân hàng đích để chuyển vào
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]
@@ -48,11 +48,11 @@ namespace LG.Core.Domain.Finance
         [Required]
         public DateTime ExpiresAt { get; set; }                // Thời điểm hết hạn yêu cầu nạp
 
-        public int? WalletTransactionId { get; set; }         // Giao dịch ví được tạo khi nạp thành công
+        public Guid? WalletTransactionId { get; set; }         // Giao dịch ví được tạo khi nạp thành công
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

@@ -4,8 +4,8 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.Customer
 {
     public class CustomerKycDto
     {
-        public int Id { get; set; }
-        public int CustomerId { get; set; }
+        public Guid Id { get; set; }
+        public Guid CustomerId { get; set; }
 
         /// <summary>Số CCCD/CMND/Hộ chiếu</summary>
         public string? IdNumber { get; set; }
@@ -15,6 +15,11 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.Customer
 
         /// <summary>Ngày sinh trên giấy tờ</summary>
         public DateTime? DateOfBirthOnId { get; set; }
+
+        public string? Gender { get; set; }
+        public string? Nationality { get; set; }
+        public string? PlaceOfOrigin { get; set; }
+        public string? PlaceOfResidence { get; set; }
 
         /// <summary>URL ảnh mặt trước</summary>
         public string? IdFrontUrl { get; set; }
@@ -50,6 +55,11 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.Customer
 
         /// <summary>Ngày sinh đọc từ OCR</summary>
         public DateTime? DateOfBirthOnId { get; set; }
+
+        public string? Gender { get; set; }
+        public string? Nationality { get; set; }
+        public string? PlaceOfOrigin { get; set; }
+        public string? PlaceOfResidence { get; set; }
 
         /// <summary>URL ảnh mặt trước đã upload (nếu có)</summary>
         public string? IdFrontUrl { get; set; }

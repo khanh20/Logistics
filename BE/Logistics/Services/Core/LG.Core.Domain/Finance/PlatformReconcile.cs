@@ -16,16 +16,16 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         public DateOnly ReconcileDate { get; set; }             // Ngày đối soát
 
         [Required]
-        public int PlatformId { get; set; }                    // Nền tảng mua hàng (VD: Taobao, 1688, ...)
+        public Guid PlatformId { get; set; }                    // Nền tảng mua hàng (VD: Taobao, 1688, ...)
 
         [Required]
-        public int PlatformAccountId { get; set; }            // Tài khoản nền tảng sử dụng để mua
+        public Guid PlatformAccountId { get; set; }            // Tài khoản nền tảng sử dụng để mua
 
         [Required]
         [Column(TypeName = "decimal(12,2)")]
@@ -50,11 +50,11 @@ namespace LG.Core.Domain.Finance
 
         public string? Notes { get; set; }                     // Ghi chú thêm
 
-        public int? ReconciledBy { get; set; }               // Nhân viên thực hiện đối soát
+        public Guid? ReconciledBy { get; set; }               // Nhân viên thực hiện đối soát
 
         public DateTime? ReconciledAt { get; set; }           // Thời điểm hoàn tất đối soát
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }

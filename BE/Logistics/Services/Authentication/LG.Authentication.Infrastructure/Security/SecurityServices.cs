@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using LG.Authentication.Domain.Entities;
+using LG.Shared.Constants;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -49,13 +50,13 @@ public class TokenService(IConfiguration config) : ITokenService
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new("userId",   user.Id.ToString()),
-            new("email",    user.Email),
-            new("fullName", user.FullName),
+            new(UserClaimTypes.UserId,   user.Id.ToString()),
+            new(UserClaimTypes.Email,    user.Email),
+            new(UserClaimTypes.Fullname, user.FullName)
         };
 
-        claims.AddRange(roles.Select(r       => new Claim(ClaimTypes.Role, r)));
-        claims.AddRange(permissions.Select(p => new Claim("permission", p)));
+        claims.AddRange(roles.Select(r       => new Claim(UserClaimTypes.Role, r)));
+        claims.AddRange(permissions.Select(p => new Claim(UserClaimTypes.Permission, p)));
 
         var token = new JwtSecurityToken(
             issuer:            config["Jwt:Issuer"],

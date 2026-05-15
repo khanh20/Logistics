@@ -15,13 +15,13 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int WalletId { get; set; }                      // Ví thực hiện giao dịch
+        public Guid WalletId { get; set; }                      // Ví thực hiện giao dịch
 
         [Required]
-        public int TypeId { get; set; }                        // Loại giao dịch (FK → TransactionType)
+        public Guid TypeId { get; set; }                        // Loại giao dịch (FK → TransactionType)
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]
@@ -40,12 +40,12 @@ namespace LG.Core.Domain.Finance
         public string ReferenceType { get; set; }               // Loại đối tượng liên quan (VD: Order, Topup, ...)
 
         [Required]
-        public int ReferenceId { get; set; }                   // ID đối tượng liên quan
+        public Guid ReferenceId { get; set; }                   // ID đối tượng liên quan
 
         [MaxLength(500)]
         public string? Note { get; set; }                       // Ghi chú giao dịch
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }

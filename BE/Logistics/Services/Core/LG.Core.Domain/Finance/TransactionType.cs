@@ -1,4 +1,4 @@
-﻿using LG.EntitiesBase;
+using LG.EntitiesBase;
 using LG.Shared.Constants.Common.Database;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ namespace LG.Core.Domain.Finance
     public class TransactionType : ICreatedBy
     {
         [Key]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         [MaxLength(50)]
@@ -30,7 +30,7 @@ namespace LG.Core.Domain.Finance
         public bool IsReversible { get; set; } = false;        // Có thể hoàn tác không
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }
 

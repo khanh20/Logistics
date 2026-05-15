@@ -14,15 +14,15 @@ namespace LG.Core.Domain.Finance
     public class DebtRecord : ICreatedBy, IModifiedBy
     {
         [Key]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int CustomerId { get; set; }                    // Khách hàng mang nợ
+        public Guid CustomerId { get; set; }                    // Khách hàng mang nợ
 
         [Required]
-        public int CreditLimitId { get; set; }                 // Hạn mức tín dụng liên quan
+        public Guid CreditLimitId { get; set; }                 // Hạn mức tín dụng liên quan
 
-        public int? LinkedOrderId { get; set; }               // Đơn hàng phát sinh khoản nợ
+        public Guid? LinkedOrderId { get; set; }               // Đơn hàng phát sinh khoản nợ
 
         [Required]
         [Column(TypeName = "decimal(18,0)")]
@@ -42,8 +42,8 @@ namespace LG.Core.Domain.Finance
         public DateOnly? OverdueSince { get; set; }           // Ngày bắt đầu quá hạn
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

@@ -10,23 +10,23 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LG.Core.Domain.finance
+namespace LG.Core.Domain.Finance
 {
 
     [Table(nameof(CustomerProfile), Schema = DbSchemas.LGFinance)]
     public class CustomerProfile : ICreatedBy, IModifiedBy, ISoftDelted
     {
         [Key]
-        public int Id { get; set; } 
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int UserId { get; set; }
+        public Guid UserId { get; set; }
 
         [Required]
         [MaxLength(30)]
         public string CustomerCode { get; set; }
 
-        public int? VipTierId { get; set; }
+        public Guid? VipTierId { get; set; }
 
         [Required]
         [MaxLength(255)]
@@ -36,7 +36,7 @@ namespace LG.Core.Domain.finance
 
         public Gender? Gender { get; set; }
 
-        public PreferredChannel PreferredChannel { get; set; } = PreferredChannel.Zalo;
+        public PreferredChannel PreferredChannel { get; set; } = PreferredChannel.Email;
 
         [MaxLength(100)]
         public string? ZaloUserId { get; set; }
@@ -44,7 +44,7 @@ namespace LG.Core.Domain.finance
         [MaxLength(20)]
         public string? ReferralCode { get; set; }
 
-        public int? ReferredById { get; set; }
+        public Guid? ReferredById { get; set; } 
 
         public decimal LifetimeValueVnd { get; set; } = 0;
 
@@ -52,10 +52,10 @@ namespace LG.Core.Domain.finance
 
         public DateTime? DeletedDate { get; set; }
         public bool Deleted { get; set; }
-        public int? DeletedBy { get; set; }
+        public Guid? DeletedBy { get; set; }
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
         public DateTime? ModifiedDate { get; set; }
-        public int? ModifiedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

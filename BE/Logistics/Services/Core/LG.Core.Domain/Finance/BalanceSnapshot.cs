@@ -14,8 +14,7 @@ namespace LG.Core.Domain.Finance
     public class BalanceSnapshot : ICreatedBy
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         public DateOnly SnapshotDate { get; set; }              // Ngày chụp snapshot (duy nhất)
@@ -43,13 +42,13 @@ namespace LG.Core.Domain.Finance
 
         public bool IsReconciled { get; set; } = false;       // Đã được đối soát chưa
 
-        public int? ReconciledBy { get; set; }               // Nhân viên thực hiện đối soát
+        public Guid? ReconciledBy { get; set; }               // Nhân viên thực hiện đối soát
 
         [Required]
         public DateTime SnapshotAt { get; set; }              // Thời điểm chính xác khi chụp snapshot
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }
 

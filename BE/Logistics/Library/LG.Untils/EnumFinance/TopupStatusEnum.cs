@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,9 +8,9 @@ namespace LG.Untils.EnumFinance
 {
     public enum TopupStatusEnum
     {
-        Pending,
-        Matched,
-        Expired,
-        Cancelled
+        Pending = 1,
+        Matched = 2,
+        Expired = 3,
+        Cancelled = 4
     }
 }

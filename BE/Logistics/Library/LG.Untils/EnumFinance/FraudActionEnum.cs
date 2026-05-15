@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,9 +8,9 @@ namespace LG.Untils.EnumFinance
 {
     public enum FraudActionEnum
     {
-        Flag,
-        FreezeWallet,
-        BlockWithdraw,
-        ManualReview
+        Flag = 1,
+        FreezeWallet = 2,
+        BlockWithdraw = 3,
+        ManualReview = 4
     }
 }

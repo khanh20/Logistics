@@ -8,8 +8,8 @@ namespace LG.Untils.EnumFinance
 {
     public enum KycStatus
     {
-        Pending = 0,
-        Approved = 1,
-        Rejected = 2
+        Pending = 1,
+        Approved = 2,
+        Rejected = 3
     }
 }

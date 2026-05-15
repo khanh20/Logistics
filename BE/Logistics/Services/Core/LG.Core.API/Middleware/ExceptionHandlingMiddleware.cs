@@ -1,13 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using LG.Core.Domain.Exceptions;
 using LG.Shared.Constants;
+using LG.ApplicationBase.MapError;
 using Microsoft.AspNetCore.Diagnostics;
 using ValidationException = LG.Core.Domain.Exceptions.ValidationException;
 
 namespace LG.Core.API.Middleware;
 
-public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger, IMapErrorCode mapErrorCode)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
@@ -27,6 +28,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
     {
         var (status, code, message) = ex switch
         {
+            CoreException e => (e.StatusCode, mapErrorCode.GetErrorMessageKey(e.ErrorCode), mapErrorCode.GetErrorMessage(e.ErrorCode)),
             NotFoundException e => (404, e.Code, e.Message),
             ConflictException e => (409, e.Code, e.Message),
             ValidationException e => (400, e.Code, e.Message),

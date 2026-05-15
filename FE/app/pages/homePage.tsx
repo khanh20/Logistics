@@ -6,7 +6,7 @@ import { ETableColumnType } from "~/shared/constants/e-table.consts";
 import { ReduxStatus } from "~/shared/redux-status";
 
 export default function HomePage() {
-  const status = ReduxStatus.IDLE;
+  const status = ReduxStatus.LOADING;
   const columns: IColumn<IViewGuestGroup>[] = [
     {
       key: "code",

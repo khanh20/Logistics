@@ -15,7 +15,7 @@ namespace LG.Core.Domain.Finance
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         [MaxLength(50)]
@@ -47,6 +47,6 @@ namespace LG.Core.Domain.Finance
         public string? ColorHex { get; set; }               // Màu hiển thị hạng (mã HEX)
 
         public DateTime? CreatedDate { get; set; }
-        public int? CreatedBy { get; set; }
+        public Guid? CreatedBy { get; set; }
     }
 }

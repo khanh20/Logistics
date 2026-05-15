@@ -24,14 +24,12 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.BalanceSnapshot", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -39,8 +37,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<bool>("IsReconciled")
                         .HasColumnType("boolean");
 
-                    b.Property<int?>("ReconciledBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ReconciledBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("SnapshotAt")
                         .HasColumnType("timestamp with time zone");
@@ -73,11 +71,9 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.BankAccount", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AccountHolder")
                         .IsRequired()
@@ -103,14 +99,20 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("WebhookService")
                         .HasColumnType("integer");
@@ -122,11 +124,9 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.BankWebhookLog", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<decimal?>("AmountVnd")
                         .HasColumnType("decimal(18,0)");
@@ -138,8 +138,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -149,8 +149,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int?>("MatchedTopupId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("MatchedTopupId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ProcessedAt")
                         .HasColumnType("timestamp with time zone");
@@ -175,14 +175,12 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.CreditLimit", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -190,8 +188,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("CurrentDebtVnd")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
 
                     b.Property<short>("DueDateDays")
                         .HasColumnType("smallint");
@@ -202,8 +200,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime>("GrantedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("GrantedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("GrantedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -211,8 +209,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("MaxCreditVnd")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
@@ -224,30 +222,28 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.CustomerAddress", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AddressLine")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("Deleted")
                         .HasColumnType("boolean");
 
-                    b.Property<int?>("DeletedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("DeletedDate")
                         .HasColumnType("timestamp with time zone");
@@ -266,8 +262,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
@@ -297,20 +293,18 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.CustomerKYC", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("DateOfBirthOnId")
                         .HasColumnType("timestamp with time zone");
@@ -318,6 +312,10 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<string>("FullNameOnId")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
 
                     b.Property<string>("IdBackUrl")
                         .HasMaxLength(500)
@@ -337,11 +335,23 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int>("KycLevel")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Nationality")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PlaceOfOrigin")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("PlaceOfResidence")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("RejectionReason")
                         .HasColumnType("text");
@@ -349,8 +359,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("ReviewedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("SelfieUrl")
                         .HasMaxLength(500)
@@ -368,13 +378,85 @@ namespace LG.Core.Infrastructure.Migrations
                     b.ToTable("CustomerKYC", "finance");
                 });
 
-            modelBuilder.Entity("LG.Core.Domain.Finance.DailyRevenueReport", b =>
+            modelBuilder.Entity("LG.Core.Domain.Finance.CustomerProfile", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomerCode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("Gender")
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<decimal>("LifetimeValueVnd")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PreferredChannel")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReferralCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("ReferredById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalOrders")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("VipTierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ZaloUserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CustomerProfile", "finance");
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.DailyRevenueReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -425,23 +507,21 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.DebtRecord", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CreditLimitId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CreditLimitId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("DebtAmountVnd")
                         .HasColumnType("decimal(18,0)");
@@ -455,11 +535,11 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<bool>("IsPaid")
                         .HasColumnType("boolean");
 
-                    b.Property<int?>("LinkedOrderId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("LinkedOrderId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
@@ -478,16 +558,68 @@ namespace LG.Core.Infrastructure.Migrations
                     b.ToTable("DebtRecord", "finance");
                 });
 
+            modelBuilder.Entity("LG.Core.Domain.Finance.EmailNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CreatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DeliveryStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MessageId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TemplateData")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("TemplateType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ToEmail")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EmailNotification", "finance");
+                });
+
             modelBuilder.Entity("LG.Core.Domain.Finance.FeeRule", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -530,8 +662,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("PlatformId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("PlatformId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("ServiceFeePct")
                         .HasColumnType("decimal(5,4)");
@@ -539,8 +671,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("StorageDailyPerKgVnd")
                         .HasColumnType("decimal(10,0)");
 
-                    b.Property<int?>("VipTierId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("VipTierId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -549,23 +681,21 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.FraudDetection", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Action")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("EvidenceJson")
                         .HasColumnType("text");
@@ -573,8 +703,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int?>("FraudType")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
@@ -585,8 +715,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("ReviewedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("RiskScore")
                         .HasColumnType("decimal(5,2)");
@@ -594,8 +724,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<int>("WalletId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -604,14 +734,12 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.PaymentLock", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -625,14 +753,14 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("LockedAmountVnd")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("OrderId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("ReleaseReason")
                         .HasColumnType("integer");
@@ -643,8 +771,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<int>("WalletId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -653,11 +781,9 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.PlatformReconcile", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AlipayStatementUrl")
                         .HasMaxLength(500)
@@ -666,8 +792,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("CnySpent")
                         .HasColumnType("decimal(12,2)");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -675,11 +801,11 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
-                    b.Property<int>("PlatformAccountId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("PlatformAccountId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("PlatformId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("PlatformId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateOnly>("ReconcileDate")
                         .HasColumnType("date");
@@ -687,8 +813,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("ReconciledAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("ReconciledBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ReconciledBy")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("ServiceFeeCollectedVnd")
                         .HasColumnType("decimal(18,0)");
@@ -709,14 +835,12 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.RefundProcess", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -736,8 +860,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int?>("Reason")
                         .HasColumnType("integer");
 
-                    b.Property<int>("ReferenceId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ReferenceType")
                         .IsRequired()
@@ -750,14 +874,14 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("TriggeredBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("TriggeredBy")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("WalletId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int?>("WalletTransactionId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("WalletTransactionId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -766,11 +890,9 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.TopupRequest", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("AmountVnd")
                         .HasColumnType("decimal(18,0)");
@@ -778,11 +900,11 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<bool>("AutoMatched")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("BankAccountId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("BankAccountId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -797,8 +919,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
@@ -815,11 +937,11 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int>("WalletId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int?>("WalletTransactionId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("WalletTransactionId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -828,19 +950,17 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.TransactionType", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -863,11 +983,9 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.VipTier", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("CashbackPct")
                         .HasColumnType("decimal(5,4)");
@@ -876,8 +994,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(6)
                         .HasColumnType("character varying(6)");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -915,17 +1033,15 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.Wallet", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("AvailableBalance")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -935,8 +1051,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("FrozenBalance")
                         .HasColumnType("decimal(18,0)");
@@ -947,8 +1063,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<bool>("IsFrozen")
                         .HasColumnType("boolean");
 
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
@@ -969,11 +1085,9 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.WalletTransaction", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,0)");
@@ -984,8 +1098,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("BalanceBefore")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
@@ -994,19 +1108,19 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<int>("ReferenceId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ReferenceType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int>("TypeId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TypeId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("WalletId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -1015,11 +1129,9 @@ namespace LG.Core.Infrastructure.Migrations
 
             modelBuilder.Entity("LG.Core.Domain.Finance.WithdrawRequest", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AccountHolder")
                         .IsRequired()
@@ -1029,8 +1141,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("AmountVnd")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<int?>("ApprovedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ApprovedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("BankAccountNo")
                         .IsRequired()
@@ -1042,20 +1154,20 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("FeeVnd")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("timestamp with time zone");
@@ -1076,140 +1188,15 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int>("WalletId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int?>("WalletTransactionId")
-                        .HasColumnType("integer");
+                    b.Property<Guid?>("WalletTransactionId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.ToTable("WithdrawRequest", "finance");
-                });
-
-            modelBuilder.Entity("LG.Core.Domain.Finance.ZaloNotification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("DeliveredAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("DeliveryStatus")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("SentAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("TemplateData")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("TemplateType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ZaloMessageId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("ZaloUserId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ZaloNotification", "finance");
-                });
-
-            modelBuilder.Entity("LG.Core.Domain.finance.CustomerProfile", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CreatedBy")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("CreatedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CustomerCode")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("Deleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<int?>("DeletedBy")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<int?>("Gender")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("LifetimeValueVnd")
-                        .HasColumnType("numeric");
-
-                    b.Property<int?>("ModifiedBy")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("ModifiedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("PreferredChannel")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ReferralCode")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<int?>("ReferredById")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalOrders")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("VipTierId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ZaloUserId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("CustomerProfile", "finance");
                 });
 #pragma warning restore 612, 618
         }

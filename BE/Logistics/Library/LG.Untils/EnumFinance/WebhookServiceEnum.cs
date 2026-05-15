@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,8 +8,10 @@ namespace LG.Untils.EnumFinance
 {
     public enum WebhookServiceEnum
     {
-        Casso,
-        Sepay,
-        MbBankApi
+        Casso = 1,
+        Sepay = 2,
+        MbBankApi = 3,
+        MoMo = 4,
+        ZaloPay = 5
     }
 }

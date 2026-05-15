@@ -12,6 +12,7 @@ namespace LG.Untils.EnumFinance
         Matched,
         Unmatched,
         Error,
-        Ignored
+        Ignored,
+        Failed
     }
 }

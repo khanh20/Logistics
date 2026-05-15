@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,9 +8,9 @@ namespace LG.Untils.EnumFinance
 {
     public enum RefundStatusEnum
     {
-        Pending,
-        Processing,
-        Completed,
-        Failed
+        Pending = 1,
+        Processing = 2,
+        Completed = 3,
+        Failed = 4
     }
 }
