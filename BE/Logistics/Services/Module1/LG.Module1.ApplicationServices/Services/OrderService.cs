@@ -1,5 +1,6 @@
 using LG.Module1.ApplicationServices.DTOs.Order;
 using LG.Module1.ApplicationServices.Interfaces;
+using LG.Module1.Domain.Adapters;
 using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Exceptions;
 using LG.Module1.Domain.Repositories;
@@ -11,7 +12,7 @@ namespace LG.Module1.ApplicationServices.Services;
 public class WalletServiceStub : IWalletService
 {
     public Task<decimal> GetBalanceAsync(Guid customerId, CancellationToken ct = default)
-        => Task.FromResult(0m);   // Phase 8 sẽ call Module 3 Finance
+        => Task.FromResult(decimal.MaxValue);   // Stub: Phase 8 sẽ call Module 3 Finance
 
     public Task DeductAsync(Guid customerId, decimal amountVnd, string description, CancellationToken ct = default)
         => throw new NotImplementedException("Wallet integration is pending Phase 8.");
@@ -21,6 +22,7 @@ public class WalletServiceStub : IWalletService
 ///  Customer-facing order operations.
 public class CustomerOrderService(
     ICustomerOrderRepository      orderRepo,
+    IOrderStatusHistoryRepository historyRepo,
     IWalletService                walletService,
     IModule1UnitOfWork            uow,
     ILogger<CustomerOrderService> logger
@@ -54,6 +56,7 @@ public class CustomerOrderService(
                 throw new OrderNotFoundException(orderId);
 
             order.CancelByCustomer(req.Reason);
+            await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
             logger.LogInformation("Order {OrderCode} cancelled by customer {CustomerId}", order.OrderCode, customerId);
             return MapToDetail(order);
@@ -75,6 +78,7 @@ public class CustomerOrderService(
                 throw new InsufficientWalletException(order.DepositVnd, balance);
 
             order.MarkPaid();
+            await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
             logger.LogInformation("Order {OrderCode} deposit paid by customer {CustomerId}", order.OrderCode, customerId);
             return MapToDetail(order);
@@ -162,7 +166,9 @@ public class CustomerOrderService(
 /// Staff / Admin order management. All state transitions go through here.
 public class OrderManagementService(
     ICustomerOrderRepository        orderRepo,
+    IOrderStatusHistoryRepository   historyRepo,
     IPlatformShopRepository         shopRepo,
+    ILogisticsService               logisticsService,
     IModule1UnitOfWork              uow,
     ILogger<OrderManagementService> logger
 ) : IOrderManagementService
@@ -194,6 +200,7 @@ public class OrderManagementService(
                         ? ShopIntegrationMode.ShopifyAuto
                         : ShopIntegrationMode.Manual;
             order.AssignToStaff(staffId, mode);
+            await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
             logger.LogInformation("Order {OrderCode} assigned to staff {StaffId}", order.OrderCode, staffId);
             return CustomerOrderService.MapToDetail(order);
@@ -209,8 +216,22 @@ public class OrderManagementService(
             var po    = PlatformOrder.CreateManual(order.Id, staffId, req.PlatformOrderId, req.Note);
             order.MarkOrderedOnPlatform(staffId, req.Note);
             order.AttachPlatformOrder(po);
+            await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
             logger.LogInformation("Order {OrderCode} manually placed on platform by staff {StaffId}", order.OrderCode, staffId);
+
+            // Thông báo Module 2 tạo shipment (stub Phase 9 — không throw nếu lỗi)
+            try
+            {
+                var shipCode = await logisticsService.CreateShipmentAsync(order.Id, req.PlatformOrderId, innerCt);
+                logger.LogInformation("Logistics shipment created: {ShipCode} for order {OrderCode}", shipCode, order.OrderCode);
+            }
+            catch (Exception ex)
+            {
+                // Không fail transaction — logistics là best-effort ở Phase 9
+                logger.LogWarning(ex, "Logistics stub failed for order {OrderCode} (non-fatal)", order.OrderCode);
+            }
+
             return CustomerOrderService.MapToDetail(order);
         }, ct);
     }
@@ -224,6 +245,7 @@ public class OrderManagementService(
             order.PlatformOrder?.UpdateTracking(req.TrackingNumber, req.Carrier);
             order.MarkShippedFromShop(staffId, $"Tracking: {req.TrackingNumber} ({req.Carrier})");
             if (req.Note is not null) order.UpdateStaffNote(req.Note);
+            await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
             return CustomerOrderService.MapToDetail(order);
         }, ct);
@@ -279,6 +301,7 @@ public class OrderManagementService(
         {
             var order = await RequireOrderAsync(orderId, innerCt);
             transition(order, note);
+            await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
             logger.LogInformation("Order {OrderCode} → {Status} by staff {StaffId}",
                 order.OrderCode, order.Status, staffId);

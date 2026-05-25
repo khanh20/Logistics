@@ -103,6 +103,44 @@ public static class ForbiddenChecker
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Tính cửa sổ SLA cho một đơn hàng dựa trên giá trị và số lượng.
+/// Pure function — trả TimeSpan, KHÔNG dùng DateTime.UtcNow ở đây.
+public static class SlaCalculator
+{
+    /// Đơn giá trị cao (>= 5 triệu VND) hoặc nhiều item (>= 5): SLA 12h.
+    /// Ngược lại: SLA 24h.
+    public static TimeSpan Calculate(decimal finalAmountVnd, int itemCount)
+    {
+        bool isHighPriority = finalAmountVnd >= 5_000_000 || itemCount >= 5;
+        return isHighPriority ? TimeSpan.FromHours(12) : TimeSpan.FromHours(24);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Chọn nhân viên có workload thấp nhất để auto-assign đơn.
+/// Pure function — không inject DB context.
+public static class WorkloadBalancer
+{
+    /// <summary>
+    /// Chọn staffId có activeLoad thấp nhất. Nếu bằng nhau, ưu tiên người ít overdue nhất.
+    /// </summary>
+    /// <param name="staffLoads">Danh sách (staffId, activeLoad, overdueCount)</param>
+    /// <returns>Guid của staff được chọn, null nếu danh sách rỗng.</returns>
+    public static Guid? PickBest(IEnumerable<(Guid StaffId, int ActiveLoad, int OverdueCount)> staffLoads)
+    {
+        return staffLoads
+            .OrderBy(s => s.ActiveLoad)
+            .ThenBy(s => s.OverdueCount)
+            .Select(s => (Guid?)s.StaffId)
+            .FirstOrDefault();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /// State machine hợp lệ cho trạng thái đơn hàng.
 public static class OrderStateMachine
 {

@@ -271,28 +271,77 @@ public class ProductService(
 
             if (req.Variants?.Count > 0)
             {
-                // Xóa variants cũ trước — cần flush để FK constraint không bị conflict
-                await variantRepo.RemoveByProductAsync(product.Id, innerCt);
-                await uow.SaveChangesAsync(innerCt);   // flush delete trước khi add mới
+                // Upsert variants — KHÔNG xóa cứng vì cart_items có FK tới product_variants.
+                // Variants không còn trong list mới → MarkUnavailable (soft delete).
+                var existingVariants = await variantRepo.GetByProductAsync(product.Id, innerCt);
 
                 foreach (var vReq in req.Variants)
                 {
-                    var variant = ProductVariant.Create(
-                        product.Id, vReq.VariantName, vReq.PriceCny,
-                        vReq.SkuIdOnPlatform, vReq.TranslatedName,
-                        vReq.StockRaw, vReq.ImageUrl, vReq.SortOrder);
-                    await variantRepo.AddAsync(variant, innerCt);
+                    // Ưu tiên match theo SkuIdOnPlatform, fallback VariantName
+                    var match = existingVariants.FirstOrDefault(v =>
+                                    !string.IsNullOrEmpty(vReq.SkuIdOnPlatform)
+                                    && v.SkuIdOnPlatform == vReq.SkuIdOnPlatform)
+                                ?? existingVariants.FirstOrDefault(v =>
+                                    v.VariantName == vReq.VariantName);
 
-                    if (vReq.PriceTiers?.Count > 0)
+                    if (match is not null)
                     {
+                        // Update in-place — giữ nguyên Id, không mất FK từ cart_items
+                        match.UpdateInfo(vReq.VariantName, vReq.TranslatedName, vReq.ImageUrl, vReq.SortOrder);
+                        match.UpdatePrice(vReq.PriceCny);
+                        if (vReq.StockRaw.HasValue)
+                            match.UpdateStock(vReq.StockRaw.Value, true);
+                        else
+                            match.MarkAvailable();
+
+                        // Refresh price tiers
+                        await tierRepo.RemoveByVariantAsync(match.Id, innerCt);
                         await uow.SaveChangesAsync(innerCt);
 
-                        var tiers = vReq.PriceTiers
-                            .Select(t => ProductPriceTier.Create(
-                                variant.Id, t.MinQuantity, t.PriceCny, t.MaxQuantity))
-                            .ToList();
-                        await tierRepo.AddRangeAsync(tiers, innerCt);
-                        variant.UpdatePrice(vReq.PriceCny, tiers);
+                        if (vReq.PriceTiers?.Count > 0)
+                        {
+                            var tiers = vReq.PriceTiers
+                                .Select(t => ProductPriceTier.Create(match.Id, t.MinQuantity, t.PriceCny, t.MaxQuantity))
+                                .ToList();
+                            await tierRepo.AddRangeAsync(tiers, innerCt);
+                            match.UpdatePrice(vReq.PriceCny, tiers);
+                        }
+
+                        await variantRepo.UpdateAsync(match, innerCt);
+                    }
+                    else
+                    {
+                        // New variant
+                        var variant = ProductVariant.Create(
+                            product.Id, vReq.VariantName, vReq.PriceCny,
+                            vReq.SkuIdOnPlatform, vReq.TranslatedName,
+                            vReq.StockRaw, vReq.ImageUrl, vReq.SortOrder);
+                        await variantRepo.AddAsync(variant, innerCt);
+
+                        if (vReq.PriceTiers?.Count > 0)
+                        {
+                            await uow.SaveChangesAsync(innerCt);
+                            var tiers = vReq.PriceTiers
+                                .Select(t => ProductPriceTier.Create(variant.Id, t.MinQuantity, t.PriceCny, t.MaxQuantity))
+                                .ToList();
+                            await tierRepo.AddRangeAsync(tiers, innerCt);
+                            variant.UpdatePrice(vReq.PriceCny, tiers);
+                        }
+                    }
+                }
+
+                // Variants không còn trong request → mark unavailable (giữ FK, ẩn khỏi catalog)
+                var incomingSkus   = req.Variants.Where(v => !string.IsNullOrEmpty(v.SkuIdOnPlatform))
+                                                 .Select(v => v.SkuIdOnPlatform!).ToHashSet();
+                var incomingNames  = req.Variants.Select(v => v.VariantName).ToHashSet();
+                foreach (var old in existingVariants)
+                {
+                    bool stillPresent = (!string.IsNullOrEmpty(old.SkuIdOnPlatform) && incomingSkus.Contains(old.SkuIdOnPlatform))
+                                        || incomingNames.Contains(old.VariantName);
+                    if (!stillPresent && old.IsAvailable)
+                    {
+                        old.MarkUnavailable();
+                        await variantRepo.UpdateAsync(old, innerCt);
                     }
                 }
             }

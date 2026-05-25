@@ -1,92 +1,86 @@
 using System.ComponentModel.DataAnnotations;
-using LG.Module1.Domain.Entities;
 
 namespace LG.Module1.ApplicationServices.DTOs.Cart;
 
-// ── Responses ─────────────────────────────────────────────────────────────────
+// ── Cart display (aligned with FE types) ─────────────────────────────────────
 
 public record CartItemResponse(
-    Guid    Id,
-    Guid    ProductId,
-    Guid    VariantId,
-    Guid    ShopId,
-    string  ProductTitle,
-    string? VariantName,
-    string? ImageUrl,
-    int     Quantity,
-    decimal PriceCny,
-    decimal TotalCny
+    Guid     Id,
+    Guid     ProductId,
+    Guid     VariantId,
+    Guid     ShopId,
+    string   ShopName,
+    string   ProductTitle,
+    string?  VariantName,
+    string?  ImageUrl,
+    int      Quantity,
+    decimal  PriceCnySnapshot,
+    decimal  LineTotalCny,
+    DateTime AddedAt
 );
 
 public record CartGroupByShopResponse(
-    Guid                    ShopId,
-    string                  ShopName,
-    List<CartItemResponse>  Items,
-    decimal                 SubtotalCny
+    Guid                   ShopId,
+    string                 ShopName,
+    decimal                SubtotalCny,
+    int                    ItemCount,
+    List<CartItemResponse> Items
 );
 
 public record CartResponse(
-    Guid                         CartId,
-    Guid                         CustomerId,
-    CartStatus                   Status,
-    List<CartGroupByShopResponse> Groups,
-    decimal                      TotalCny,
-    DateTime                     UpdatedAt
+    Guid                          Id,
+    string                        Status,
+    int                           TotalItemCount,
+    decimal                       SubtotalCny,
+    DateTime                      CreatedAt,
+    List<CartGroupByShopResponse> GroupsByShop
 );
 
-// Preview trước khi checkout — tính toán chi phí theo shop
-public record CheckoutPreviewItemResponse(
-    Guid    CartItemId,
-    Guid    VariantId,
-    string  ProductTitle,
-    string? VariantName,
-    int     Quantity,
-    decimal UnitPriceCny,
-    decimal SubtotalCny
-);
+// ── Checkout preview ──────────────────────────────────────────────────────────
 
 public record CheckoutPreviewGroupResponse(
-    Guid                             ShopId,
-    string                           ShopName,
-    string                           ShopIntegrationMode,
-    bool                             ShopIsBlacklisted,
-    List<CheckoutPreviewItemResponse> Items,
-    decimal                          SubtotalCny,
-    decimal                          EstimatedDepositVnd  // = subtotalCny * rateVnd * depositPct
+    Guid    ShopId,
+    string  ShopName,
+    decimal SubtotalCny,
+    decimal SubtotalVnd,
+    int     ItemCount,
+    bool    HasForbiddenProducts,
+    List<string> Warnings
 );
 
+/// Response aligned with FE CheckoutPreviewResponse interface.
+/// serviceFeeVnd / estimatedShippingFeeVnd are stubs (Phase 8).
+/// walletBalance fields are stubs — wallet returns 0 until Phase 8.
 public record CheckoutPreviewResponse(
+    decimal                          ExchangeRateVndPerCny,
+    string                           RateAsOf,              // ISO-8601 string
     List<CheckoutPreviewGroupResponse> Groups,
-    decimal TotalCny,
-    decimal RateVndPerCny,
-    decimal DepositPct,
-    decimal TotalDepositVnd,
-    string  DepositConfigName
+    decimal                          SubtotalVnd,
+    decimal                          ServiceFeeVnd,          // stub = 0
+    decimal                          EstimatedShippingFeeVnd, // stub = 0
+    decimal                          TotalVnd,
+    decimal                          DepositVnd,
+    decimal                          RemainingPaymentVnd,
+    bool                             WalletBalanceSufficient, // stub = true
+    decimal                          WalletBalanceVnd,        // stub = 0
+    decimal                          WalletShortageVnd        // stub = 0
 );
 
-// Kết quả confirm checkout — mảng order đã tạo (1 order / shop)
-public record ConfirmCheckoutItemResponse(
-    Guid   OrderId,
-    string OrderCode,
-    Guid   ShopId,
-    string ShopName,
-    decimal TotalCny,
-    decimal DepositVnd,
-    string  Status
-);
+// ── Confirm checkout ──────────────────────────────────────────────────────────
 
+/// Response aligned with FE ConfirmCheckoutResponse interface.
 public record ConfirmCheckoutResponse(
-    List<ConfirmCheckoutItemResponse> Orders,
-    int    OrdersCreated,
-    decimal TotalDepositVnd
+    List<string> CreatedOrderIds,
+    decimal      TotalChargedFromWallet,   // stub = 0 (wallet Phase 8)
+    string       CountdownDeadline         // ISO-8601 — payment deadline
 );
 
 // ── Requests ──────────────────────────────────────────────────────────────────
 
+/// ShopId is NOT sent by the client — the service derives it from the product.
 public record AddCartItemRequest(
-    [Required] Guid    ProductId,
-    [Required] Guid    VariantId,
-    [Required] Guid    ShopId,
+    [Required] Guid     ProductId,
+    [Required] Guid     VariantId,
     [Range(1, 9999)] int Quantity
 );
 
@@ -94,14 +88,15 @@ public record UpdateCartItemQuantityRequest(
     [Range(1, 9999)] int Quantity
 );
 
+/// Client selects shops (checkboxes in cart UI).
+/// Null / empty = include all shops.
 public record CheckoutPreviewRequest(
-    /// Null = checkout tất cả item trong cart
-    List<Guid>? CartItemIds
+    List<Guid>? ShopIds,
+    string?     DeliveryAddressNote
 );
 
 public record ConfirmCheckoutRequest(
-    /// Null = checkout tất cả
-    List<Guid>? CartItemIds,
-    /// Address id hoặc inline address text (Phase 8)
-    string? DeliveryAddressNote
+    List<Guid>? ShopIds,
+    string?     DeliveryAddressNote,
+    string?     CustomerNote
 );

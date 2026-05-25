@@ -386,3 +386,21 @@ public class OrderFeeDetailConfig : IEntityTypeConfiguration<OrderFeeDetail>
         b.Property(x => x.Note).HasMaxLength(500);
     }
 }
+
+public class StaffAssignmentConfig : IEntityTypeConfiguration<StaffAssignment>
+{
+    public void Configure(EntityTypeBuilder<StaffAssignment> b)
+    {
+        b.ToTable("staff_assignments");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Note).HasMaxLength(500);
+
+        // Index cho job query: tìm pending-expired, query by staff, query overdue
+        b.HasIndex(x => x.OrderId);
+        b.HasIndex(x => x.StaffId);
+        b.HasIndex(x => new { x.SlaDeadline, x.CompletedAt });
+
+        b.HasOne(x => x.Order).WithMany()
+         .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

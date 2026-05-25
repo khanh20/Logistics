@@ -229,10 +229,9 @@ public class ProductRepository(Module1DbContext db) : IProductRepository
               .ThenInclude(v => v.PriceTiers.OrderBy(t => t.MinQuantity))
           .FirstOrDefaultAsync(x => x.Slug == slug.ToLowerInvariant() && x.IsActive, ct);
 
-    public Task<ProductMaster?> GetByPlatformProductIdAsync(Guid platformId, string platformProductId, CancellationToken ct = default) =>
+    public Task<ProductMaster?> GetByPlatformProductIdAsync(Guid shopId, string platformProductId, CancellationToken ct = default) =>
         db.ProductMasters
-          .Include(x => x.Shop)
-          .FirstOrDefaultAsync(x => x.Shop.PlatformId == platformId
+          .FirstOrDefaultAsync(x => x.ShopId == shopId
                                     && x.PlatformProductId == platformProductId, ct);
 
     public async Task<(List<ProductMaster> Items, int TotalCount)> SearchAsync(
@@ -451,10 +450,11 @@ public class CartRepository(Module1DbContext db) : ICartRepository
 
     public async Task AddAsync(Cart cart, CancellationToken ct = default) =>
         await db.Carts.AddAsync(cart, ct);
-
+ 
     public Task UpdateAsync(Cart cart, CancellationToken ct = default)
     {
-        db.Carts.Update(cart);
+        if (db.Entry(cart).State == EntityState.Detached)
+            db.Carts.Update(cart);
         return Task.CompletedTask;
     }
 
@@ -462,6 +462,28 @@ public class CartRepository(Module1DbContext db) : ICartRepository
     {
         var ids = itemIds.ToList();
         return db.CartItems.Where(i => i.CartId == cartId && ids.Contains(i.Id)).ToListAsync(ct);
+    }
+}
+
+// ── CartItem ──────────────────────────────────────────────────────────────────
+public class CartItemRepository(Module1DbContext db) : ICartItemRepository
+{
+    public async Task AddAsync(CartItem item, CancellationToken ct = default)
+    {
+        if (db.Entry(item).State == EntityState.Detached)
+            await db.CartItems.AddAsync(item, ct);
+    }
+
+    public Task DeleteAsync(CartItem item, CancellationToken ct = default)
+    {
+        db.CartItems.Remove(item);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteRangeAsync(IEnumerable<CartItem> items, CancellationToken ct = default)
+    {
+        db.CartItems.RemoveRange(items);
+        return Task.CompletedTask;
     }
 }
 
@@ -528,8 +550,19 @@ public class CustomerOrderRepository(Module1DbContext db) : ICustomerOrderReposi
 
     public Task UpdateAsync(CustomerOrder order, CancellationToken ct = default)
     {
-        db.CustomerOrders.Update(order);
+        if (db.Entry(order).State == EntityState.Detached)
+            db.CustomerOrders.Update(order);
         return Task.CompletedTask;
+    }
+}
+
+// ── OrderStatusHistory ────────────────────────────────────────────────────────
+public class OrderStatusHistoryRepository(Module1DbContext db) : IOrderStatusHistoryRepository
+{
+    public async Task AddAsync(OrderStatusHistory entry, CancellationToken ct = default)
+    {
+        if (db.Entry(entry).State == EntityState.Detached)
+            await db.OrderStatusHistories.AddAsync(entry, ct);
     }
 }
 
@@ -600,5 +633,63 @@ public class Module1UnitOfWork(Module1DbContext db) : IModule1UnitOfWork
             }
             catch { await tx.RollbackAsync(ct); throw; }
         });
+    }
+}
+
+// ── StaffAssignment ───────────────────────────────────────────────────────────
+public class StaffAssignmentRepository(Module1DbContext db) : IStaffAssignmentRepository
+{
+    public Task<StaffAssignment?> GetActiveByOrderIdAsync(Guid orderId, CancellationToken ct = default) =>
+        // Query trực tiếp trên FK column orderId — không qua navigation (tránh Bug 3)
+        db.StaffAssignments
+          .Where(x => x.OrderId == orderId && x.CompletedAt == null)
+          .OrderByDescending(x => x.AssignedAt)
+          .FirstOrDefaultAsync(ct);
+
+    public Task<List<StaffAssignment>> GetAllByOrderIdAsync(Guid orderId, CancellationToken ct = default) =>
+        db.StaffAssignments
+          .Where(x => x.OrderId == orderId)
+          .OrderByDescending(x => x.AssignedAt)
+          .ToListAsync(ct);
+
+    public Task<List<StaffAssignment>> GetByStaffIdAsync(Guid staffId, bool activeOnly,
+                                                          CancellationToken ct = default)
+    {
+        var q = db.StaffAssignments.Where(x => x.StaffId == staffId);
+        if (activeOnly) q = q.Where(x => x.CompletedAt == null);
+        return q.OrderByDescending(x => x.AssignedAt).ToListAsync(ct);
+    }
+
+    public Task<List<StaffAssignment>> GetOverdueAsync(CancellationToken ct = default) =>
+        db.StaffAssignments
+          .Where(x => x.IsOverdue && x.CompletedAt == null)
+          .Include(x => x.Order)
+          .OrderBy(x => x.SlaDeadline)
+          .ToListAsync(ct);
+
+    public Task<List<StaffAssignment>> GetPendingExpiredAsync(CancellationToken ct = default) =>
+        // Lấy những assignment chưa complete, chưa đánh dấu overdue, nhưng đã qua deadline
+        db.StaffAssignments
+          .Where(x => x.CompletedAt == null && !x.IsOverdue && x.SlaDeadline < DateTime.UtcNow)
+          .ToListAsync(ct);
+
+    public Task<int> GetActiveLoadAsync(Guid staffId, CancellationToken ct = default) =>
+        db.StaffAssignments.CountAsync(x => x.StaffId == staffId && x.CompletedAt == null, ct);
+
+    public Task<int> GetOverdueCountAsync(Guid staffId, CancellationToken ct = default) =>
+        db.StaffAssignments.CountAsync(x => x.StaffId == staffId && x.IsOverdue && x.CompletedAt == null, ct);
+
+    public async Task AddAsync(StaffAssignment assignment, CancellationToken ct = default)
+    {
+        // Tránh Bug 1 (EF snapshot): chỉ Add khi entry Detached
+        if (db.Entry(assignment).State == Microsoft.EntityFrameworkCore.EntityState.Detached)
+            await db.StaffAssignments.AddAsync(assignment, ct);
+    }
+
+    public Task UpdateAsync(StaffAssignment assignment, CancellationToken ct = default)
+    {
+        if (db.Entry(assignment).State == Microsoft.EntityFrameworkCore.EntityState.Detached)
+            db.StaffAssignments.Update(assignment);
+        return Task.CompletedTask;
     }
 }

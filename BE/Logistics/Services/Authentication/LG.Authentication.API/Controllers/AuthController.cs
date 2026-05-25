@@ -2,17 +2,20 @@ using LG.Authentication.ApplicationServices.DTOs.Auth;
 using LG.Authentication.ApplicationServices.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LG.Authentication.API.Controllers;
 
 [Route("api/auth")]
 public class AuthController(IAuthService authService) : BaseController
 {
-    /// Register a new customer account
+    // Register a new customer account
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(AuthResponse), 201)]
     [ProducesResponseType(409)]
+    [ProducesResponseType(429)]
     public async Task<IActionResult> Register(
         [FromBody] RegisterRequest req, CancellationToken ct)
     {
@@ -20,11 +23,13 @@ public class AuthController(IAuthService authService) : BaseController
         return Created(result, "Registration successful.");
     }
 
-    /// Login and receive JWT + refresh token
+    // Login and receive JWT + refresh token
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(AuthResponse), 200)]
     [ProducesResponseType(401)]
+    [ProducesResponseType(429)]
     public async Task<IActionResult> Login(
         [FromBody] LoginRequest req, CancellationToken ct)
     {
@@ -32,11 +37,13 @@ public class AuthController(IAuthService authService) : BaseController
         return Ok(result, "Login successful.");
     }
 
-    /// Refresh access token using refresh token
+    // Refresh access token using refresh token
     [HttpPost("refresh")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     [ProducesResponseType(typeof(RefreshResponse), 200)]
     [ProducesResponseType(401)]
+    [ProducesResponseType(429)]
     public async Task<IActionResult> Refresh(
         [FromBody] RefreshTokenRequest req, CancellationToken ct)
     {

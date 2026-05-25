@@ -5,6 +5,7 @@ using LG.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LG.Module1.API.Controllers;
 
@@ -27,7 +28,9 @@ public class ProductsController(IProductService productService) : Module1BaseCon
 {
     [HttpGet]
     [AllowAnonymous]
+    [EnableRateLimiting("public")]
     [ProducesResponseType(typeof(ApiResponse<PagedProductResponse>), 200)]
+    [ProducesResponseType(429)]
     public async Task<IActionResult> Search([FromQuery] ProductSearchRequest req, CancellationToken ct)
     {
         var result = await productService.SearchAsync(req, ct);

@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using LG.Module1.API.BackgroundJobs;
 using LG.Module1.API.Middleware;
 using LG.Module1.Infrastructure;
@@ -7,6 +8,8 @@ using LG.Module1.Infrastructure.Data;
 using LG.Shared.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +40,77 @@ builder.Services.AddControllers()
     {
         opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         opt.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
+
+builder.Services.Configure<ApiBehaviorOptions>(opt =>
+{
+    opt.InvalidModelStateResponseFactory = ctx =>
+    {
+        var errors = ctx.ModelState
+            .Where(e => e.Value?.Errors.Count > 0)
+            .ToDictionary(
+                e => e.Key,
+                e => e.Value!.Errors.Select(x => x.ErrorMessage).ToArray());
+
+        var firstMsg = errors.SelectMany(kv => kv.Value).FirstOrDefault()
+                       ?? "Dữ liệu không hợp lệ.";
+
+        return new BadRequestObjectResult(new
+        {
+            success   = false,
+            message   = firstMsg,
+            errorCode = "VALIDATION_ERROR",
+            errors,
+        });
+    };
+});
+
+// ── Rate limiting ────────────────────────────────────────────────────────────
+
+builder.Services.AddRateLimiter(opt =>
+{
+    opt.RejectionStatusCode = 429;
+
+    // Policy "public": áp cho endpoints AllowAnonymous heavy (search, listing)
+    opt.AddFixedWindowLimiter("public", o =>
+    {
+        o.PermitLimit = 60;          // 60 request / phút / IP
+        o.Window      = TimeSpan.FromMinutes(1);
+        o.QueueLimit  = 0;
+    });
+
+    // Policy "auth-sensitive": cho cancel, pay-deposit, ... — tránh spam thao tác
+    opt.AddFixedWindowLimiter("auth-sensitive", o =>
+    {
+        o.PermitLimit = 20;
+        o.Window      = TimeSpan.FromMinutes(1);
+        o.QueueLimit  = 0;
+    });
+
+    // Global fallback — chống DDoS layer thấp
+    opt.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 200,
+                Window      = TimeSpan.FromMinutes(1),
+                QueueLimit  = 0,
+            }));
+
+    opt.OnRejected = async (ctx, ct) =>
+    {
+        ctx.HttpContext.Response.StatusCode  = 429;
+        ctx.HttpContext.Response.ContentType = "application/json";
+        if (ctx.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry))
+            ctx.HttpContext.Response.Headers["Retry-After"] = ((int)retry.TotalSeconds).ToString();
+        await ctx.HttpContext.Response.WriteAsync(
+            """{"success":false,"message":"Quá nhiều request. Vui lòng thử lại sau.","errorCode":"RATE_LIMITED"}""",
+            ct);
+    };
+});
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -133,7 +206,12 @@ var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string
               ?? ["http://localhost:3000", "http://localhost:5173"];
 
 builder.Services.AddCors(opt => opt.AddPolicy("FE", p =>
-    p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+    p.WithOrigins(origins)
+     .AllowAnyHeader()
+     .AllowAnyMethod()
+     .AllowCredentials()
+     .SetPreflightMaxAge(TimeSpan.FromMinutes(10))
+     .WithExposedHeaders("x-token-expired", "Retry-After")));
 
 // ── Swagger ────────────────────────────────────────────────────────────────────
 builder.Services.AddSwaggerGen(opt =>
@@ -169,6 +247,7 @@ builder.Services.AddHealthChecks().AddDbContextCheck<Module1DbContext>("postgres
 // ── Background jobs ─────────────────────────────────────────────────
 builder.Services.AddHostedService<OrderTimeoutJob>();
 builder.Services.AddHostedService<OrderAssignmentJob>();
+builder.Services.AddHostedService<SlaMonitorJob>();
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 3. BUILD
@@ -195,7 +274,11 @@ fwdOpts.KnownNetworks.Clear();
 fwdOpts.KnownProxies.Clear();
 app.UseForwardedHeaders(fwdOpts);
 
-// Global exception handler — đứng đầu pipeline
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
+
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
 app.UseMiddleware<Module1ExceptionMiddleware>();
 
 // Swagger — luôn bật (không guard bằng IsDevelopment để staging cũng xem được)
@@ -206,13 +289,14 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-// Health endpoints — không cần auth
+// Health endpoints
 app.MapGet("/healthz", () => Results.Ok(new { status = "healthy", service = "mod1", time = DateTime.UtcNow }));
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").RequireAuthorization(p => p.RequireClaim("permission", Permissions.ConfigRead));
 
-// Routing → CORS → Auth → Controllers
+// Routing → CORS → RateLimit → Auth → Controllers
 app.UseRouting();
 app.UseCors("FE");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

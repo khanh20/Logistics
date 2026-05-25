@@ -138,6 +138,56 @@ public record CancelOrderRequest(
     [Required] string Reason
 );
 
+// ── StaffAssignment DTOs ──────────────────────────────────────────────────────
+
+public record StaffAssignmentDto(
+    Guid      Id,
+    Guid      OrderId,
+    Guid      StaffId,
+    DateTime  AssignedAt,
+    DateTime  SlaDeadline,
+    DateTime? CompletedAt,
+    bool      IsOverdue,
+    bool      IsAutoAssigned,
+    string?   Note
+);
+
+public record OverdueAssignmentDto(
+    Guid    AssignmentId,
+    Guid    OrderId,
+    string  OrderCode,
+    Guid    StaffId,
+    DateTime SlaDeadline,
+    int     OverdueByMinutes,
+    string  OrderStatus
+);
+
+public record ActiveAssignmentSummary(
+    Guid     AssignmentId,
+    Guid     OrderId,
+    DateTime SlaDeadline,
+    bool     IsOverdue
+);
+
+public record StaffWorkloadDto(
+    Guid                          StaffId,
+    int                           ActiveCount,
+    int                           OverdueCount,
+    List<StaffAssignmentDto>      Assignments
+);
+
+// ── Request: manual assign ────────────────────────────────────────────────────
+
+public record ManualAssignRequest(
+    [Required] Guid   StaffId,
+    string?           Note = null
+);
+
+public record ReassignRequest(
+    [Required] Guid   NewStaffId,
+    string?           Note = null
+);
+
 /// Filter cho danh sách đơn (staff + admin)
 public record OrderListFilter(
     Guid?       CustomerId    = null,

@@ -1,3 +1,5 @@
+using LG.Module1.ApplicationServices.Interfaces;
+using LG.Module1.Domain.Adapters;
 using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +16,7 @@ public class OrderTimeoutJob(
 ) : BackgroundService
 {
     private const int TimeoutMinutes   = 30;
-    private const int IntervalSeconds  = 60;
+    private const int IntervalSeconds  = 500;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -39,8 +41,9 @@ public class OrderTimeoutJob(
     private async Task ProcessTimeoutsAsync(CancellationToken ct)
     {
         using var scope = scopeFactory.CreateScope();
-        var orderRepo = scope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
-        var uow       = scope.ServiceProvider.GetRequiredService<IModule1UnitOfWork>();
+        var orderRepo   = scope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
+        var historyRepo = scope.ServiceProvider.GetRequiredService<IOrderStatusHistoryRepository>();
+        var uow         = scope.ServiceProvider.GetRequiredService<IModule1UnitOfWork>();
 
         var timedOut = await orderRepo.GetTimedOutPendingOrdersAsync(TimeoutMinutes, ct);
         if (timedOut.Count == 0) return;
@@ -52,6 +55,7 @@ public class OrderTimeoutJob(
             try
             {
                 order.CancelByTimeout();
+                await historyRepo.AddAsync(order.History.Last(), ct);
                 await orderRepo.UpdateAsync(order, ct);
                 logger.LogInformation("Auto-cancelled timed-out order {OrderCode}", order.OrderCode);
             }
@@ -72,7 +76,7 @@ public class OrderAssignmentJob(
     ILogger<OrderAssignmentJob> logger
 ) : BackgroundService
 {
-    private const int IntervalSeconds = 30;
+    private const int IntervalSeconds = 500;
     private const int BatchSize       = 20;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -96,17 +100,94 @@ public class OrderAssignmentJob(
 
     private async Task ProcessAssignmentsAsync(CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
-        var orderRepo = scope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
+        using var scope          = scopeFactory.CreateScope();
+        var orderRepo            = scope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
+        var assignmentService    = scope.ServiceProvider.GetRequiredService<IStaffAssignmentService>();
+        var managementService    = scope.ServiceProvider.GetRequiredService<IOrderManagementService>();
+        var rosterService        = scope.ServiceProvider.GetRequiredService<IStaffRosterService>();
+        var uow                  = scope.ServiceProvider.GetRequiredService<IModule1UnitOfWork>();
 
         var unassigned = await orderRepo.GetUnassignedPaidOrdersAsync(BatchSize, ct);
         if (unassigned.Count == 0) return;
 
-        // Log found orders, manual assign via API until Phase 8 provides staff roster
-        logger.LogInformation(
-            "OrderAssignmentJob: {Count} paid orders awaiting staff assignment (manual assign via /api/manage/orders/{{id}}/assign)",
-            unassigned.Count);
+        var staffIds = await rosterService.GetAvailableStaffAsync(ct);
+        if (staffIds.Count == 0)
+        {
+            logger.LogWarning("OrderAssignmentJob: no available staff configured in StaffRoster:StaffIds");
+            return;
+        }
 
-        // Future Phase 8: pull available staff list from Auth service, round-robin or load-balance
+        logger.LogInformation("OrderAssignmentJob: {Count} paid orders, {Staff} staff available",
+            unassigned.Count, staffIds.Count);
+
+        foreach (var order in unassigned)
+        {
+            try
+            {
+                // 1. Chọn staff tốt nhất + tạo StaffAssignment record
+                var assignment = await assignmentService.AutoAssignAsync(order.Id, staffIds, ct);
+                if (assignment is null)
+                {
+                    logger.LogWarning("OrderAssignmentJob: could not auto-assign order {OrderCode}", order.OrderCode);
+                    continue;
+                }
+
+                // 2. Chuyển trạng thái đơn → AwaitingManualPlace / AwaitingApiPlace
+                await managementService.AssignOrderAsync(order.Id, assignment.StaffId, ct);
+
+                logger.LogInformation(
+                    "OrderAssignmentJob: order {OrderCode} assigned to staff {StaffId}, SLA={SlaDeadline:u}",
+                    order.OrderCode, assignment.StaffId, assignment.SlaDeadline);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "OrderAssignmentJob: failed to assign order {OrderCode}", order.OrderCode);
+            }
+        }
+    }
+}
+
+// ── SlaMonitorJob ─────────────────────────────────────────────────────────────
+/// Chạy mỗi 5 phút. Đánh dấu IsOverdue = true cho assignment đã qua SlaDeadline.
+public class SlaMonitorJob(
+    IServiceScopeFactory scopeFactory,
+    ILogger<SlaMonitorJob> logger
+) : BackgroundService
+{
+    private const int IntervalSeconds = 300; // 5 phút
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        logger.LogInformation("SlaMonitorJob started (interval: {Interval}s)", IntervalSeconds);
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try { await ProcessExpiredAsync(stoppingToken); }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            { logger.LogError(ex, "SlaMonitorJob failed during execution"); }
+
+            await Task.Delay(TimeSpan.FromSeconds(IntervalSeconds), stoppingToken);
+        }
+    }
+
+    private async Task ProcessExpiredAsync(CancellationToken ct)
+    {
+        using var scope        = scopeFactory.CreateScope();
+        var assignmentRepo     = scope.ServiceProvider.GetRequiredService<IStaffAssignmentRepository>();
+        var uow                = scope.ServiceProvider.GetRequiredService<IModule1UnitOfWork>();
+
+        var expired = await assignmentRepo.GetPendingExpiredAsync(ct);
+        if (expired.Count == 0) return;
+
+        logger.LogWarning("SlaMonitorJob: {Count} assignments past SLA deadline", expired.Count);
+
+        foreach (var a in expired)
+        {
+            a.MarkOverdue();
+            await assignmentRepo.UpdateAsync(a, ct);
+        }
+
+        await uow.SaveChangesAsync(ct);
+        logger.LogInformation("SlaMonitorJob: marked {Count} assignments as overdue", expired.Count);
     }
 }

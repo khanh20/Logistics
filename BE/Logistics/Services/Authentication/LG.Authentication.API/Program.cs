@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using LG.Authentication.ApplicationServices;
 using LG.Authentication.Infrastructure;
 using LG.Authentication.Infrastructure.Data;
@@ -8,6 +9,8 @@ using LG.Authentication.API.Middleware;
 using LG.Shared.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -37,9 +40,72 @@ builder.Services.AddControllers()
     {
         // Tránh vòng lặp object khi serialize navigation properties
         opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        // Giữ tên property dạng camelCase (default của ASP.NET)
+        // Bỏ field null khỏi response để giảm payload
         opt.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        // Serialize enum thành string để FE đọc được tên thay vì số
+        opt.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
+// Override mặc định ProblemDetails 400 — trả ApiResponse envelope cho FE parse nhất quán
+builder.Services.Configure<ApiBehaviorOptions>(opt =>
+{
+    opt.InvalidModelStateResponseFactory = ctx =>
+    {
+        var errors = ctx.ModelState
+            .Where(e => e.Value?.Errors.Count > 0)
+            .ToDictionary(
+                e => e.Key,
+                e => e.Value!.Errors.Select(x => x.ErrorMessage).ToArray());
+
+        var firstMsg = errors.SelectMany(kv => kv.Value).FirstOrDefault()
+                       ?? "Invalid input.";
+
+        return new BadRequestObjectResult(new
+        {
+            success   = false,
+            message   = firstMsg,
+            errorCode = "VALIDATION_ERROR",
+            errors,
+        });
+    };
+});
+
+// ── Rate limiting ────────────────────────────────────────────────────────────
+// Bảo vệ login/register/refresh khỏi brute-force và abuse.
+builder.Services.AddRateLimiter(opt =>
+{
+    opt.RejectionStatusCode = 429;
+
+    // Policy "auth": login, register, refresh — strict
+    opt.AddFixedWindowLimiter("auth", o =>
+    {
+        o.PermitLimit = 10;          // 10 request / phút / IP
+        o.Window      = TimeSpan.FromMinutes(1);
+        o.QueueLimit  = 0;
+    });
+
+    // Global fallback chống DDoS
+    opt.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "anon",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 200,
+                Window      = TimeSpan.FromMinutes(1),
+                QueueLimit  = 0,
+            }));
+
+    opt.OnRejected = async (ctx, ct) =>
+    {
+        ctx.HttpContext.Response.StatusCode  = 429;
+        ctx.HttpContext.Response.ContentType = "application/json";
+        if (ctx.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry))
+            ctx.HttpContext.Response.Headers["Retry-After"] = ((int)retry.TotalSeconds).ToString();
+        await ctx.HttpContext.Response.WriteAsync(
+            """{"success":false,"message":"Too many requests. Please try again later.","errorCode":"RATE_LIMITED"}""",
+            ct);
+    };
+});
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -150,7 +216,9 @@ builder.Services.AddCors(opt => opt.AddPolicy("FE", p =>
     p.WithOrigins(allowedOrigins)
      .AllowAnyHeader()
      .AllowAnyMethod()
-     .AllowCredentials()));
+     .AllowCredentials()
+     .SetPreflightMaxAge(TimeSpan.FromMinutes(10))
+     .WithExposedHeaders("x-token-expired", "Retry-After")));
 
 // ── Swagger ───────────────────────────────────────────────────────────────────
 builder.Services.AddSwaggerGen(opt =>
@@ -211,7 +279,14 @@ fwdOpts.KnownNetworks.Clear();
 fwdOpts.KnownProxies.Clear();
 app.UseForwardedHeaders(fwdOpts);
 
-// Global exception handler — phải đứng đầu pipeline
+// HTTPS redirect chỉ trong production
+if (!app.Environment.IsDevelopment())
+    app.UseHttpsRedirection();
+
+// Security headers — đặt sớm để cả response auth-fail cũng có headers
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+// Global exception handler — sau security headers để response 5xx vẫn có headers
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseSwagger();
@@ -221,11 +296,13 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
+// /healthz public; /health chi tiết bảo vệ tránh leak DB schema
 app.MapGet("/healthz", () => Results.Ok(new { status = "healthy", service = "auth", time = DateTime.UtcNow }));
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").RequireAuthorization(p => p.RequireClaim("permission", Permissions.ConfigRead));
 
 app.UseRouting();
 app.UseCors("FE");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

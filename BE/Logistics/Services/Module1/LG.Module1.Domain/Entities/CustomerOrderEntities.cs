@@ -386,6 +386,49 @@ public class OrderStatusHistory
         };
 }
 
+// ── StaffAssignment — Lịch sử phân công NV cho đơn hàng ──────────────────────
+public class StaffAssignment
+{
+    public Guid      Id               { get; private set; } = Guid.NewGuid();
+    public Guid      OrderId          { get; private set; }
+    public Guid      StaffId          { get; private set; }
+    public DateTime  AssignedAt       { get; private set; } = DateTime.UtcNow;
+    public DateTime  SlaDeadline      { get; private set; }
+    public DateTime? CompletedAt      { get; private set; }
+    public bool      IsOverdue        { get; private set; }
+    /// null = auto-assign bởi job; có giá trị = admin tự chọn.
+    public Guid?     AssignedByAdminId { get; private set; }
+    public string?   Note             { get; private set; }
+
+    // Navigation
+    public CustomerOrder Order { get; private set; } = default!;
+
+    private StaffAssignment() { }
+
+    public static StaffAssignment Create(Guid orderId, Guid staffId, DateTime slaDeadline,
+                                          Guid? assignedByAdminId = null, string? note = null) =>
+        new()
+        {
+            OrderId           = orderId,
+            StaffId           = staffId,
+            SlaDeadline       = slaDeadline,
+            AssignedByAdminId = assignedByAdminId,
+            Note              = note?.Trim(),
+        };
+
+    /// Đánh dấu đơn đã xử lý xong (staff hoàn thành công việc của mình).
+    public void MarkCompleted()
+    {
+        CompletedAt = DateTime.UtcNow;
+    }
+
+    /// Job SlaMonitor gọi khi phát hiện quá deadline.
+    public void MarkOverdue()
+    {
+        IsOverdue = true;
+    }
+}
+
 // ── OrderFeeDetail — Breakdown chi tiết phí ──────────────────────────────────
 public class OrderFeeDetail
 {

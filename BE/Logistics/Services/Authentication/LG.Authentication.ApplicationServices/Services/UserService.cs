@@ -116,4 +116,14 @@ public class UserService(
 
         logger.LogInformation("User deleted: {UserId} by admin: {AdminId}", userId, adminId);
     }
+
+    public async Task<List<StaffRosterItemResponse>> GetStaffRosterAsync(
+        string roleName, bool activeOnly, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(roleName))
+            throw new ValidationException("roleName is required.");
+
+        var users = await userRepo.GetByRoleNameAsync(roleName, activeOnly, ct);
+        return users.Select(u => new StaffRosterItemResponse(u.Id, u.FullName, u.Email)).ToList();
+    }
 }

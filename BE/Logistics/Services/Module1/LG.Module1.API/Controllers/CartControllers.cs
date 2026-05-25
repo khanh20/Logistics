@@ -73,6 +73,6 @@ public class CartController(ICartService cartService) : Module1BaseController
     {
         var result = await cartService.ConfirmCheckoutAsync(CurrentUserId, req, ct);
         return Ok(ApiResponse<ConfirmCheckoutResponse>.Ok(result,
-            $"Đã tạo {result.OrdersCreated} đơn hàng. Tổng cọc: {result.TotalDepositVnd:N0} VNĐ."));
+            $"Đã tạo {result.CreatedOrderIds.Count} đơn hàng thành công."));
     }
 }

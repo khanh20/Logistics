@@ -205,6 +205,34 @@ public interface IWalletService
     Task DeductAsync(Guid customerId, decimal amountVnd, string description, CancellationToken ct = default);
 }
 
+// ── Staff Assignment ─────────────────────────────────────────────────────────
+public interface IStaffAssignmentService
+{
+    /// Auto-assign đơn dựa trên workload. Trả null nếu không có staff.
+    Task<StaffAssignmentDto?> AutoAssignAsync(Guid orderId,
+        IReadOnlyList<Guid> availableStaffIds, CancellationToken ct = default);
+
+    /// Admin tự chọn staff cho đơn cụ thể.
+    Task<StaffAssignmentDto> ManualAssignAsync(Guid orderId, Guid staffId, Guid adminId,
+        string? note, CancellationToken ct = default);
+
+    /// Chuyển đơn sang nhân viên khác (soft-complete assignment cũ).
+    Task<StaffAssignmentDto> ReassignAsync(Guid orderId, Guid newStaffId, Guid adminId,
+        string? note, CancellationToken ct = default);
+
+    /// Đánh dấu assignment đã hoàn thành (staff xử lý xong).
+    Task MarkCompletedAsync(Guid assignmentId, CancellationToken ct = default);
+
+    /// Danh sách assignment đang quá SLA.
+    Task<List<OverdueAssignmentDto>> GetOverdueAsync(CancellationToken ct = default);
+
+    /// Workload hiện tại của một staff.
+    Task<StaffWorkloadDto> GetWorkloadAsync(Guid staffId, CancellationToken ct = default);
+
+    /// Lấy assignment đang active của một đơn (nếu có).
+    Task<StaffAssignmentDto?> GetActiveByOrderAsync(Guid orderId, CancellationToken ct = default);
+}
+
 public interface IPlatformService
 {
     // ── Platform ──────────────────────────────────────────────────────────────

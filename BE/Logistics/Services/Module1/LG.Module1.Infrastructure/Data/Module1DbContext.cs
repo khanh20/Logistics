@@ -29,6 +29,7 @@ public class Module1DbContext(DbContextOptions<Module1DbContext> options) : DbCo
     public DbSet<PlatformOrder>      PlatformOrders      => Set<PlatformOrder>();
     public DbSet<OrderStatusHistory> OrderStatusHistories => Set<OrderStatusHistory>();
     public DbSet<OrderFeeDetail>     OrderFeeDetails     => Set<OrderFeeDetail>();
+    public DbSet<StaffAssignment>    StaffAssignments    => Set<StaffAssignment>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {

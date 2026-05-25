@@ -23,6 +23,8 @@ public interface IUserService
     Task<UserResponse>  UpdateProfileAsync(Guid userId, UpdateProfileRequest req, CancellationToken ct = default);
     Task<UserResponse>  UpdateStatusAsync(Guid userId, UpdateUserStatusRequest req, Guid adminId, CancellationToken ct = default);
     Task                DeleteAsync(Guid userId, Guid adminId, CancellationToken ct = default);
+    Task<List<StaffRosterItemResponse>> GetStaffRosterAsync(string roleName, bool activeOnly,
+                                                             CancellationToken ct = default);
 }
 
 public interface IRoleService

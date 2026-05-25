@@ -11,14 +11,16 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
   const { t } = useTranslation();
 
   const MENU_ITEMS = [
-    { to: "/admin/orders",          label: t("nav.orders"),          icon: "📦" },
-    { to: "/admin/platform-orders", label: t("nav.platform_orders"), icon: "🛍️" },
-    { to: "/admin/products",        label: t("nav.products"),        icon: "🏷️" },
-    { to: "/admin/categories",      label: t("nav.categories"),      icon: "📂" },
-    { to: "/admin/platforms",       label: t("nav.platforms"),       icon: "🌐" },
-    { to: "/admin/ingestion",       label: t("nav.ingestion"),       icon: "⬇️" },
-    { to: "/admin/exchange-rates",  label: t("nav.exchange_rates"),  icon: "💱" },
-    { to: "/admin/staff",           label: t("nav.staff"),           icon: "👥" },
+    { to: "/admin/orders",               label: t("nav.orders"),           icon: "📦" },
+    { to: "/admin/platform-orders",      label: t("nav.platform_orders"),  icon: "🛍️" },
+    { to: "/admin/staff-dashboard",      label: t("nav.staff_dashboard"),  icon: "📊" },
+    { to: "/admin/assignments/overdue",  label: t("nav.overdue_sla"),      icon: "⚠️" },
+    { to: "/admin/products",             label: t("nav.products"),         icon: "🏷️" },
+    { to: "/admin/categories",           label: t("nav.categories"),       icon: "📂" },
+    { to: "/admin/platforms",            label: t("nav.platforms"),        icon: "🌐" },
+    { to: "/admin/ingestion",            label: t("nav.ingestion"),        icon: "⬇️" },
+    { to: "/admin/exchange-rates",       label: t("nav.exchange_rates"),   icon: "💱" },
+    { to: "/admin/staff",                label: t("nav.staff"),            icon: "👥" },
   ];
 
   return (

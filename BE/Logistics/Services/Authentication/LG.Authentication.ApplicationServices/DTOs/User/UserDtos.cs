@@ -36,6 +36,12 @@ public record UserListResponse(
     List<string> Roles
 );
 
+public record StaffRosterItemResponse(
+    Guid   Id,
+    string FullName,
+    string Email
+);
+
 public record PagedResponse<T>(
     List<T> Data,
     int     Page,

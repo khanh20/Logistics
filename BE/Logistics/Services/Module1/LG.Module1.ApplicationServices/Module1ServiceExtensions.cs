@@ -10,8 +10,10 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Text;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Polly;
+using System.Text;
 
 namespace LG.Module1.Infrastructure;
 
@@ -42,11 +44,20 @@ public static class Module1ServiceExtensions
                     maxRetryDelay: TimeSpan.FromSeconds(10),
                     errorCodesToAdd: null);
                 npg.CommandTimeout(30);
+                npg.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+
             });
 
 #if DEBUG
             opt.EnableSensitiveDataLogging();
             opt.EnableDetailedErrors();
+            opt.LogTo(Console.WriteLine,
+        new[]
+        {
+            DbLoggerCategory.Database.Command.Name,
+            DbLoggerCategory.Update.Name
+        },
+        LogLevel.Information);
 #endif
         }, ServiceLifetime.Scoped);
 
@@ -65,8 +76,11 @@ public static class Module1ServiceExtensions
         services.AddScoped<IProductImageRepository, ProductImageRepository>();
         services.AddScoped<IProductAttributeRepository, ProductAttributeRepository>();
         services.AddScoped<ICartRepository, CartRepository>();
+        services.AddScoped<ICartItemRepository, CartItemRepository>();
         services.AddScoped<ICustomerOrderRepository, CustomerOrderRepository>();
+        services.AddScoped<IOrderStatusHistoryRepository, OrderStatusHistoryRepository>();
         services.AddScoped<IPlatformOrderRepository, PlatformOrderRepository>();
+        services.AddScoped<IStaffAssignmentRepository, StaffAssignmentRepository>();
         services.AddScoped<IModule1UnitOfWork, Module1UnitOfWork>();
 
         services.AddDataProtection()
@@ -88,6 +102,27 @@ public static class Module1ServiceExtensions
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
         services.AddScoped<IOrderManagementService, OrderManagementService>();
         services.AddScoped<IWalletService, WalletServiceStub>();
+        services.AddScoped<IStaffAssignmentService, StaffAssignmentService>();
+        services.AddScoped<ILogisticsService, LogisticsServiceStub>();
+
+        // HttpClient cho StaffRosterHttpService — set BaseAddress + InternalKey header sẵn.
+        // Đọc Auth:BaseUrl + Auth:InternalApiKey từ appsettings/env (env override).
+        services.AddHttpClient<IStaffRosterService, StaffRosterHttpService>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var baseUrl = cfg["Auth:BaseUrl"]
+                       ?? Environment.GetEnvironmentVariable("AUTH__BASEURL")
+                       ?? "https://localhost:7237";
+            var key = cfg["Auth:InternalApiKey"]
+                   ?? Environment.GetEnvironmentVariable("AUTH__INTERNALAPIKEY")
+                   ?? throw new InvalidOperationException(
+                       "Auth:InternalApiKey is required for cross-service calls.");
+
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout     = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("X-Internal-Key", key);
+        })
+        .AddPolicyHandler(GetRetryPolicy("Auth"));
 
         return services;
     }

@@ -4,6 +4,7 @@ using LG.Module1.Domain.Entities;
 using LG.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LG.Module1.API.Controllers;
 
@@ -38,15 +39,17 @@ public class CustomerOrderController(ICustomerOrderService orderService) : Modul
     // POST /api/orders/{id}/cancel
     [HttpPost("{id:guid}/cancel")]
     [Authorize(Policy = Permissions.OrderCreate)]
+    [EnableRateLimiting("auth-sensitive")]
     public async Task<IActionResult> CancelOrder(Guid id, [FromBody] CancelOrderRequest req, CancellationToken ct)
     {
         var detail = await orderService.CancelOrderAsync(CurrentUserId, id, req, ct);
         return Ok(ApiResponse<OrderDetailResponse>.Ok(detail, "Đơn hàng đã được hủy."));
     }
 
-    // POST /api/orders/{id}/pay-deposit  (Phase 8 — wallet stub)
+    // POST /api/orders/{id}/pay-deposit 
     [HttpPost("{id:guid}/pay-deposit")]
     [Authorize(Policy = Permissions.OrderDeposit)]
+    [EnableRateLimiting("auth-sensitive")]
     public async Task<IActionResult> PayDeposit(Guid id, CancellationToken ct)
     {
         var detail = await orderService.PayDepositAsync(CurrentUserId, id, ct);

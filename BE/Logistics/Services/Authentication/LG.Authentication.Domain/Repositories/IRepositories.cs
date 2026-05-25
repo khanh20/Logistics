@@ -14,6 +14,8 @@ public interface IUserRepository
     Task        DeleteAsync(User user, CancellationToken ct = default);
     Task<List<string>> GetPermissionCodesAsync(Guid userId, CancellationToken ct = default);
     Task<List<string>> GetRoleNamesAsync(Guid userId, CancellationToken ct = default);
+    Task<List<User>> GetByRoleNameAsync(string roleName, bool activeOnly,
+                                         CancellationToken ct = default);
 }
 
 public interface IRoleRepository

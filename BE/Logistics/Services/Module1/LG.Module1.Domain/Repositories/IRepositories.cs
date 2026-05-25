@@ -82,7 +82,7 @@ public interface IProductRepository
     Task<ProductMaster?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<ProductMaster?> GetByIdWithDetailsAsync(Guid id, CancellationToken ct = default);
     Task<ProductMaster?> GetBySlugAsync(string slug, CancellationToken ct = default);
-    Task<ProductMaster?> GetByPlatformProductIdAsync(Guid platformId, string platformProductId, CancellationToken ct = default);
+    Task<ProductMaster?> GetByPlatformProductIdAsync(Guid shopId, string platformProductId, CancellationToken ct = default);
 
     Task<(List<ProductMaster> Items, int TotalCount)> SearchAsync(
         string? keyword, Guid? categoryId, Guid? platformId,
@@ -152,6 +152,18 @@ public interface ICartRepository
     Task<List<CartItem>> GetItemsByIdsAsync(Guid cartId, IEnumerable<Guid> itemIds, CancellationToken ct = default);
 }
 
+public interface ICartItemRepository
+{
+    Task AddAsync(CartItem item, CancellationToken ct = default);
+    Task DeleteAsync(CartItem item, CancellationToken ct = default);
+    Task DeleteRangeAsync(IEnumerable<CartItem> items, CancellationToken ct = default);
+}
+
+public interface IOrderStatusHistoryRepository
+{
+    Task AddAsync(OrderStatusHistory entry, CancellationToken ct = default);
+}
+
 // ── CustomerOrder repos ───────────────────────────────────────────────────────
 public interface ICustomerOrderRepository
 {
@@ -182,6 +194,35 @@ public interface IPlatformOrderRepository
     Task<List<PlatformOrder>> GetByStaffAsync(Guid staffId, OrderStatus? status, int page, int pageSize, CancellationToken ct = default);
     Task AddAsync(PlatformOrder order, CancellationToken ct = default);
     Task UpdateAsync(PlatformOrder order, CancellationToken ct = default);
+}
+
+// ── StaffAssignment repos ─────────────────────────────────────────────────────
+public interface IStaffAssignmentRepository
+{
+    /// Lấy assignment đang active (chưa CompletedAt) của đơn.
+    Task<StaffAssignment?> GetActiveByOrderIdAsync(Guid orderId, CancellationToken ct = default);
+
+    /// Lấy tất cả assignment (lịch sử) của đơn.
+    Task<List<StaffAssignment>> GetAllByOrderIdAsync(Guid orderId, CancellationToken ct = default);
+
+    /// Lấy danh sách assignment đang active của một staff.
+    Task<List<StaffAssignment>> GetByStaffIdAsync(Guid staffId, bool activeOnly,
+                                                   CancellationToken ct = default);
+
+    /// Lấy tất cả assignment đã overdue (IsOverdue = true, chưa CompletedAt).
+    Task<List<StaffAssignment>> GetOverdueAsync(CancellationToken ct = default);
+
+    /// Lấy tất cả assignment chưa hoàn thành và SlaDeadline < UtcNow (cho SlaMonitorJob).
+    Task<List<StaffAssignment>> GetPendingExpiredAsync(CancellationToken ct = default);
+
+    /// Đếm số đơn đang active của staff (activeLoad cho WorkloadBalancer).
+    Task<int> GetActiveLoadAsync(Guid staffId, CancellationToken ct = default);
+
+    /// Đếm số đơn overdue của staff (cho WorkloadBalancer tie-break).
+    Task<int> GetOverdueCountAsync(Guid staffId, CancellationToken ct = default);
+
+    Task AddAsync(StaffAssignment assignment, CancellationToken ct = default);
+    Task UpdateAsync(StaffAssignment assignment, CancellationToken ct = default);
 }
 
 // ── Unit of Work ──────────────────────────────────────────────────────────────

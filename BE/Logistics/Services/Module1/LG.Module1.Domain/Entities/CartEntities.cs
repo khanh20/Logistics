@@ -60,15 +60,22 @@ public class Cart
         Touch();
     }
 
-    public void RemoveItem(Guid cartItemId)
+    public CartItem RemoveItem(Guid cartItemId)
     {
         var item = Items.FirstOrDefault(i => i.Id == cartItemId)
                    ?? throw new CartItemNotFoundException(cartItemId);
         Items.Remove(item);
         Touch();
+        return item;
     }
 
-    public void Clear() { Items.Clear(); Touch(); }
+    public IReadOnlyList<CartItem> Clear()
+    {
+        var removed = Items.ToList();
+        Items.Clear();
+        Touch();
+        return removed;
+    }
 
     public void MarkConverted()
     {

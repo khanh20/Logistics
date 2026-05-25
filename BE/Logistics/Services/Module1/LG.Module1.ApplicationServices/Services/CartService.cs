@@ -11,15 +11,16 @@ namespace LG.Module1.ApplicationServices.Services;
 /// Mỗi customer có tối đa 1 cart Active.
 /// Checkout tạo 1 CustomerOrder cho mỗi shop, wrapped trong 1 transaction.
 public class CartService(
-    ICartRepository              cartRepo,
-    IProductRepository           productRepo,
-    IProductVariantRepository    variantRepo,
-    IPlatformShopRepository      shopRepo,
-    ICustomerOrderRepository     orderRepo,
-    IDepositConfigRepository     depositRepo,
+    ICartRepository                cartRepo,
+    ICartItemRepository            cartItemRepo,
+    IProductRepository             productRepo,
+    IProductVariantRepository      variantRepo,
+    IPlatformShopRepository        shopRepo,
+    ICustomerOrderRepository       orderRepo,
+    IDepositConfigRepository       depositRepo,
     IExchangeRateHistoryRepository rateRepo,
-    IModule1UnitOfWork           uow,
-    ILogger<CartService>         logger
+    IModule1UnitOfWork             uow,
+    ILogger<CartService>           logger
 ) : ICartService
 {
     // ── GetOrCreate ───────────────────────────────────────────────────────────
@@ -38,37 +39,42 @@ public class CartService(
 
     // ── AddItem ───────────────────────────────────────────────────────────────
 
-    public async Task<CartResponse> AddItemAsync(Guid customerId, AddCartItemRequest req, CancellationToken ct = default)
+    public Task<CartResponse> AddItemAsync(Guid customerId, AddCartItemRequest req, CancellationToken ct = default)
     {
-        var cart    = await EnsureActiveCartAsync(customerId, ct);
-        var variant = await variantRepo.GetByIdAsync(req.VariantId, ct)
-                      ?? throw new ProductNotFoundException(req.VariantId);
-        var product = await productRepo.GetByIdAsync(req.ProductId, ct)
-                      ?? throw new ProductNotFoundException(req.ProductId);
+        return uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            var cart    = await EnsureActiveCartAsync(customerId, innerCt);
+            var variant = await variantRepo.GetByIdAsync(req.VariantId, innerCt)
+                          ?? throw new ProductNotFoundException(req.VariantId);
 
-        if (!variant.IsAvailable)
-            throw new VariantUnavailableException(variant.TranslatedName ?? variant.VariantName);
+            if (!variant.IsAvailable)
+                throw new VariantUnavailableException(variant.TranslatedName ?? variant.VariantName);
 
-        // Lấy ảnh từ variant trước, fallback sang ảnh chính của product
-        var productWithImages = await productRepo.GetByIdWithDetailsAsync(product.Id, ct);
-        var primaryImage = productWithImages?.Images.FirstOrDefault(i => i.IsPrimary)?.LocalCdnUrl
-                        ?? productWithImages?.Images.FirstOrDefault()?.SourceUrl;
+            // GetByIdWithDetailsAsync → Images + ShopId trong một query
+            var product = await productRepo.GetByIdWithDetailsAsync(req.ProductId, innerCt)
+                          ?? throw new ProductNotFoundException(req.ProductId);
 
-        cart.AddOrUpdateItem(
-            productId:           product.Id,
-            variantId:           variant.Id,
-            shopId:              req.ShopId,
-            quantity:            req.Quantity,
-            priceCnySnapshot:    variant.PriceCnyCurrent,
-            productTitle:        product.TranslatedTitle ?? product.OriginalTitle,
-            variantName:         variant.TranslatedName  ?? variant.VariantName,
-            imageUrl:            variant.ImageUrl ?? primaryImage
-        );
+            var primaryImage = product.Images.FirstOrDefault(i => i.IsPrimary)?.LocalCdnUrl
+                            ?? product.Images.FirstOrDefault()?.SourceUrl;
 
-        await cartRepo.UpdateAsync(cart, ct);
-        await uow.SaveChangesAsync(ct);
-        logger.LogInformation("Cart {CartId}: added variant {VariantId} x{Qty}", cart.Id, req.VariantId, req.Quantity);
-        return MapToResponse(cart);
+            var cartItem = cart.AddOrUpdateItem(
+                productId:        product.Id,
+                variantId:        variant.Id,
+                shopId:           product.ShopId,
+                quantity:         req.Quantity,
+                priceCnySnapshot: variant.PriceCnyCurrent,
+                productTitle:     product.TranslatedTitle ?? product.OriginalTitle,
+                variantName:      variant.TranslatedName  ?? variant.VariantName,
+                imageUrl:         variant.ImageUrl ?? primaryImage
+            );
+
+            await cartItemRepo.AddAsync(cartItem, innerCt);
+
+            await cartRepo.UpdateAsync(cart, innerCt);
+
+            logger.LogInformation("Cart {CartId}: added variant {VariantId} x{Qty}", cart.Id, req.VariantId, req.Quantity);
+            return MapToResponse(cart);
+        }, ct);
     }
 
     // ── UpdateItemQuantity ────────────────────────────────────────────────────
@@ -87,8 +93,9 @@ public class CartService(
 
     public async Task<CartResponse> RemoveItemAsync(Guid customerId, Guid cartItemId, CancellationToken ct = default)
     {
-        var cart = await EnsureActiveCartAsync(customerId, ct);
-        cart.RemoveItem(cartItemId);
+        var cart        = await EnsureActiveCartAsync(customerId, ct);
+        var removedItem = cart.RemoveItem(cartItemId);  
+        await cartItemRepo.DeleteAsync(removedItem, ct); 
         await cartRepo.UpdateAsync(cart, ct);
         await uow.SaveChangesAsync(ct);
         return MapToResponse(cart);
@@ -98,8 +105,9 @@ public class CartService(
 
     public async Task<CartResponse> ClearCartAsync(Guid customerId, CancellationToken ct = default)
     {
-        var cart = await EnsureActiveCartAsync(customerId, ct);
-        cart.Clear();
+        var cart         = await EnsureActiveCartAsync(customerId, ct);
+        var removedItems = cart.Clear();                        
+        await cartItemRepo.DeleteRangeAsync(removedItems, ct);   
         await cartRepo.UpdateAsync(cart, ct);
         await uow.SaveChangesAsync(ct);
         return MapToResponse(cart);
@@ -110,25 +118,74 @@ public class CartService(
     public async Task<CheckoutPreviewResponse> PreviewCheckoutAsync(Guid customerId,
         CheckoutPreviewRequest req, CancellationToken ct = default)
     {
-        var cart    = await EnsureActiveCartAsync(customerId, ct);
-        var items   = FilterItems(cart, req.CartItemIds);
+        var cart  = await EnsureActiveCartAsync(customerId, ct);
+        var items = FilterByShops(cart, req.ShopIds);
 
         if (!items.Any())
             throw new EmptyCartCheckoutException();
 
         var (rate, depositCfg) = await LoadRateAndDepositAsync(ct);
+        var rateVnd            = rate.RateVndPerCny;
 
-        var groups = await BuildPreviewGroupsAsync(items, rate.RateVndPerCny, depositCfg.DepositPct, ct);
-        var totalCny = groups.Sum(g => g.SubtotalCny);
-        var totalDeposit = groups.Sum(g => g.EstimatedDepositVnd);
+        // Build per-shop preview groups
+        var groups = new List<CheckoutPreviewGroupResponse>();
+        foreach (var shopGroup in items.GroupBy(i => i.ShopId))
+        {
+            var shop       = await shopRepo.GetByIdAsync(shopGroup.Key, ct);
+            var shopName   = shop?.ShopName ?? shopGroup.Key.ToString();
+            var groupItems = shopGroup.ToList();
+
+            var hasForbidden = false;
+            var warnings     = new List<string>();
+
+            // Kiểm tra từng sản phẩm có bị cấm không
+            foreach (var ci in groupItems)
+            {
+                var prod = await productRepo.GetByIdAsync(ci.ProductId, ct);
+                if (prod?.IsForbidden == true)
+                {
+                    hasForbidden = true;
+                    warnings.Add($"Sản phẩm '{ci.ProductTitleSnapshot}' nằm trong danh mục hàng cấm/hạn chế.");
+                }
+            }
+
+            if (shop?.IsBlacklisted == true)
+                warnings.Add($"Shop '{shopName}' đang bị blacklist.");
+
+            var subtotalCny = groupItems.Sum(ci => ci.Quantity * ci.PriceCnySnapshot);
+            var subtotalVnd = Math.Round(subtotalCny * rateVnd, 0);
+
+            groups.Add(new CheckoutPreviewGroupResponse(
+                ShopId:               shopGroup.Key,
+                ShopName:             shopName,
+                SubtotalCny:          subtotalCny,
+                SubtotalVnd:          subtotalVnd,
+                ItemCount:            groupItems.Count,
+                HasForbiddenProducts: hasForbidden,
+                Warnings:             warnings
+            ));
+        }
+
+        var totalSubtotalVnd          = groups.Sum(g => g.SubtotalVnd);
+        const decimal serviceFeeVnd   = 0m;        // stub — Phase 8
+        const decimal shippingFeeVnd  = 0m;        // stub — Phase 8
+        var totalVnd     = totalSubtotalVnd + serviceFeeVnd + shippingFeeVnd;
+        var depositVnd   = Math.Round(totalVnd * depositCfg.DepositPct, 0);
+        var remainingVnd = totalVnd - depositVnd;
 
         return new CheckoutPreviewResponse(
-            Groups:          groups,
-            TotalCny:        totalCny,
-            RateVndPerCny:   rate.RateVndPerCny,
-            DepositPct:      depositCfg.DepositPct,
-            TotalDepositVnd: totalDeposit,
-            DepositConfigName: depositCfg.Name
+            ExchangeRateVndPerCny:   rateVnd,
+            RateAsOf:                rate.EffectiveFrom.ToString("O"),
+            Groups:                  groups,
+            SubtotalVnd:             totalSubtotalVnd,
+            ServiceFeeVnd:           serviceFeeVnd,
+            EstimatedShippingFeeVnd: shippingFeeVnd,
+            TotalVnd:                totalVnd,
+            DepositVnd:              depositVnd,
+            RemainingPaymentVnd:     remainingVnd,
+            WalletBalanceSufficient: true,   // stub — wallet Phase 8
+            WalletBalanceVnd:        0m,     // stub
+            WalletShortageVnd:       0m      // stub
         );
     }
 
@@ -140,18 +197,17 @@ public class CartService(
         return uow.ExecuteInTransactionAsync(async innerCt =>
         {
             var cart  = await EnsureActiveCartAsync(customerId, innerCt);
-            var items = FilterItems(cart, req.CartItemIds);
+            var items = FilterByShops(cart, req.ShopIds);
 
             if (!items.Any())
                 throw new EmptyCartCheckoutException();
 
             var (rate, depositCfg) = await LoadRateAndDepositAsync(innerCt);
 
-            // Group by shop
-            var byShop = items.GroupBy(i => i.ShopId);
-            var createdOrders = new List<ConfirmCheckoutItemResponse>();
+            var createdOrderIds = new List<string>();
+            DateTime?  firstDeadline = null;
 
-            foreach (var shopGroup in byShop)
+            foreach (var shopGroup in items.GroupBy(i => i.ShopId))
             {
                 var shop = await shopRepo.GetByIdAsync(shopGroup.Key, innerCt)
                            ?? throw new ProductNotFoundException($"Shop {shopGroup.Key}");
@@ -159,7 +215,6 @@ public class CartService(
                 if (shop.IsBlacklisted)
                     throw new BlacklistedShopException(shop.ShopName);
 
-                // Tạo CustomerOrder
                 var order = CustomerOrder.Create(
                     customerId:          customerId,
                     shopId:              shop.Id,
@@ -170,7 +225,7 @@ public class CartService(
                                              ? PlacementMode.AutoApi
                                              : PlacementMode.Manual,
                     deliveryAddressNote: req.DeliveryAddressNote,
-                    customerNote:        null
+                    customerNote:        req.CustomerNote
                 );
 
                 foreach (var ci in shopGroup)
@@ -185,44 +240,37 @@ public class CartService(
                     );
                 }
 
-                order.CalculateDeposit();  // tính FinalAmountVnd + DepositVnd từ TotalCny
-
+                order.CalculateDeposit();
                 await orderRepo.AddAsync(order, innerCt);
 
-                createdOrders.Add(new ConfirmCheckoutItemResponse(
-                    OrderId:    order.Id,
-                    OrderCode:  order.OrderCode,
-                    ShopId:     shop.Id,
-                    ShopName:   shop.ShopName,
-                    TotalCny:   order.TotalCny,
-                    DepositVnd: order.DepositVnd,
-                    Status:     order.Status.ToString()
-                ));
+                createdOrderIds.Add(order.Id.ToString());
+                firstDeadline ??= order.PaymentDeadline;
 
                 logger.LogInformation(
                     "CustomerOrder {OrderCode} created for customer {CustomerId}, shop {ShopName}",
                     order.OrderCode, customerId, shop.ShopName);
             }
 
-            // Xóa các item đã checkout khỏi cart (hoặc mark cart Converted nếu checkout tất cả)
-            if (req.CartItemIds is null || req.CartItemIds.Count == 0)
+            // Xóa item đã checkout hoặc mark cart Converted nếu checkout toàn bộ
+            if (req.ShopIds is null || req.ShopIds.Count == 0)
             {
-                // checkout toàn bộ → mark cart converted
+                // Checkout toàn bộ cart → mark Converted (không cần xóa từng item)
                 cart.MarkConverted();
             }
             else
             {
-                // checkout 1 phần → chỉ xóa những item được chọn
-                foreach (var id in req.CartItemIds)
-                    cart.RemoveItem(id);
+                // Checkout một phần (theo shop) → explicit delete + xóa khỏi collection
+                await cartItemRepo.DeleteRangeAsync(items, innerCt);
+                foreach (var item in items)
+                    cart.RemoveItem(item.Id);
             }
 
             await cartRepo.UpdateAsync(cart, innerCt);
 
             return new ConfirmCheckoutResponse(
-                Orders:         createdOrders,
-                OrdersCreated:  createdOrders.Count,
-                TotalDepositVnd: createdOrders.Sum(o => o.DepositVnd)
+                CreatedOrderIds:        createdOrderIds,
+                TotalChargedFromWallet: 0m,          // stub — wallet Phase 8
+                CountdownDeadline:      (firstDeadline ?? DateTime.UtcNow.AddMinutes(30)).ToString("O")
             );
         }, ct);
     }
@@ -241,11 +289,12 @@ public class CartService(
         return cart;
     }
 
-    private static List<CartItem> FilterItems(Cart cart, List<Guid>? cartItemIds)
+    /// Lọc items theo ShopIds được chọn từ FE. Null / empty = lấy tất cả.
+    private static List<CartItem> FilterByShops(Cart cart, List<Guid>? shopIds)
     {
-        if (cartItemIds is null || cartItemIds.Count == 0)
+        if (shopIds is null || shopIds.Count == 0)
             return cart.Items.ToList();
-        return cart.Items.Where(i => cartItemIds.Contains(i.Id)).ToList();
+        return cart.Items.Where(i => shopIds.Contains(i.ShopId)).ToList();
     }
 
     private async Task<(ExchangeRateHistory Rate, DepositConfig Deposit)> LoadRateAndDepositAsync(CancellationToken ct)
@@ -257,45 +306,6 @@ public class CartService(
         return (rate, deposit);
     }
 
-    private async Task<List<CheckoutPreviewGroupResponse>> BuildPreviewGroupsAsync(
-        List<CartItem> items, decimal rateVnd, decimal depositPct, CancellationToken ct)
-    {
-        var result = new List<CheckoutPreviewGroupResponse>();
-
-        foreach (var shopGroup in items.GroupBy(i => i.ShopId))
-        {
-            var shop = await shopRepo.GetByIdAsync(shopGroup.Key, ct);
-            var shopName = shop?.ShopName ?? shopGroup.Key.ToString();
-            var mode = shop?.IntegrationMode.ToString() ?? "Manual";
-            var isBlacklisted = shop?.IsBlacklisted ?? false;
-
-            var previewItems = shopGroup.Select(ci => new CheckoutPreviewItemResponse(
-                CartItemId:   ci.Id,
-                VariantId:    ci.VariantId,
-                ProductTitle: ci.ProductTitleSnapshot,
-                VariantName:  ci.VariantNameSnapshot,
-                Quantity:     ci.Quantity,
-                UnitPriceCny: ci.PriceCnySnapshot,
-                SubtotalCny:  ci.Quantity * ci.PriceCnySnapshot
-            )).ToList();
-
-            var subtotal = previewItems.Sum(i => i.SubtotalCny);
-            var depositVnd = Math.Round(subtotal * rateVnd * depositPct, 0);
-
-            result.Add(new CheckoutPreviewGroupResponse(
-                ShopId:             shopGroup.Key,
-                ShopName:           shopName,
-                ShopIntegrationMode: mode,
-                ShopIsBlacklisted:  isBlacklisted,
-                Items:              previewItems,
-                SubtotalCny:        subtotal,
-                EstimatedDepositVnd: depositVnd
-            ));
-        }
-
-        return result;
-    }
-
     // ── Mapper ────────────────────────────────────────────────────────────────
 
     private static CartResponse MapToResponse(Cart cart)
@@ -304,34 +314,38 @@ public class CartService(
             .GroupBy(i => i.ShopId)
             .Select(g =>
             {
+                var shopName  = g.First().Shop?.ShopName ?? g.Key.ToString();
                 var shopItems = g.Select(ci => new CartItemResponse(
-                    Id:           ci.Id,
-                    ProductId:    ci.ProductId,
-                    VariantId:    ci.VariantId,
-                    ShopId:       ci.ShopId,
-                    ProductTitle: ci.ProductTitleSnapshot,
-                    VariantName:  ci.VariantNameSnapshot,
-                    ImageUrl:     ci.ImageUrlSnapshot,
-                    Quantity:     ci.Quantity,
-                    PriceCny:     ci.PriceCnySnapshot,
-                    TotalCny:     ci.Quantity * ci.PriceCnySnapshot
+                    Id:               ci.Id,
+                    ProductId:        ci.ProductId,
+                    VariantId:        ci.VariantId,
+                    ShopId:           ci.ShopId,
+                    ShopName:         shopName,
+                    ProductTitle:     ci.ProductTitleSnapshot,
+                    VariantName:      ci.VariantNameSnapshot,
+                    ImageUrl:         ci.ImageUrlSnapshot,
+                    Quantity:         ci.Quantity,
+                    PriceCnySnapshot: ci.PriceCnySnapshot,
+                    LineTotalCny:     ci.Quantity * ci.PriceCnySnapshot,
+                    AddedAt:          ci.AddedAt
                 )).ToList();
 
                 return new CartGroupByShopResponse(
-                    ShopId:       g.Key,
-                    ShopName:     g.First().Shop?.ShopName ?? g.Key.ToString(),
-                    Items:        shopItems,
-                    SubtotalCny:  shopItems.Sum(i => i.TotalCny)
+                    ShopId:      g.Key,
+                    ShopName:    shopName,
+                    SubtotalCny: shopItems.Sum(i => i.LineTotalCny),
+                    ItemCount:   shopItems.Count,
+                    Items:       shopItems
                 );
             }).ToList();
 
         return new CartResponse(
-            CartId:     cart.Id,
-            CustomerId: cart.CustomerId,
-            Status:     cart.Status,
-            Groups:     groups,
-            TotalCny:   groups.Sum(g => g.SubtotalCny),
-            UpdatedAt:  cart.UpdatedAt
+            Id:             cart.Id,
+            Status:         cart.Status.ToString(),
+            TotalItemCount: cart.Items.Count,
+            SubtotalCny:    groups.Sum(g => g.SubtotalCny),
+            CreatedAt:      cart.CreatedAt,
+            GroupsByShop:   groups
         );
     }
 }
