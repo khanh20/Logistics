@@ -16,6 +16,7 @@ public static class DataSeeder
         await SeedPermissionsAsync(db, ct);
         await SeedRolePermissionsAsync(db, ct);
         await SeedAdminUserAsync(db, hasher, logger, ct);
+        await SeedStaffUsersAsync(db, hasher, logger, ct);
     }
 
     // ── Permissions ───────────────────────────────────────────────────────────
@@ -157,5 +158,34 @@ public static class DataSeeder
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Admin user seeded: {Email} / Admin@123!", adminEmail);
+    }
+
+    // ── Test NV_MuaHang staff ─────────────────────────────────────────────────
+    private static async Task SeedStaffUsersAsync(AppDbContext db, IPasswordHasher hasher,
+                                                    ILogger logger, CancellationToken ct)
+    {
+        var nvRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == Roles.NvMuaHang, ct);
+        if (nvRole is null) return;
+
+        var staffSeeds = new[]
+        {
+            ("nguyen.van.an@muaho.vn",   "Staff@123!", "Nguyễn Văn An"),
+            ("tran.thi.bich@muaho.vn",   "Staff@123!", "Trần Thị Bích"),
+            ("le.minh.cuong@muaho.vn",   "Staff@123!", "Lê Minh Cường"),
+        };
+
+        foreach (var (email, password, fullName) in staffSeeds)
+        {
+            if (await db.Users.AnyAsync(u => u.Email == email, ct)) continue;
+
+            var user = User.Create(email, hasher.Hash(password), fullName);
+            await db.Users.AddAsync(user, ct);
+            await db.SaveChangesAsync(ct);
+
+            await db.UserRoles.AddAsync(UserRole.Create(user.Id, nvRole.Id, null), ct);
+            await db.SaveChangesAsync(ct);
+
+            logger.LogInformation("Staff user seeded: {Email} / Staff@123!", email);
+        }
     }
 }

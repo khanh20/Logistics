@@ -56,6 +56,27 @@ public class UserRepository(AppDbContext db) : IUserRepository
                where ur.UserId == userId
                select r.Name)
               .ToListAsync(ct);
+
+    public async Task<List<User>> GetByRoleNameAsync(string roleName, bool activeOnly,
+                                                      CancellationToken ct = default)
+    {
+        var nameNorm = roleName.Trim();
+
+        var userIds = await (from ur in db.UserRoles
+                             join r in db.Roles on ur.RoleId equals r.Id
+                             where r.Name == nameNorm
+                             select ur.UserId)
+                            .Distinct()
+                            .ToListAsync(ct);
+
+        if (userIds.Count == 0) return [];
+
+        var q = db.Users.Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                        .Where(u => userIds.Contains(u.Id));
+        if (activeOnly) q = q.Where(u => u.Status == UserStatus.Active);
+
+        return await q.OrderBy(u => u.FullName).ToListAsync(ct);
+    }
 }
 
 // ── Role ─────────────────────────────────────────────────────────────────────
@@ -140,6 +161,18 @@ public class PermissionRepository(AppDbContext db) : IPermissionRepository
 
     public async Task AddRangeAsync(IEnumerable<Permission> permissions, CancellationToken ct = default) =>
         await db.Permissions.AddRangeAsync(permissions, ct);
+
+    public Task UpdateAsync(Permission permission, CancellationToken ct = default)
+    {
+        db.Permissions.Update(permission);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(Permission permission, CancellationToken ct = default)
+    {
+        db.Permissions.Remove(permission);
+        return Task.CompletedTask;
+    }
 }
 
 // ── RolePermission ────────────────────────────────────────────────────────────

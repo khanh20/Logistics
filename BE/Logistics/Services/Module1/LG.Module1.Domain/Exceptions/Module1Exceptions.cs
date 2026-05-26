@@ -33,3 +33,23 @@ public class InsufficientStockException(string variant)
 
 public class PlatformNotFoundException(object id)
     : Module1DomainException($"Không tìm thấy sàn thương mại: {id}.", "PLATFORM_NOT_FOUND");
+
+public class CartNotFoundException(object id)
+    : Module1DomainException($"Không tìm thấy giỏ hàng: {id}.", "CART_NOT_FOUND");
+
+public class OrderNotFoundException(object id)
+    : Module1DomainException($"Không tìm thấy đơn hàng: {id}.", "ORDER_NOT_FOUND");
+
+public class BlacklistedShopException(string shopName)
+    : Module1DomainException($"Shop '{shopName}' đã bị blacklist, không thể đặt hàng.", "BLACKLISTED_SHOP");
+
+public class InsufficientWalletException(decimal required, decimal available)
+    : Module1DomainException(
+        $"Số dư ví không đủ. Cần {required:N0} VNĐ, hiện có {available:N0} VNĐ.",
+        "INSUFFICIENT_WALLET");
+
+public class EmptyCartCheckoutException()
+    : Module1DomainException("Giỏ hàng trống, không thể tạo đơn hàng.", "EMPTY_CART");
+
+public class VariantUnavailableException(string variantName)
+    : Module1DomainException($"Phân loại '{variantName}' hiện không còn hàng.", "VARIANT_UNAVAILABLE");

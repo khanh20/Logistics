@@ -139,7 +139,9 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
     <aside className="w-64 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col">
       <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-800">
         <span className="text-lg font-bold text-white">MuaHo</span>
-        <span className="text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-medium">Admin</span>
+        <span className="text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-medium">
+          Admin
+        </span>
       </div>
 
       <nav className="flex-1 min-h-0 overflow-y-auto py-4 px-2 space-y-1 custom-scrollbar">

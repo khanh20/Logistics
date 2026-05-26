@@ -28,6 +28,28 @@ public class UsersController(IUserService userService) : BaseController
         return Ok(result, "Profile updated.");
     }
 
+    /// List all users for staff management (Admin only)
+    [HttpGet("staff")]
+    [RequirePermission(Permissions.UserRead)]
+    [ProducesResponseType(typeof(PagedResponse<UserListResponse>), 200)]
+    public async Task<IActionResult> GetStaff(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 200,
+        CancellationToken ct = default)
+    {
+        var result = await userService.GetAllAsync(page, pageSize, ct);
+        return Ok(result);
+    }
+
+    /// Create a new staff account (Admin only)
+    [HttpPost("staff")]
+    [RequirePermission(Permissions.UserManage)]
+    [ProducesResponseType(typeof(UserListResponse), 200)]
+    public async Task<IActionResult> CreateStaff([FromBody] CreateStaffRequest req, CancellationToken ct)
+    {
+        var result = await userService.CreateStaffAsync(req, CurrentUserId, ct);
+        return Ok(result, "Staff account created.");
+    }
+
     /// List all users (Admin only)
     [HttpGet]
     [RequirePermission(Permissions.UserRead)]
@@ -38,6 +60,16 @@ public class UsersController(IUserService userService) : BaseController
     {
         var result = await userService.GetAllAsync(page, pageSize, ct);
         return Ok(result);
+    }
+
+    /// Create a user with admin-selected roles (Admin only)
+    [HttpPost]
+    [RequirePermission(Permissions.UserManage)]
+    [ProducesResponseType(typeof(UserListResponse), 200)]
+    public async Task<IActionResult> Create([FromBody] CreateUserRequest req, CancellationToken ct)
+    {
+        var result = await userService.CreateUserAsync(req, CurrentUserId, ct);
+        return Ok(result, "User account created.");
     }
 
     /// Get user by ID (Admin / Staff)

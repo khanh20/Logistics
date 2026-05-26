@@ -14,6 +14,8 @@ public interface IUserRepository
     Task        DeleteAsync(User user, CancellationToken ct = default);
     Task<List<string>> GetPermissionCodesAsync(Guid userId, CancellationToken ct = default);
     Task<List<string>> GetRoleNamesAsync(Guid userId, CancellationToken ct = default);
+    Task<List<User>> GetByRoleNameAsync(string roleName, bool activeOnly,
+                                         CancellationToken ct = default);
 }
 
 public interface IRoleRepository
@@ -44,6 +46,8 @@ public interface IPermissionRepository
     Task<List<Permission>> GetByRoleIdAsync(Guid roleId, CancellationToken ct = default);
     Task                   AddAsync(Permission permission, CancellationToken ct = default);
     Task                   AddRangeAsync(IEnumerable<Permission> permissions, CancellationToken ct = default);
+    Task                   UpdateAsync(Permission permission, CancellationToken ct = default);
+    Task                   DeleteAsync(Permission permission, CancellationToken ct = default);
 }
 
 public interface IRolePermissionRepository

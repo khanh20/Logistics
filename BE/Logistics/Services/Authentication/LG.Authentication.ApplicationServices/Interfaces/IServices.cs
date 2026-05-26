@@ -23,6 +23,11 @@ public interface IUserService
     Task<UserResponse>  UpdateProfileAsync(Guid userId, UpdateProfileRequest req, CancellationToken ct = default);
     Task<UserResponse>  UpdateStatusAsync(Guid userId, UpdateUserStatusRequest req, Guid adminId, CancellationToken ct = default);
     Task                DeleteAsync(Guid userId, Guid adminId, CancellationToken ct = default);
+    Task<List<StaffRosterItemResponse>> GetStaffRosterAsync(string roleName, bool activeOnly,
+                                                             CancellationToken ct = default);
+    Task<List<UserListResponse>> GetStaffManagementListAsync(CancellationToken ct = default);
+    Task<UserListResponse> CreateStaffAsync(CreateStaffRequest req, Guid adminId, CancellationToken ct = default);
+    Task<UserListResponse> CreateUserAsync(CreateUserRequest req, Guid adminId, CancellationToken ct = default);
 }
 
 public interface IRoleService
@@ -43,6 +48,9 @@ public interface IPermissionService
     Task<List<PermissionResponse>> GetByRoleAsync(Guid roleId, CancellationToken ct = default);
     Task<List<PermissionResponse>> GetByUserAsync(Guid userId, CancellationToken ct = default);
     Task                           SyncRolePermissionsAsync(SyncRolePermissionsRequest req, CancellationToken ct = default);
+    Task<PermissionResponse>       CreateAsync(CreatePermissionRequest req, CancellationToken ct = default);
+    Task<PermissionResponse>       UpdateAsync(Guid id, UpdatePermissionRequest req, CancellationToken ct = default);
+    Task                           DeleteAsync(Guid id, CancellationToken ct = default);
 }
 
 public interface ISystemConfigService

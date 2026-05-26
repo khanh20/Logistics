@@ -150,6 +150,19 @@ public class ProductVariant
         UpdatedAt   = DateTime.UtcNow;
     }
 
+    /// Đánh dấu variant không còn khả dụng (soft-delete). Giữ FK từ cart_items.
+    public void MarkUnavailable()
+    {
+        IsAvailable = false;
+        UpdatedAt   = DateTime.UtcNow;
+    }
+
+    public void MarkAvailable()
+    {
+        IsAvailable = true;
+        UpdatedAt   = DateTime.UtcNow;
+    }
+
     public void UpdateInfo(string variantName, string? translatedName, string? imageUrl, int sortOrder)
     {
         VariantName = variantName.Trim();

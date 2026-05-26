@@ -114,7 +114,35 @@ public class PlatformShop
         Touch();
     }
 
+    // ── Integration mode ──────────────────────────────────────────
+    public ShopIntegrationMode IntegrationMode            { get; private set; } = ShopIntegrationMode.Manual;
+    public string?             IntegrationApiUrl          { get; private set; }
+    public string?             IntegrationApiTokenEncrypted { get; private set; }
+
+    public void SetIntegration(ShopIntegrationMode mode, string? apiUrl, string? encryptedToken)
+    {
+        IntegrationMode             = mode;
+        IntegrationApiUrl           = apiUrl?.Trim();
+        IntegrationApiTokenEncrypted = encryptedToken;
+        Touch();
+    }
+
+    public void RemoveIntegration()
+    {
+        IntegrationMode             = ShopIntegrationMode.Manual;
+        IntegrationApiUrl           = null;
+        IntegrationApiTokenEncrypted = null;
+        Touch();
+    }
+
     private void Touch() => UpdatedAt = DateTime.UtcNow;
+}
+
+// ── ShopIntegrationMode ───────────────────────────────────────────────────────
+public enum ShopIntegrationMode
+{
+    Manual     = 1,   // NV đặt tay qua Alipay / giao diện sàn
+    ShopifyAuto = 2,  // Shopify Storefront API — đặt tự động
 }
 
 // ─── PlatformAccount ──────────────────────────────────────────────────────────

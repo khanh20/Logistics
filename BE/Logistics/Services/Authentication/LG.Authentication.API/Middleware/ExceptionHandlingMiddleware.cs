@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Diagnostics;
 
 namespace LG.Authentication.API.Middleware;
 
-public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+public class ExceptionHandlingMiddleware(
+    RequestDelegate next,
+    ILogger<ExceptionHandlingMiddleware> logger,
+    IHostEnvironment env)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
@@ -33,13 +36,16 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             InvalidTokenException e  => (401, e.Code, e.Message),
             AccountLockedException e => (403, e.Code, e.Message),
             DomainException e        => (400, e.Code, e.Message),
-            _                        => (500, "INTERNAL_ERROR", "An unexpected error occurred.")
+            _ => (500, "INTERNAL_ERROR",
+                 env.IsDevelopment() ? ex.Message : "An unexpected error occurred.")
         };
 
-        if (status == 500)
-            logger.LogError(ex, "Unhandled exception");
+        if (status >= 500)
+            logger.LogError(ex, "Unhandled exception on {Path}", ctx.Request.Path);
         else
-            logger.LogWarning(ex, "Domain exception: {Code}", code);
+            logger.LogWarning(ex, "Domain exception: {Code} on {Path}", code, ctx.Request.Path);
+
+        if (ctx.Response.HasStarted) return;
 
         ctx.Response.StatusCode  = status;
         ctx.Response.ContentType = "application/json";

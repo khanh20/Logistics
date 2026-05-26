@@ -4,7 +4,10 @@ using LG.Shared.Constants;
 
 namespace LG.Module1.API.Middleware;
 
-public class Module1ExceptionMiddleware(RequestDelegate next, ILogger<Module1ExceptionMiddleware> logger)
+public class Module1ExceptionMiddleware(
+    RequestDelegate next,
+    ILogger<Module1ExceptionMiddleware> logger,
+    IHostEnvironment env)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
@@ -34,17 +37,28 @@ public class Module1ExceptionMiddleware(RequestDelegate next, ILogger<Module1Exc
             AdapterUpstreamException e => (502, e.Code, e.Message),
 
             Module1DomainException e => (400, e.Code, e.Message),
-            InvalidOperationException e => (400, "INVALID_OPERATION", e.Message),
-            ArgumentException e => (400, "BAD_REQUEST", e.Message),
-            _ => (500, "INTERNAL_ERROR", "Đã xảy ra lỗi không mong muốn.")
+
+            // Operation/Argument exception là client error nhưng message có thể leak
+            // internal info (path, field name nội bộ) → mask trong production.
+            InvalidOperationException => (400, "INVALID_OPERATION",
+                env.IsDevelopment() ? ex.Message : "Yêu cầu không hợp lệ."),
+            ArgumentException => (400, "BAD_REQUEST",
+                env.IsDevelopment() ? ex.Message : "Tham số không hợp lệ."),
+
+            // Unhandled — luôn mask message khi production
+            _ => (500, "INTERNAL_ERROR",
+                env.IsDevelopment() ? ex.Message : "Đã xảy ra lỗi không mong muốn.")
         };
 
-        if (status >= 500) logger.LogError(ex, "Server-side exception: {Code}", code);
-        else logger.LogWarning(ex, "Client/domain exception: {Code}", code);
+        if (status >= 500) logger.LogError(ex, "Server-side exception: {Code} on {Path}", code, ctx.Request.Path);
+        else logger.LogWarning(ex, "Client/domain exception: {Code} on {Path}", code, ctx.Request.Path);
 
         // Set Retry-After header cho 429
         if (ex is AdapterRateLimitException rl && rl.RetryAfterSeconds.HasValue)
             ctx.Response.Headers["Retry-After"] = rl.RetryAfterSeconds.Value.ToString();
+
+        // Tránh ghi response nếu pipeline đã ghi rồi (vd file streaming đã start)
+        if (ctx.Response.HasStarted) return;
 
         ctx.Response.StatusCode = status;
         ctx.Response.ContentType = "application/json";

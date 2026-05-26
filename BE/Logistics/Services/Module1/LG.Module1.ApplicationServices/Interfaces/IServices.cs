@@ -1,6 +1,9 @@
+using LG.Module1.ApplicationServices.DTOs.Cart;
 using LG.Module1.ApplicationServices.DTOs.Category;
+using LG.Module1.ApplicationServices.DTOs.Order;
 using LG.Module1.ApplicationServices.DTOs.Platform;
 using LG.Module1.ApplicationServices.DTOs.Product;
+using LG.Module1.Domain.Entities;
 
 namespace LG.Module1.ApplicationServices.Interfaces;
 
@@ -107,6 +110,127 @@ public interface IProductAttributeService
 
     /// Thay thế toàn bộ attributes của product (dùng sau crawl).
     Task<List<ProductAttributeResponse>> SyncAsync(Guid productId, List<AddAttributeRequest> attributes, CancellationToken ct = default);
+}
+
+// ── Cart ────────────────────────────────────────────────────────────
+public interface ICartService
+{
+    /// Lấy cart Active của customer. Tạo mới nếu chưa có.
+    Task<CartResponse>          GetOrCreateCartAsync(Guid customerId, CancellationToken ct = default);
+
+    /// Thêm item vào cart (merge nếu trùng variant).
+    Task<CartResponse>          AddItemAsync(Guid customerId, AddCartItemRequest req, CancellationToken ct = default);
+
+    /// Cập nhật số lượng 1 item.
+    Task<CartResponse>          UpdateItemQuantityAsync(Guid customerId, Guid cartItemId, UpdateCartItemQuantityRequest req, CancellationToken ct = default);
+
+    /// Xóa 1 item khỏi cart.
+    Task<CartResponse>          RemoveItemAsync(Guid customerId, Guid cartItemId, CancellationToken ct = default);
+
+    /// Xóa toàn bộ items.
+    Task<CartResponse>          ClearCartAsync(Guid customerId, CancellationToken ct = default);
+
+    /// Preview chi phí checkout (tính deposit, tỉ giá) — không tạo đơn.
+    Task<CheckoutPreviewResponse>  PreviewCheckoutAsync(Guid customerId, CheckoutPreviewRequest req, CancellationToken ct = default);
+
+    /// Tạo đơn hàng từ cart (atomic, dùng transaction).
+    /// 1 shop → 1 CustomerOrder. Trả về danh sách order đã tạo.
+    Task<ConfirmCheckoutResponse>  ConfirmCheckoutAsync(Guid customerId, ConfirmCheckoutRequest req, CancellationToken ct = default);
+}
+
+// ── Order (Customer) ────────────────────────────────────────────────
+public interface ICustomerOrderService
+{
+    Task<(List<OrderListItemResponse> Items, int TotalCount)>
+        GetMyOrdersAsync(Guid customerId, OrderStatus? status, int page, int pageSize, CancellationToken ct = default);
+
+    Task<OrderDetailResponse> GetMyOrderDetailAsync(Guid customerId, Guid orderId, CancellationToken ct = default);
+
+    /// Khách hủy đơn (chỉ được hủy khi còn ở PendingPayment / AwaitingManualPlace).
+    Task<OrderDetailResponse> CancelOrderAsync(Guid customerId, Guid orderId, CancelOrderRequest req, CancellationToken ct = default);
+
+    /// Placeholder Phase 8 — khách xác nhận đặt cọc (wallet trả tiền).
+    Task<OrderDetailResponse> PayDepositAsync(Guid customerId, Guid orderId, CancellationToken ct = default);
+}
+
+// ── Order (Staff) ───────────────────────────────────────────────────
+public interface IOrderManagementService
+{
+    Task<(List<StaffOrderListItemResponse> Items, int TotalCount)>
+        GetOrdersAsync(OrderListFilter filter, CancellationToken ct = default);
+
+    Task<OrderDetailResponse> GetOrderDetailAsync(Guid orderId, CancellationToken ct = default);
+
+    /// Staff nhận đơn — chuyển sang AwaitingManualPlace / AwaitingApiPlace.
+    Task<OrderDetailResponse> AssignOrderAsync(Guid orderId, Guid staffId, CancellationToken ct = default);
+
+    /// Ghi nhận đã đặt hàng thủ công trên sàn.
+    Task<OrderDetailResponse> RecordManualPlacementAsync(Guid orderId, Guid staffId, ManualPlacementRequest req, CancellationToken ct = default);
+
+    /// Cập nhật mã tracking từ shop gửi.
+    Task<OrderDetailResponse> UpdateTrackingAsync(Guid orderId, Guid staffId, UpdateTrackingRequest req, CancellationToken ct = default);
+
+    /// Ghi nhận hàng đã về kho TQ.
+    Task<OrderDetailResponse> MarkArrivedChinaAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
+
+    /// Ghi nhận đang vận chuyển quốc tế.
+    Task<OrderDetailResponse> MarkShippingToVNAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
+
+    /// Ghi nhận hàng đã về kho VN.
+    Task<OrderDetailResponse> MarkArrivedVietnamAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
+
+    /// Ghi nhận đang giao cho khách.
+    Task<OrderDetailResponse> MarkDeliveringAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
+
+    /// Hoàn thành đơn.
+    Task<OrderDetailResponse> MarkCompletedAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
+
+    /// Ghi nhận vấn đề phát sinh.
+    Task<OrderDetailResponse> RecordIssueAsync(Guid orderId, Guid staffId, RecordIssueRequest req, CancellationToken ct = default);
+
+    /// Staff hủy đơn.
+    Task<OrderDetailResponse> CancelByStaffAsync(Guid orderId, Guid staffId, CancelOrderRequest req, CancellationToken ct = default);
+
+    /// Ghi nhận hoàn hàng.
+    Task<OrderDetailResponse> MarkReturnedAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
+}
+
+// ── Wallet stub (Phase 8) ──────────────────────────────────────────
+public interface IWalletService
+{
+    /// Kiểm tra số dư ví — stub Phase 8, luôn trả available = 0.
+    Task<decimal> GetBalanceAsync(Guid customerId, CancellationToken ct = default);
+
+    /// Trừ tiền ví — stub Phase 8, throw NotImplementedException.
+    Task DeductAsync(Guid customerId, decimal amountVnd, string description, CancellationToken ct = default);
+}
+
+// ── Staff Assignment ─────────────────────────────────────────────────────────
+public interface IStaffAssignmentService
+{
+    /// Auto-assign đơn dựa trên workload. Trả null nếu không có staff.
+    Task<StaffAssignmentDto?> AutoAssignAsync(Guid orderId,
+        IReadOnlyList<Guid> availableStaffIds, CancellationToken ct = default);
+
+    /// Admin tự chọn staff cho đơn cụ thể.
+    Task<StaffAssignmentDto> ManualAssignAsync(Guid orderId, Guid staffId, Guid adminId,
+        string? note, CancellationToken ct = default);
+
+    /// Chuyển đơn sang nhân viên khác (soft-complete assignment cũ).
+    Task<StaffAssignmentDto> ReassignAsync(Guid orderId, Guid newStaffId, Guid adminId,
+        string? note, CancellationToken ct = default);
+
+    /// Đánh dấu assignment đã hoàn thành (staff xử lý xong).
+    Task MarkCompletedAsync(Guid assignmentId, CancellationToken ct = default);
+
+    /// Danh sách assignment đang quá SLA.
+    Task<List<OverdueAssignmentDto>> GetOverdueAsync(CancellationToken ct = default);
+
+    /// Workload hiện tại của một staff.
+    Task<StaffWorkloadDto> GetWorkloadAsync(Guid staffId, CancellationToken ct = default);
+
+    /// Lấy assignment đang active của một đơn (nếu có).
+    Task<StaffAssignmentDto?> GetActiveByOrderAsync(Guid orderId, CancellationToken ct = default);
 }
 
 public interface IPlatformService

@@ -3,14 +3,19 @@ using LG.Authentication.ApplicationServices.Interfaces;
 using LG.Authentication.Domain.Entities;
 using LG.Authentication.Domain.Exceptions;
 using LG.Authentication.Domain.Repositories;
+using LG.Authentication.Infrastructure.Security;
+using LG.Shared.Constants;
 using Microsoft.Extensions.Logging;
 
 namespace LG.Authentication.ApplicationServices.Services;
 
 public class UserService(
-    IUserRepository userRepo,
-    IAuditLogRepository auditRepo,   
-    IUnitOfWork uow,
+    IUserRepository     userRepo,
+    IRoleRepository     roleRepo,
+    IUserRoleRepository userRoleRepo,
+    IAuditLogRepository auditRepo,
+    IUnitOfWork         uow,
+    IPasswordHasher     hasher,
     ICurrentUserService currentUser,
     ILogger<UserService> logger
 ) : IUserService
@@ -115,5 +120,86 @@ public class UserService(
         }, ct);
 
         logger.LogInformation("User deleted: {UserId} by admin: {AdminId}", userId, adminId);
+    }
+
+    public async Task<List<StaffRosterItemResponse>> GetStaffRosterAsync(
+        string roleName, bool activeOnly, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(roleName))
+            throw new ValidationException("roleName is required.");
+
+        var users = await userRepo.GetByRoleNameAsync(roleName, activeOnly, ct);
+        return users.Select(u => new StaffRosterItemResponse(u.Id, u.FullName, u.Email)).ToList();
+    }
+
+    public async Task<List<UserListResponse>> GetStaffManagementListAsync(CancellationToken ct = default)
+    {
+        var paged = await GetAllAsync(page: 1, pageSize: 200, ct);
+        return paged.Data;
+    }
+
+    public async Task<UserListResponse> CreateStaffAsync(CreateStaffRequest req, Guid adminId, CancellationToken ct = default)
+    {
+        if (await userRepo.ExistsByEmailAsync(req.Email, ct))
+            throw new ConflictException($"Email '{req.Email}' đã được sử dụng.");
+
+        var nvRole = await roleRepo.GetByNameAsync(Roles.NvMuaHang, ct)
+            ?? throw new NotFoundException("Role", Roles.NvMuaHang);
+
+        var user = User.Create(req.Email, hasher.Hash(req.Password), req.FullName, req.Phone);
+
+        await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            await userRepo.AddAsync(user, innerCt);
+            await userRoleRepo.AddAsync(UserRole.Create(user.Id, nvRole.Id, null), innerCt);
+
+            var log = AuditLog.Create(adminId, "CREATE_STAFF", "users", user.Id,
+                null,
+                System.Text.Json.JsonSerializer.Serialize(new { user.Email, user.FullName }),
+                null, null);
+            await auditRepo.AddAsync(log, innerCt);
+        }, ct);
+
+        logger.LogInformation("Staff created: {Email} by admin: {AdminId}", user.Email, adminId);
+
+        return UserMapper.ToListResponse(user, [Roles.NvMuaHang]);
+    }
+
+    public async Task<UserListResponse> CreateUserAsync(CreateUserRequest req, Guid adminId, CancellationToken ct = default)
+    {
+        if (await userRepo.ExistsByEmailAsync(req.Email, ct))
+            throw new ConflictException($"Email '{req.Email}' đã được sử dụng.");
+
+        var roleIds = req.RoleIds ?? [];
+
+        // Validate và load roles trước transaction
+        var roles = new List<Role>();
+        foreach (var roleId in roleIds)
+        {
+            var role = await roleRepo.GetByIdAsync(roleId, ct)
+                ?? throw new NotFoundException("Role", roleId);
+            roles.Add(role);
+        }
+
+        var user = User.Create(req.Email, hasher.Hash(req.Password), req.FullName, req.Phone);
+
+        await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            await userRepo.AddAsync(user, innerCt);
+
+            foreach (var role in roles)
+                await userRoleRepo.AddAsync(UserRole.Create(user.Id, role.Id, adminId), innerCt);
+
+            var log = AuditLog.Create(adminId, "CREATE_USER", "users", user.Id,
+                null,
+                System.Text.Json.JsonSerializer.Serialize(
+                    new { user.Email, user.FullName, RoleIds = roleIds }),
+                null, null);
+            await auditRepo.AddAsync(log, innerCt);
+        }, ct);
+
+        logger.LogInformation("User created: {Email} by admin: {AdminId}", user.Email, adminId);
+
+        return UserMapper.ToListResponse(user, roles.Select(r => r.Name).ToList());
     }
 }
