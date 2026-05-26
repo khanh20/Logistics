@@ -401,6 +401,8 @@
     "start_crawl": "Bắt đầu crawl",
     "crawling": "Đang crawl...",
     "result_summary": "Kết quả: {{saved}}/{{found}} sản phẩm đã lưu",
+    "category_label": "Danh mục sản phẩm",
+    "category_placeholder": "Không chọn (tùy chọn)",
     "status_created": "Đã tạo",
     "status_updated": "Đã cập nhật",
     "status_skipped": "Bỏ qua",

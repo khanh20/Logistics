@@ -401,6 +401,8 @@
     "start_crawl": "Start Crawl",
     "crawling": "Crawling...",
     "result_summary": "Result: {{saved}}/{{found}} products saved",
+    "category_label": "Product Category",
+    "category_placeholder": "None (optional)",
     "status_created": "Created",
     "status_updated": "Updated",
     "status_skipped": "Skipped",
