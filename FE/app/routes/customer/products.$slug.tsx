@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { store } from "~/lib/feature/store";
 import { productsApi } from "~/lib/api/products";
 import { cartApi } from "~/lib/api/cart";
 import { Button } from "~/components/ui/Button";
@@ -53,7 +53,7 @@ export default function ProductDetailPage({
   const [cartMsg, setCartMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const navigate = useNavigate();
-  const { token } = useAuthStore.getState();
+  const { token } = store.getState().authState;
   const primaryImage = product.images.find((i) => i.isPrimary) ?? product.images[0];
   const activeImage = product.images[activeImageIdx] ?? primaryImage;
 

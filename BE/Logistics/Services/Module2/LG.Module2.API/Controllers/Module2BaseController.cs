@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using LG.Shared.Constants;
 
 namespace LG.Module2.API.Controllers;
 
@@ -6,7 +7,7 @@ namespace LG.Module2.API.Controllers;
 public abstract class Module2BaseController : ControllerBase
 {
     protected Guid CurrentUserId =>
-        Guid.Parse(HttpContext.User.FindFirst("userId")?.Value
+        Guid.Parse(HttpContext.User.FindFirst(UserClaimTypes.UserId)?.Value
             ?? throw new UnauthorizedAccessException("UserId claim not found."));
 
     protected string? ClientIp =>

@@ -3,7 +3,7 @@ import { AdminSidebar } from "~/components/admin/AdminSidebar";
 import { AdminTopbar } from "~/components/admin/AdminTopbar";
 import { store } from "~/lib/feature/store";
 import { ErrorState } from "~/components/shared/ErrorState";
-import { useAuthStore } from "~/lib/stores/authStore";
+
 import { STAFF_ROLES, type Role } from "~/lib/constants/roles";
 import type { UserAuthInfo } from "~/lib/types/auth";
 import type { Route } from "./+types/admin-layout";
@@ -38,7 +38,7 @@ export default function AdminLayout({ loaderData }: { loaderData: { user: UserAu
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const { user } = useAuthStore.getState();
+  const { user } = store.getState().authState;
 
   if (!user) {
     return <ErrorState error={error} fullScreen />;

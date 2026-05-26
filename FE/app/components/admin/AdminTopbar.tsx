@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "~/lib/stores/authStore";
-import { authApi } from "~/lib/api/auth";
+import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
+import { logout as logoutThunk } from "~/lib/feature/auth/authThunk";
 import { cn } from "~/lib/utils/cn";
 import type { UserAuthInfo } from "~/lib/types/auth";
 
@@ -11,19 +11,21 @@ interface AdminTopbarProps {
 
 export function AdminTopbar({ user }: AdminTopbarProps) {
   const { t, i18n } = useTranslation();
-  const refreshToken = useAuthStore((s) => s.refreshToken);
-  const logout = useAuthStore((s) => s.logout);
+  const dispatch = useAppDispatch();
+  const refreshToken = useAppSelector((state) => state.authState.refreshToken);
   const navigate = useNavigate();
 
   async function handleLogout() {
     if (refreshToken) {
       try {
-        await authApi.logout(refreshToken);
+        await dispatch(logoutThunk(refreshToken)).unwrap();
       } catch {
         /* ignore */
       }
+    } else {
+      // Just clear local state if no refresh token
+      localStorage.removeItem("muaho-auth");
     }
-    logout();
     navigate("/");
   }
 

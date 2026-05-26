@@ -4,7 +4,9 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  isRouteErrorResponse,
 } from "react-router";
+import { Result, Button, Typography } from "antd";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -50,7 +52,6 @@ export default function App() {
     </Provider>
   );
 }
-import { Result, Button, Typography } from "antd";
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Có lỗi xảy ra!";

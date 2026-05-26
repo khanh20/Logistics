@@ -1,9 +1,11 @@
-import { useAuthStore } from "~/lib/stores/authStore";
+import { useAppSelector } from "~/lib/feature/hooks";
 import { isStaff, isAdmin } from "~/lib/constants/roles";
 
 export function useAuth() {
-  const { user, token, roles, permissions, login, logout, hasRole, hasPermission } =
-    useAuthStore();
+  const { user, token, roles, permissions } = useAppSelector((state) => state.authState);
+
+  const hasRole = (role: string) => roles.includes(role);
+  const hasPermission = (permission: string) => permissions.includes(permission);
 
   return {
     user,
@@ -11,8 +13,6 @@ export function useAuth() {
     isAuthenticated: !!token,
     roles,
     permissions,
-    login,
-    logout,
     hasRole,
     hasPermission,
     isAdmin: isAdmin(roles),

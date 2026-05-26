@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, redirect } from "react-router";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { store } from "~/lib/feature/store";
 import { customerOrdersApi } from "~/lib/api/orders";
 import { StatusBadge } from "~/components/shared/StatusBadge";
 import { Button } from "~/components/ui/Button";
@@ -17,7 +17,7 @@ export function meta(_: Route.MetaArgs) {
 const PAGE_SIZE = 10;
 
 export async function clientLoader() {
-  const { token } = useAuthStore.getState();
+  const { token } = store.getState().authState;
   if (!token) throw redirect("/login");
 
   const res = await customerOrdersApi.list({ page: 1, pageSize: PAGE_SIZE });
