@@ -139,7 +139,7 @@ public class CustomerOrder
         PaidAt        = DateTime.UtcNow;
     }
 
-    /// Route theo IntegrationMode của shop.
+    /// Route theo IntegrationMode của shop — chỉ dùng cho lần assign đầu tiên.
     public void AssignToStaff(Guid staffId, ShopIntegrationMode integrationMode)
     {
         AssignedStaffId = staffId;
@@ -147,6 +147,14 @@ public class CustomerOrder
             ? OrderStatus.AwaitingApiPlace
             : OrderStatus.AwaitingManualPlace;
         TransitionTo(next, staffId, "Đã phân công NV");
+    }
+
+    /// Chuyển sang NV khác mà không đổi trạng thái đơn — dùng khi reassign.
+    public void Reassign(Guid newStaffId, Guid changedBy, string? note = null)
+    {
+        AssignedStaffId = newStaffId;
+        AppendHistory(Status, Status, changedBy, note ?? "Chuyển NV phụ trách");
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void MarkOrderedOnPlatform(Guid changedBy, string? note = null) =>

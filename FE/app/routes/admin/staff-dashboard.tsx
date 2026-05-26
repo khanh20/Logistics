@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { staffAssignmentsApi } from "~/lib/api/orders";
 import { SlaCountdown } from "~/components/admin/SlaCountdown";
 import { Button } from "~/components/ui/Button";
@@ -11,14 +12,12 @@ export function meta(_: Route.MetaArgs) {
   return [{ title: "Staff Dashboard — MuaHo Admin" }];
 }
 
-// Danh sách staffId tạm hardcode, Phase 10 lấy từ Auth service
 const KNOWN_STAFF_IDS: string[] = [];
 
 export async function clientLoader() {
   const overdueRes = await staffAssignmentsApi.getOverdue();
   const overdueList = overdueRes.data as OverdueAssignmentDto[];
 
-  // Lấy workload cho từng staff được biết
   const workloads: StaffWorkloadDto[] = [];
   for (const id of KNOWN_STAFF_IDS) {
     try {
@@ -37,6 +36,7 @@ export default function StaffDashboardPage({
 }: {
   loaderData: { overdueList: OverdueAssignmentDto[]; workloads: StaffWorkloadDto[] };
 }) {
+  const { t } = useTranslation();
   const { overdueList, workloads } = loaderData;
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -44,29 +44,36 @@ export default function StaffDashboardPage({
   const [reassignOrderId, setReassignOrderId] = useState<string | null>(null);
   const [newStaffId, setNewStaffId] = useState("");
 
-  async function handleReassign(orderId: string) {
-    if (!newStaffId.trim()) { setError("Vui lòng nhập Staff ID."); return; }
+  async function handleReassign(orderId: string, orderCode: string) {
+    if (!newStaffId.trim()) { setError(t("staff.error_staff_id_required")); return; }
     setLoading(true);
     setError(null);
     try {
       await staffAssignmentsApi.reassign(orderId, newStaffId.trim());
-      setSuccess(`Đã reassign đơn ${orderId.slice(0, 8)}…`);
+      setSuccess(t("staff.reassign_success", { code: orderCode }));
       setReassignOrderId(null);
       setNewStaffId("");
     } catch (err: unknown) {
-      setError((err as { message?: string })?.message ?? "Lỗi khi reassign.");
+      setError((err as { message?: string })?.message ?? t("staff.reassign_error"));
     } finally {
       setLoading(false);
     }
   }
 
+  const tableHeaders = [
+    t("staff.col_order_code"),
+    t("staff.col_staff_id"),
+    t("staff.col_sla_deadline"),
+    t("staff.col_overdue"),
+    t("common.status"),
+    "",
+  ];
+
   return (
     <div className="max-w-5xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Staff Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Theo dõi workload và SLA của nhân viên mua hàng.
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900">{t("staff.dashboard_title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("staff.dashboard_subtitle")}</p>
       </div>
 
       {error   && <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
@@ -76,7 +83,7 @@ export default function StaffDashboardPage({
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-800">
-            Đơn quá SLA
+            {t("staff.overdue_section")}
             {overdueList.length > 0 && (
               <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
                 {overdueList.length}
@@ -87,19 +94,19 @@ export default function StaffDashboardPage({
             to="/admin/assignments/overdue"
             className="text-sm text-primary hover:underline"
           >
-            Xem tất cả →
+            {t("staff.view_all")}
           </Link>
         </div>
 
         {overdueList.length === 0 ? (
-          <p className="text-sm text-gray-500">Không có đơn nào quá SLA ✓</p>
+          <p className="text-sm text-gray-500">{t("staff.no_overdue")}</p>
         ) : (
           <div className="overflow-hidden rounded-xl border border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {["Mã đơn", "Staff ID", "SLA Deadline", "Quá hạn", "Trạng thái", ""].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  {tableHeaders.map((h, i) => (
+                    <th key={i} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       {h}
                     </th>
                   ))}
@@ -124,7 +131,10 @@ export default function StaffDashboardPage({
                     </td>
                     <td className="px-4 py-3">
                       <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                        {Math.floor(a.overdueByMinutes / 60)}h {a.overdueByMinutes % 60}p
+                        {t("staff.overdue_duration", {
+                          h: Math.floor(a.overdueByMinutes / 60),
+                          m: a.overdueByMinutes % 60,
+                        })}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{a.orderStatus}</td>
@@ -134,14 +144,14 @@ export default function StaffDashboardPage({
                           <input
                             value={newStaffId}
                             onChange={(e) => setNewStaffId(e.target.value)}
-                            placeholder="Staff UUID"
+                            placeholder={t("staff.staff_uuid_placeholder")}
                             className="w-48 rounded border border-gray-300 px-2 py-1 text-xs"
                           />
-                          <Button size="sm" loading={loading} onClick={() => handleReassign(a.orderId)}>
-                            Xác nhận
+                          <Button size="sm" loading={loading} onClick={() => handleReassign(a.orderId, a.orderCode)}>
+                            {t("staff.confirm_reassign")}
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => setReassignOrderId(null)}>
-                            Hủy
+                            {t("common.cancel")}
                           </Button>
                         </div>
                       ) : (
@@ -150,7 +160,7 @@ export default function StaffDashboardPage({
                           variant="secondary"
                           onClick={() => { setReassignOrderId(a.orderId); setNewStaffId(""); }}
                         >
-                          Reassign
+                          {t("staff.reassign_btn")}
                         </Button>
                       )}
                     </td>
@@ -165,7 +175,7 @@ export default function StaffDashboardPage({
       {/* ── Workload section ── */}
       {workloads.length > 0 && (
         <section>
-          <h2 className="mb-4 text-lg font-semibold text-gray-800">Workload nhân viên</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">{t("staff.workload_section")}</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {workloads.map((w) => (
               <div
@@ -176,19 +186,18 @@ export default function StaffDashboardPage({
                 <div className="mt-3 flex gap-6">
                   <div>
                     <p className="text-2xl font-bold text-gray-900">{w.activeCount}</p>
-                    <p className="text-xs text-gray-500">Đơn đang xử lý</p>
+                    <p className="text-xs text-gray-500">{t("staff.active_orders")}</p>
                   </div>
                   <div>
                     <p className={`text-2xl font-bold ${w.overdueCount > 0 ? "text-red-600" : "text-gray-900"}`}>
                       {w.overdueCount}
                     </p>
-                    <p className="text-xs text-gray-500">Quá SLA</p>
+                    <p className="text-xs text-gray-500">{t("staff.overdue_label")}</p>
                   </div>
                 </div>
-                {/* SLA nearest deadline */}
                 {w.assignments.length > 0 && (
                   <div className="mt-3">
-                    <p className="mb-1 text-xs text-gray-500">Deadline gần nhất</p>
+                    <p className="mb-1 text-xs text-gray-500">{t("staff.nearest_deadline")}</p>
                     <SlaCountdown deadline={w.assignments[0].slaDeadline} />
                   </div>
                 )}

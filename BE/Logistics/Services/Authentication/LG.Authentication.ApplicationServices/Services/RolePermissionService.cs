@@ -65,9 +65,6 @@ public class RoleService(
         var role = await roleRepo.GetByIdAsync(id, ct)
                    ?? throw new NotFoundException(nameof(Role), id);
 
-        if (role.IsSystem)
-            throw new ForbiddenException("System roles cannot be deleted.");
-
         await roleRepo.DeleteAsync(role, ct);
         await uow.SaveChangesAsync(ct);
 
@@ -155,13 +152,47 @@ public class PermissionService(
         return all.Where(p => codes.Contains(p.Code)).Select(PermissionMapper.ToResponse).ToList();
     }
 
+    public async Task<PermissionResponse> CreateAsync(CreatePermissionRequest req, CancellationToken ct = default)
+    {
+        if (await permRepo.GetByCodeAsync(req.Code, ct) is not null)
+            throw new ConflictException($"Permission code '{req.Code}' already exists.");
+
+        var perm = Permission.Create(req.Name, req.Code, req.ModuleName, req.Description);
+        await permRepo.AddAsync(perm, ct);
+        await uow.SaveChangesAsync(ct);
+
+        logger.LogInformation("Permission created: {Code}", perm.Code);
+        return PermissionMapper.ToResponse(perm);
+    }
+
+    public async Task<PermissionResponse> UpdateAsync(Guid id, UpdatePermissionRequest req, CancellationToken ct = default)
+    {
+        var perm = await permRepo.GetByIdAsync(id, ct)
+                   ?? throw new NotFoundException(nameof(Permission), id);
+
+        perm.Update(req.Name, req.ModuleName, req.Description);
+        await permRepo.UpdateAsync(perm, ct);
+        await uow.SaveChangesAsync(ct);
+
+        logger.LogInformation("Permission updated: {Id}", id);
+        return PermissionMapper.ToResponse(perm);
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var perm = await permRepo.GetByIdAsync(id, ct)
+                   ?? throw new NotFoundException(nameof(Permission), id);
+
+        await permRepo.DeleteAsync(perm, ct);
+        await uow.SaveChangesAsync(ct);
+
+        logger.LogInformation("Permission deleted: {Id}", id);
+    }
+
     public async Task SyncRolePermissionsAsync(SyncRolePermissionsRequest req, CancellationToken ct = default)
     {
         var role = await roleRepo.GetByIdAsync(req.RoleId, ct)
                    ?? throw new NotFoundException(nameof(Role), req.RoleId);
-
-        if (role.IsSystem)
-            throw new ForbiddenException("Cannot modify permissions of a system role.");
 
         // Validate tất cả codes trước khi mở transaction
         var allPerms = await permRepo.GetAllAsync(ct);

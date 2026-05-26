@@ -106,7 +106,6 @@ public static class ForbiddenChecker
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Tính cửa sổ SLA cho một đơn hàng dựa trên giá trị và số lượng.
-/// Pure function — trả TimeSpan, KHÔNG dùng DateTime.UtcNow ở đây.
 public static class SlaCalculator
 {
     /// Đơn giá trị cao (>= 5 triệu VND) hoặc nhiều item (>= 5): SLA 12h.
@@ -121,14 +120,9 @@ public static class SlaCalculator
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Chọn nhân viên có workload thấp nhất để auto-assign đơn.
-/// Pure function — không inject DB context.
 public static class WorkloadBalancer
 {
-    /// <summary>
     /// Chọn staffId có activeLoad thấp nhất. Nếu bằng nhau, ưu tiên người ít overdue nhất.
-    /// </summary>
-    /// <param name="staffLoads">Danh sách (staffId, activeLoad, overdueCount)</param>
-    /// <returns>Guid của staff được chọn, null nếu danh sách rỗng.</returns>
     public static Guid? PickBest(IEnumerable<(Guid StaffId, int ActiveLoad, int OverdueCount)> staffLoads)
     {
         return staffLoads

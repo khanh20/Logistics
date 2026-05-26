@@ -46,6 +46,8 @@ public interface IPermissionRepository
     Task<List<Permission>> GetByRoleIdAsync(Guid roleId, CancellationToken ct = default);
     Task                   AddAsync(Permission permission, CancellationToken ct = default);
     Task                   AddRangeAsync(IEnumerable<Permission> permissions, CancellationToken ct = default);
+    Task                   UpdateAsync(Permission permission, CancellationToken ct = default);
+    Task                   DeleteAsync(Permission permission, CancellationToken ct = default);
 }
 
 public interface IRolePermissionRepository

@@ -32,7 +32,6 @@ public class Role
 
     public void Update(string name, string? description, string scope)
     {
-        if (IsSystem) throw new InvalidOperationException("Cannot modify a system role.");
         Name        = name.Trim();
         Description = description;
         Scope       = scope;

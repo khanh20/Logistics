@@ -14,6 +14,22 @@ public record UpdateUserStatusRequest(
     [Required] string Status   // "Active" | "Banned" | "Suspended"
 );
 
+public record CreateStaffRequest(
+    [Required, EmailAddress, MaxLength(255)]     string  Email,
+    [Required, MinLength(8), MaxLength(100)]     string  Password,
+    [Required, MaxLength(255)]                   string  FullName,
+    [MaxLength(20)]                              string? Phone
+);
+
+// Tạo user bất kỳ với role do admin chọn
+public record CreateUserRequest(
+    [Required, EmailAddress, MaxLength(255)] string     Email,
+    [Required, MinLength(8), MaxLength(100)] string     Password,
+    [Required, MaxLength(255)]              string     FullName,
+    [MaxLength(20)]                         string?    Phone,
+    List<Guid>?                             RoleIds
+);
+
 // ── Response ──────────────────────────────────────────────────────────────────
 public record UserResponse(
     Guid         Id,
@@ -31,6 +47,7 @@ public record UserListResponse(
     Guid     Id,
     string   Email,
     string   FullName,
+    string?  Phone,
     string   Status,
     DateTime CreatedAt,
     List<string> Roles
@@ -57,5 +74,5 @@ public static class UserMapper
         u.Status.ToString(), u.LastLoginAt, u.CreatedAt, roles);
 
     public static UserListResponse ToListResponse(Domain.Entities.User u, List<string> roles) => new(
-        u.Id, u.Email, u.FullName, u.Status.ToString(), u.CreatedAt, roles);
+        u.Id, u.Email, u.FullName, u.Phone, u.Status.ToString(), u.CreatedAt, roles);
 }

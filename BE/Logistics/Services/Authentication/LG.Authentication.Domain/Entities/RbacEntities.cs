@@ -40,6 +40,13 @@ public class Permission
             ModuleName  = moduleName,
             Description = description,
         };
+
+    public void Update(string name, string moduleName, string? description)
+    {
+        Name        = name.Trim();
+        ModuleName  = moduleName.Trim();
+        Description = description;
+    }
 }
 
 public class RolePermission

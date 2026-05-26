@@ -40,8 +40,8 @@ public class StaffRosterHttpService(
     ILogger<StaffRosterHttpService>                  logger
 ) : IStaffRosterService
 {
-    private const string CacheKey = "staff-roster:NvMuaHang";
-    private const string RoleName = "NvMuaHang";
+    private const string CacheKey = "staff-roster:NV_MuaHang";
+    private const string RoleName = "NV_MuaHang";
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(60);
 
     public async Task<IReadOnlyList<Guid>> GetAvailableStaffAsync(CancellationToken ct = default)
@@ -146,7 +146,7 @@ public class StaffAssignmentService(
     {
         return await uow.ExecuteInTransactionAsync(async innerCt =>
         {
-            // Soft-complete assignment cũ (tránh Bug 2: không hard-delete)
+            // Soft-complete assignment 
             var current = await assignmentRepo.GetActiveByOrderIdAsync(orderId, innerCt);
             if (current is not null)
             {
@@ -157,8 +157,7 @@ public class StaffAssignmentService(
             var order = await orderRepo.GetByIdWithDetailsAsync(orderId, innerCt)
                         ?? throw new OrderNotFoundException(orderId);
 
-            // Cập nhật AssignedStaffId trên đơn hàng
-            order.AssignToStaff(newStaffId, ShopIntegrationMode.Manual);
+            order.Reassign(newStaffId, adminId, note ?? "Reassign bởi admin");
             await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
 

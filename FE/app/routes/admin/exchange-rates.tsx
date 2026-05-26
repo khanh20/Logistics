@@ -41,7 +41,7 @@ export default function ExchangeRatesPage({
 
     const rateNum = parseFloat(rate);
     if (isNaN(rateNum) || rateNum < 100 || rateNum > 99999) {
-      setError("Tỉ giá phải từ 100 đến 99,999 VNĐ/CNY.");
+      setError(t("exchange_rate.rate_range_error"));
       return;
     }
 
@@ -77,8 +77,8 @@ export default function ExchangeRatesPage({
           <p className="text-sm text-gray-500 mb-1">{t("exchange_rate.current")}</p>
           <p className="text-4xl font-bold text-primary">{formatRate(current.rateVndPerCny)}</p>
           <div className="mt-3 flex gap-6 text-sm text-gray-500">
-            <span>Nguồn: <strong className="text-gray-700">{current.source}</strong></span>
-            <span>Hiệu lực từ: <strong className="text-gray-700">{formatDate(current.effectiveFrom)}</strong></span>
+            <span>{t("exchange_rate.source_label")}: <strong className="text-gray-700">{current.source}</strong></span>
+            <span>{t("exchange_rate.effective_from")}: <strong className="text-gray-700">{formatDate(current.effectiveFrom)}</strong></span>
           </div>
         </div>
       )}
@@ -90,22 +90,22 @@ export default function ExchangeRatesPage({
           <form onSubmit={handleUpdate} className="space-y-4">
             <div className="flex gap-4">
               <Input
-                label={`Tỉ giá (${t("exchange_rate.rate_vnd_per_cny")})`}
+                label={t("exchange_rate.rate_label")}
                 type="number"
                 step="1"
                 min="100"
                 max="99999"
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
-                hint="VD: 3500 nghĩa là 1¥ = 3,500₫"
+                hint={t("exchange_rate.rate_hint")}
                 required
                 className="flex-1"
               />
               <Input
-                label={t("exchange_rate.source")}
+                label={t("exchange_rate.source_label")}
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                placeholder="VD: Vietcombank, NHNN"
+                placeholder={t("exchange_rate.source_placeholder")}
                 required
                 className="flex-1"
               />
@@ -155,7 +155,7 @@ export default function ExchangeRatesPage({
                 <td className="px-6 py-3">
                   {r.isCurrent && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Hiện tại
+                      {t("exchange_rate.current_badge")}
                     </span>
                   )}
                 </td>

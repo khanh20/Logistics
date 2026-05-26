@@ -64,6 +64,19 @@ public record SyncRolePermissionsRequest(
     [Required] List<string> PermissionCodes
 );
 
+public record CreatePermissionRequest(
+    [Required, MaxLength(100)] string  Name,
+    [Required, MaxLength(100)] string  Code,
+    [Required, MaxLength(50)]  string  ModuleName,
+    [MaxLength(255)]           string? Description
+);
+
+public record UpdatePermissionRequest(
+    [Required, MaxLength(100)] string  Name,
+    [Required, MaxLength(50)]  string  ModuleName,
+    [MaxLength(255)]           string? Description
+);
+
 public static class PermissionMapper
 {
     public static PermissionResponse ToResponse(Permission p) =>

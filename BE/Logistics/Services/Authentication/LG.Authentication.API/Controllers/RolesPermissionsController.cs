@@ -130,19 +130,51 @@ public class PermissionsController(IPermissionService permService) : BaseControl
         return Ok(result);
     }
 
-    /// 
+    ///
     /// Sync (replace) all permissions for a role.
     /// Pass the complete desired set — extras are removed, missing are added.
-    /// 
+    ///
     [HttpPut("role/sync")]
     [RequirePermission(Permissions.PermissionAssign)]
     [ProducesResponseType(200)]
-    [ProducesResponseType(403)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> SyncRolePermissions(
         [FromBody] SyncRolePermissionsRequest req, CancellationToken ct)
     {
         await permService.SyncRolePermissionsAsync(req, ct);
         return Ok<object?>(null, "Permissions synced.");
+    }
+
+    /// Create a new permission
+    [HttpPost]
+    [RequirePermission(Permissions.PermissionManage)]
+    [ProducesResponseType(typeof(PermissionResponse), 200)]
+    [ProducesResponseType(409)]
+    public async Task<IActionResult> Create([FromBody] CreatePermissionRequest req, CancellationToken ct)
+    {
+        var result = await permService.CreateAsync(req, ct);
+        return Ok(result, "Permission created.");
+    }
+
+    /// Update an existing permission
+    [HttpPut("{id:guid}")]
+    [RequirePermission(Permissions.PermissionManage)]
+    [ProducesResponseType(typeof(PermissionResponse), 200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePermissionRequest req, CancellationToken ct)
+    {
+        var result = await permService.UpdateAsync(id, req, ct);
+        return Ok(result, "Permission updated.");
+    }
+
+    /// Delete a permission
+    [HttpDelete("{id:guid}")]
+    [RequirePermission(Permissions.PermissionManage)]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await permService.DeleteAsync(id, ct);
+        return Ok<object?>(null, "Permission deleted.");
     }
 }

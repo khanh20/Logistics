@@ -167,6 +167,7 @@ public class CustomerOrderService(
 public class OrderManagementService(
     ICustomerOrderRepository        orderRepo,
     IOrderStatusHistoryRepository   historyRepo,
+    IPlatformOrderRepository        platformOrderRepo,
     IPlatformShopRepository         shopRepo,
     ILogisticsService               logisticsService,
     IModule1UnitOfWork              uow,
@@ -216,6 +217,7 @@ public class OrderManagementService(
             var po    = PlatformOrder.CreateManual(order.Id, staffId, req.PlatformOrderId, req.Note);
             order.MarkOrderedOnPlatform(staffId, req.Note);
             order.AttachPlatformOrder(po);
+            await platformOrderRepo.AddAsync(po, innerCt);
             await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
             logger.LogInformation("Order {OrderCode} manually placed on platform by staff {StaffId}", order.OrderCode, staffId);
