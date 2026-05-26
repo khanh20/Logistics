@@ -7,4 +7,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  ssr: {
+    noExternal: [/^antd/, /^@ant-design/, /^@rc-component/, /rc-.*/, "@ctrl/tinycolor", "@emotion/hash"],
+  },
 });

@@ -10,9 +10,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize(Roles = "Admin,SuperAdmin")]
-    public class PaymentLockController : ControllerBase
+    public class PaymentLockController : CoreBaseController
     {
         private readonly IPaymentLockService _service;
 
@@ -22,16 +21,16 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpGet("order/{orderId}")]
-        public async Task<ActionResult<List<PaymentLockDto>>> GetByOrder(Guid orderId)
+        public async Task<IActionResult> GetByOrder(Guid orderId)
         {
             return Ok(await _service.GetByOrderIdAsync(orderId));
         }
 
         [HttpPost]
-        public async Task<ActionResult<PaymentLockDto>> Create(CreatePaymentLockDto dto)
+        public async Task<IActionResult> Create(CreatePaymentLockDto dto)
         {
             var result = await _service.CreateAsync(dto);
-            return Ok(result);
+            return Created(result, "Tạo payment lock thành công.");
         }
 
         [HttpPost("{id}/release")]
@@ -39,7 +38,7 @@ namespace LG.Core.API.Controllers.Finance
         {
             var result = await _service.ReleaseAsync(id, reason);
             if (!result) return BadRequest("Cannot release payment lock.");
-            return NoContent();
+            return Ok<object?>(null, "Release thành công.");
         }
     }
 }

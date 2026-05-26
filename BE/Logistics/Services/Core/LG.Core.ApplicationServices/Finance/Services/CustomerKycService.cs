@@ -130,7 +130,6 @@ namespace LG.Core.ApplicationServices.Finance.Services
                 // Tạo mới
                 kyc = new CustomerKYC
                 {
-                    // Id = int.Newint(),
                     CustomerId = customerId,
                     KycLevel = KycLevel.Basic,
                     Status = KycStatus.Pending,
@@ -167,6 +166,61 @@ namespace LG.Core.ApplicationServices.Finance.Services
             await _db.SaveChangesAsync();
 
             return _mapper.Map<CustomerKycDto>(kyc);
-        }    
+        }
+
+        // ── Admin Methods ────────────────────────────────────────────────────────
+        public async Task<System.Collections.Generic.List<CustomerKycDto>> GetAllKycsAsync()
+        {
+            var kycs = await _db.CustomerKycs
+                .AsNoTracking()
+                .OrderByDescending(k => k.CreatedDate)
+                .ToListAsync();
+
+            return _mapper.Map<System.Collections.Generic.List<CustomerKycDto>>(kycs);
+        }
+
+        public async Task<CustomerKycDto> ApproveKycAsync(Guid kycId, Guid adminId)
+        {
+            var kyc = await _db.CustomerKycs.FirstOrDefaultAsync(k => k.Id == kycId);
+            if (kyc == null)
+                throw new Exception("Không tìm thấy hồ sơ KYC.");
+
+            if (kyc.Status != KycStatus.Pending)
+                throw new Exception("Hồ sơ này không ở trạng thái Chờ duyệt.");
+
+            kyc.Status = KycStatus.Approved;
+            kyc.ReviewedBy = adminId;
+            kyc.ReviewedAt = DateTime.UtcNow;
+            kyc.ModifiedDate = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            _logger.LogInformation("Admin {AdminId} đã phê duyệt KYC {KycId}", adminId, kycId);
+
+            return _mapper.Map<CustomerKycDto>(kyc);
+        }
+
+        public async Task<CustomerKycDto> RejectKycAsync(Guid kycId, Guid adminId, string reason)
+        {
+            var kyc = await _db.CustomerKycs.FirstOrDefaultAsync(k => k.Id == kycId);
+            if (kyc == null)
+                throw new Exception("Không tìm thấy hồ sơ KYC.");
+
+            if (kyc.Status != KycStatus.Pending)
+                throw new Exception("Hồ sơ này không ở trạng thái Chờ duyệt.");
+
+            if (string.IsNullOrWhiteSpace(reason))
+                throw new Exception("Vui lòng nhập lý do từ chối.");
+
+            kyc.Status = KycStatus.Rejected;
+            kyc.RejectionReason = reason;
+            kyc.ReviewedBy = adminId;
+            kyc.ReviewedAt = DateTime.UtcNow;
+            kyc.ModifiedDate = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync();
+            _logger.LogInformation("Admin {AdminId} đã từ chối KYC {KycId} với lý do: {Reason}", adminId, kycId, reason);
+
+            return _mapper.Map<CustomerKycDto>(kyc);
+        }
     }
 }

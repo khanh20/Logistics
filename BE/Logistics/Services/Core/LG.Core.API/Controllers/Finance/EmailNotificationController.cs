@@ -9,9 +9,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize(Roles = "Admin,SuperAdmin")]
-    public class EmailNotificationController : ControllerBase
+    public class EmailNotificationController : CoreBaseController
     {
         private readonly IEmailNotificationService _service;
 
@@ -21,17 +20,16 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpGet("customer/{customerId}")]
-        public async Task<ActionResult<List<EmailNotificationDto>>> GetByCustomer(Guid customerId)
+        public async Task<IActionResult> GetByCustomer(Guid customerId)
         {
             return Ok(await _service.GetByCustomerIdAsync(customerId));
         }
 
         [HttpPost("send")]
-        public async Task<ActionResult<EmailNotificationDto>> SendNotification(SendEmailNotificationDto dto)
+        public async Task<IActionResult> SendNotification(SendEmailNotificationDto dto)
         {
             var result = await _service.CreateAsync(dto);
-            return Ok(result);
+            return Created(result, "Gửi email thành công.");
         }
     }
 }
-

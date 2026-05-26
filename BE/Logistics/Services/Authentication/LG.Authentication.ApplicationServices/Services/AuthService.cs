@@ -50,7 +50,7 @@ public class AuthService(
                 RefreshToken: rt.Token,
                 AccessTokenExpiresAt: DateTime.UtcNow.AddMinutes(30),
                 RefreshTokenExpiresAt: rt.ExpiresAt,
-                User: new UserAuthInfo(user.Id, user.Email, user.FullName, user.AvatarUrl,
+                User: new UserAuthInfo(user.Id, user.Email, user.Phone, user.FullName, user.AvatarUrl,
                     roles, permissions)
             );
         }, ct);
@@ -83,7 +83,7 @@ public class AuthService(
                 RefreshToken: rt.Token,
                 AccessTokenExpiresAt: DateTime.UtcNow.AddMinutes(30),
                 RefreshTokenExpiresAt: rt.ExpiresAt,
-                User: new UserAuthInfo(user.Id, user.Email, user.FullName, user.AvatarUrl, roles, permissions)
+                User: new UserAuthInfo(user.Id, user.Email, user.Phone, user.FullName, user.AvatarUrl, roles, permissions)
             );
         }, ct);
 

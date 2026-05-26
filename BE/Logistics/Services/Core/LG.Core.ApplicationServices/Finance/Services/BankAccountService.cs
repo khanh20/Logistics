@@ -77,11 +77,18 @@ namespace LG.Core.ApplicationServices.Finance.Services
             return _mapper.Map<BankAccountDto>(entity);
         }
 
-        public async Task<List<BankAccountDto>> GetSystemBankAccountsAsync()
+        public async Task<List<BankAccountDto>> GetSystemBankAccountsAsync(bool activeOnly = true)
         {
-            var accounts = await _db.BankAccounts
+            var query = _db.BankAccounts
                 .AsNoTracking()
-                .Where(x => x.Type == BankAccountType.System && x.IsActive)
+                .Where(x => x.Type == BankAccountType.System);
+
+            if (activeOnly)
+            {
+                query = query.Where(x => x.IsActive);
+            }
+
+            var accounts = await query
                 .OrderByDescending(x => x.CreatedDate)
                 .ToListAsync();
 

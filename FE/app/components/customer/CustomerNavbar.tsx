@@ -1,21 +1,24 @@
 import { NavLink, useNavigate } from "react-router";
 import { cn } from "~/lib/utils/cn";
-import { useAuth } from "~/lib/hooks/useAuth";
-import { useAuthStore } from "~/lib/stores/authStore";
-import { authApi } from "~/lib/api/auth";
+import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
+import { selectUser, selectAuth } from "~/lib/feature/auth/authSelector";
+import { logout as logoutThunk } from "~/lib/feature/auth/authThunk";
+import { store } from "~/lib/feature/store";
 import { useTransition } from "react";
 import { useTranslation } from "react-i18next";
 
 
 export function CustomerNavbar() {
-  const { isAuthenticated, user, logout } = useAuth();
-  const refreshToken = useAuthStore((s) => s.refreshToken);
+  const { user, token } = useAppSelector(selectAuth);
+  const isAuthenticated = !!token;
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
 
   const NAV_ITEMS = [
     { to: "/", label: t("nav.home") },
     { to: "/orders", label: t("nav.user_orders") },
+    { to: "/finance", label: "Tài chính" },
     { to: "/cart", label: t("nav.cart") },
   ];
 
@@ -25,10 +28,10 @@ export function CustomerNavbar() {
   }
 
   async function handleLogout() {
+    const refreshToken = store.getState().authState.refreshToken;
     if (refreshToken) {
-      try { await authApi.logout(refreshToken); } catch { /* ignore */ }
+      await dispatch(logoutThunk(refreshToken));
     }
-    logout();
     navigate("/");
   }
 
@@ -77,7 +80,11 @@ export function CustomerNavbar() {
             </button>
             {isAuthenticated ? (
               <>
-                <span className="text-sm text-red-100 hidden md:block">{user?.fullName}</span>
+                <NavLink to="/profile" className="hidden md:block">
+                  <span className="text-sm text-red-100 hover:text-white transition-colors cursor-pointer font-medium">
+                    {user?.fullName}
+                  </span>
+                </NavLink>
                 <button
                   onClick={handleLogout}
                   className="text-sm text-red-100 hover:text-white transition-colors"

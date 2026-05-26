@@ -10,9 +10,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize]
-    public class CustomerAddressController : ControllerBase
+    public class CustomerAddressController : CoreBaseController
     {
         private readonly ICustomerAddressService _service;
 
@@ -21,22 +20,20 @@ namespace LG.Core.API.Controllers.Finance
             _service = service;
         }
 
-        private Guid GetCurrentUserId() => HttpContext.GetCurrentUserId();
-
         [HttpGet("me")]
-        public async Task<ActionResult<List<CustomerAddressDto>>> GetMyAddresses()
+        public async Task<IActionResult> GetMyAddresses()
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var addresses = await _service.GetByCustomerIdAsync(userId);
             return Ok(addresses);
         }
 
         [HttpPost]
-        public async Task<ActionResult<CustomerAddressDto>> Create(CreateCustomerAddressDto dto)
+        public async Task<IActionResult> Create(CreateCustomerAddressDto dto)
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var result = await _service.CreateAsync(dto, userId);
-            return Ok(result);
+            return Created(result, "Tạo địa chỉ thành công.");
         }
 
         [HttpPut("{id}")]
@@ -44,7 +41,7 @@ namespace LG.Core.API.Controllers.Finance
         {
             var result = await _service.UpdateAsync(id, dto);
             if (!result) return NotFound();
-            return NoContent();
+            return Ok<object?>(null, "Cập nhật địa chỉ thành công.");
         }
 
         [HttpDelete("{id}")]
@@ -52,16 +49,16 @@ namespace LG.Core.API.Controllers.Finance
         {
             var result = await _service.DeleteAsync(id);
             if (!result) return NotFound();
-            return NoContent();
+            return Ok<object?>(null, "Xóa địa chỉ thành công.");
         }
 
         [HttpPatch("{id}/set-default")]
         public async Task<IActionResult> SetDefault(Guid id)
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var result = await _service.SetDefaultAsync(id, userId);
             if (!result) return NotFound();
-            return NoContent();
+            return Ok<object?>(null, "Đặt địa chỉ mặc định thành công.");
         }
     }
 }

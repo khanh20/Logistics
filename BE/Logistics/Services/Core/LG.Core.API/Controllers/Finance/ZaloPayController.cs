@@ -11,8 +11,7 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/zalopay")]
-    [ApiController]
-    public class ZaloPayController : ControllerBase
+    public class ZaloPayController : CoreBaseController
     {
         private readonly IZaloPayService _zaloPayService;
         private readonly CoreDbContext _db;
@@ -73,14 +72,14 @@ namespace LG.Core.API.Controllers.Finance
                 var success = await _zaloPayService.ProcessCallbackAsync(callbackDto);
 
                 if (!success)
-                    return Ok(new { return_code = -1, return_message = "Xác thực chữ ký thất bại" });
+                    return base.Ok(new { return_code = -1, return_message = "Xác thực chữ ký thất bại" });
 
-                return Ok(new { return_code = 1, return_message = "success" });
+                return base.Ok(new { return_code = 1, return_message = "success" });
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Lỗi xử lý callback: {ex.Message}");
-                return Ok(new { return_code = -1, return_message = ex.Message });
+                return base.Ok(new { return_code = -1, return_message = ex.Message });
             }
         }
     }

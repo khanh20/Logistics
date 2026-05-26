@@ -5,22 +5,23 @@ import type { Route } from "./+types/login";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { STAFF_ROLES, type Role } from "~/lib/constants/roles";
-import { authApi } from "~/lib/api/auth";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
+import { login as loginThunk } from "~/lib/feature/auth/authThunk";
+import { store } from "~/lib/feature/store";
 
 export function meta(_: Route.MetaArgs) {
   return [{ title: "Đăng nhập — MuaHo Logistics" }];
 }
 
 export async function clientLoader(_: Route.ClientLoaderArgs) {
-  const { token } = useAuthStore.getState();
+  const { token } = store.getState().authState;
   if (token) throw redirect("/");
   return null;
 }
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const login = useAuthStore((s) => s.login);
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
   const [email, setEmail]       = useState("");
@@ -39,10 +40,9 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const res = await authApi.login({ email, password });
-      login(res.data.accessToken, res.data.refreshToken, res.data.user);
+      const res = await dispatch(loginThunk({ email, password })).unwrap();
 
-      const isStaff = res.data.user.roles.some((r) =>
+      const isStaff = res.user.roles.some((r) =>
         STAFF_ROLES.includes(r as Role)
       );
       navigate(isStaff ? "/admin" : "/", { replace: true });

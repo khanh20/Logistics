@@ -9,9 +9,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
     // [Authorize] // Uncomment when testing security
-    public class RefundController : ControllerBase
+    public class RefundController : CoreBaseController
     {
         private readonly IRefundService _refundService;
 
@@ -21,13 +20,13 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<RefundDto>>> GetAll()
+        public async Task<IActionResult> GetAll()
         {
             return Ok(await _refundService.GetAllAsync());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<RefundDto>> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _refundService.GetByIdAsync(id);
             if (result == null) return NotFound();
@@ -35,10 +34,10 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpPost("request")]
-        public async Task<ActionResult<RefundDto>> CreateRequest(CreateRefundDto dto)
+        public async Task<IActionResult> CreateRequest(CreateRefundDto dto)
         {
             var result = await _refundService.CreateRefundRequestAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            return Created(result, "Tạo yêu cầu hoàn tiền thành công.");
         }
 
         [HttpPost("{id}/approve")]
@@ -47,7 +46,7 @@ namespace LG.Core.API.Controllers.Finance
         {
             var result = await _refundService.ApproveRefundAsync(id);
             if (!result) return BadRequest("Không thể duyệt yêu cầu hoàn tiền này.");
-            return Ok("Duyệt hoàn tiền thành công.");
+            return Ok<object?>(null, "Duyệt hoàn tiền thành công.");
         }
 
         [HttpPost("{id}/reject")]
@@ -56,7 +55,7 @@ namespace LG.Core.API.Controllers.Finance
         {
             var result = await _refundService.RejectRefundAsync(id, reason);
             if (!result) return BadRequest("Không thể từ chối yêu cầu hoàn tiền này.");
-            return Ok("Đã từ chối hoàn tiền.");
+            return Ok<object?>(null, "Đã từ chối hoàn tiền.");
         }
     }
 }

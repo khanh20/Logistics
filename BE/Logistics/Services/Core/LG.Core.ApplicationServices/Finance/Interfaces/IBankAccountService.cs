@@ -10,7 +10,7 @@ namespace LG.Core.ApplicationServices.Finance.Interfaces
     {
         Task<BankAccountDto?> GetByIdAsync(Guid id);
         Task<BankAccountDto> CreateAsync(CreateBankAccountDto dto, Guid? currentUserId, BankAccountType type);
-        Task<List<BankAccountDto>> GetSystemBankAccountsAsync();
+        Task<List<BankAccountDto>> GetSystemBankAccountsAsync(bool activeOnly = true);
         Task<List<BankAccountDto>> GetCustomerBankAccountsAsync(Guid userId);
         Task<bool> ToggleActiveStatusAsync(Guid id);
         Task<bool> DeleteAsync(Guid id);

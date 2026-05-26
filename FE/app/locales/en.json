@@ -263,7 +263,21 @@
     "platforms": "Platforms",
     "ingestion": "Import Products",
     "exchange_rates": "Exchange Rate",
-    "staff": "Staff"
+    "staff": "Staff",
+    "finance": "Finance",
+    "finance_overview": "Overview",
+    "finance_kyc": "KYC Verification",
+    "finance_withdraws": "Withdrawals",
+    "finance_transactions": "Transaction History",
+    "finance_refunds": "Refunds",
+    "finance_reconcile": "Reconciliation",
+    "finance_fraud": "Fraud Detection",
+    "finance_payment_locks": "Payment Locks",
+    "finance_fee_rules": "Fee Rules",
+    "finance_vip_tiers": "VIP Tiers",
+    "finance_transaction_types": "Transaction Types",
+    "finance_bank_accounts": "System Bank Accounts",
+    "finance_webhook_logs": "Webhook Logs (ZaloPay)"
   },
   "home": {
     "badge": "Order from Taobao, eBay, Rakuten — delivered to your door",

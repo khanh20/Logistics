@@ -10,8 +10,7 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
-    public class VipTierController : ControllerBase
+    public class VipTierController : CoreBaseController
     {
         private readonly IVipTierService _vipTierService;
 
@@ -20,16 +19,14 @@ namespace LG.Core.API.Controllers.Finance
             _vipTierService = vipTierService;
         }
 
-        private Guid GetCurrentUserId() => HttpContext.GetCurrentUserId();
-
         [HttpGet]
-        public async Task<ActionResult<List<VipTierDto>>> GetAll()
+        public async Task<IActionResult> GetAll()
         {
             return Ok(await _vipTierService.GetAllAsync());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<VipTierDto>> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _vipTierService.GetByIdAsync(id);
             if (result == null) return NotFound();
@@ -38,10 +35,10 @@ namespace LG.Core.API.Controllers.Finance
 
         [HttpPost]
         [Authorize(Roles = "Admin,SuperAdmin")]
-        public async Task<ActionResult<VipTierDto>> Create(CreateVipTierDto dto)
+        public async Task<IActionResult> Create(CreateVipTierDto dto)
         {
             var result = await _vipTierService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            return Created(result, "Tạo VIP tier thành công.");
         }
 
         [HttpPut("{id}")]
@@ -50,7 +47,7 @@ namespace LG.Core.API.Controllers.Finance
         {
             var result = await _vipTierService.UpdateAsync(id, dto);
             if (!result) return NotFound();
-            return NoContent();
+            return Ok<object?>(null, "Cập nhật thành công.");
         }
 
         [HttpDelete("{id}")]
@@ -59,7 +56,7 @@ namespace LG.Core.API.Controllers.Finance
         {
             var result = await _vipTierService.DeleteAsync(id);
             if (!result) return NotFound();
-            return NoContent();
+            return Ok<object?>(null, "Xóa thành công.");
         }
     }
 }

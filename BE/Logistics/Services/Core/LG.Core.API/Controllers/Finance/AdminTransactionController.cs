@@ -9,9 +9,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/admin/transactions")]
-    [ApiController]
     [Authorize(Roles = "Admin,SuperAdmin")] // Chỉ dành cho quản trị viên
-    public class AdminTransactionController : ControllerBase
+    public class AdminTransactionController : CoreBaseController
     {
         private readonly ITransactionService _transactionService;
 
@@ -19,8 +18,6 @@ namespace LG.Core.API.Controllers.Finance
         {
             _transactionService = transactionService;
         }
-
-        private Guid GetCurrentUserId() => HttpContext.GetCurrentUserId();
 
         public class ApproveWithdrawRequest
         {
@@ -48,9 +45,9 @@ namespace LG.Core.API.Controllers.Finance
         [HttpPost("withdraws/{id}/approve")]
         public async Task<IActionResult> ApproveWithdraw(Guid id, [FromBody] ApproveWithdrawRequest request)
         {
-            var adminId = GetCurrentUserId();
+            var adminId = CurrentUserId;
             var success = await _transactionService.ApproveWithdrawAsync(id, adminId, request.TransferRef);
-            return Ok(new { message = "Đã duyệt lệnh rút tiền thành công." });
+            return Ok<object?>(null, "Đã duyệt lệnh rút tiền thành công.");
         }
 
         /// <summary>
@@ -62,9 +59,9 @@ namespace LG.Core.API.Controllers.Finance
             if (string.IsNullOrWhiteSpace(request.Reason))
                 return BadRequest(new { message = "Vui lòng nhập lý do từ chối." });
 
-            var adminId = GetCurrentUserId();
+            var adminId = CurrentUserId;
             var success = await _transactionService.RejectWithdrawAsync(id, adminId, request.Reason);
-            return Ok(new { message = "Đã từ chối lệnh rút tiền và hoàn tiền vào ví khách hàng." });
+            return Ok<object?>(null, "Đã từ chối lệnh rút tiền và hoàn tiền vào ví khách hàng.");
         }
     }
 }

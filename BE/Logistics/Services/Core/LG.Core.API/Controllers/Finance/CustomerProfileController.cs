@@ -9,9 +9,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize]
-    public class CustomerProfileController : ControllerBase
+    public class CustomerProfileController : CoreBaseController
     {
         private readonly ICustomerProfileService _service;
 
@@ -20,25 +19,23 @@ namespace LG.Core.API.Controllers.Finance
             _service = service;
         }
 
-        private Guid GetCurrentUserId() => HttpContext.GetCurrentUserId();
-
         [HttpGet("me")]
-        public async Task<ActionResult<CustomerProfileDto>> GetMyProfile()
+        public async Task<IActionResult> GetMyProfile()
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var profile = await _service.GetByUserIdAsync(userId);
             if (profile == null) return NotFound();
             return Ok(profile);
         }
 
         [HttpPost("me")]
-        public async Task<ActionResult<CustomerProfileDto>> CreateMyProfile(CreateCustomerProfileDto dto)
+        public async Task<IActionResult> CreateMyProfile(CreateCustomerProfileDto dto)
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             try
             {
                 var result = await _service.CreateAsync(dto, userId);
-                return CreatedAtAction(nameof(GetMyProfile), new { }, result);
+                return Created(result, "Tạo profile thành công.");
             }
             catch (InvalidOperationException ex)
             {
@@ -51,7 +48,7 @@ namespace LG.Core.API.Controllers.Finance
         {
             var result = await _service.UpdateAsync(id, dto);
             if (!result) return NotFound();
-            return NoContent();
+            return Ok<object?>(null, "Cập nhật profile thành công.");
         }
     }
 }

@@ -10,9 +10,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize(Roles = "Admin,SuperAdmin")]
-    public class PlatformReconcileController : ControllerBase
+    public class PlatformReconcileController : CoreBaseController
     {
         private readonly IPlatformReconcileService _service;
 
@@ -21,28 +20,26 @@ namespace LG.Core.API.Controllers.Finance
             _service = service;
         }
 
-        private Guid GetCurrentUserId() => HttpContext.GetCurrentUserId();
-
         [HttpGet]
-        public async Task<ActionResult<List<PlatformReconcileDto>>> GetAll()
+        public async Task<IActionResult> GetAll()
         {
             return Ok(await _service.GetAllAsync());
         }
 
         [HttpPost]
-        public async Task<ActionResult<PlatformReconcileDto>> Create(CreatePlatformReconcileDto dto)
+        public async Task<IActionResult> Create(CreatePlatformReconcileDto dto)
         {
             var result = await _service.CreateAsync(dto);
-            return Ok(result);
+            return Created(result, "Tạo reconcile thành công.");
         }
 
         [HttpPost("{id}/confirm")]
         public async Task<IActionResult> Confirm(Guid id)
         {
-            var adminId = GetCurrentUserId();
+            var adminId = CurrentUserId;
             var result = await _service.ConfirmAsync(id, adminId);
             if (!result) return NotFound();
-            return NoContent();
+            return Ok<object?>(null, "Confirm thành công.");
         }
     }
 }

@@ -10,9 +10,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/transactions")]
-    [ApiController]
     [Authorize] // Yêu cầu đăng nhập
-    public class TransactionController : ControllerBase
+    public class TransactionController : CoreBaseController
     {
         private readonly ITransactionService _transactionService;
 
@@ -20,8 +19,6 @@ namespace LG.Core.API.Controllers.Finance
         {
             _transactionService = transactionService;
         }
-
-        private Guid GetCurrentUserId() => HttpContext.GetCurrentUserId();
 
         /// <summary>
         /// Tạo yêu cầu nạp tiền mới
@@ -32,9 +29,9 @@ namespace LG.Core.API.Controllers.Finance
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var result = await _transactionService.CreateTopupRequestAsync(request, userId);
-            return Ok(result);
+            return Ok(result, "Tạo yêu cầu nạp tiền thành công.");
         }
 
         /// <summary>
@@ -43,7 +40,7 @@ namespace LG.Core.API.Controllers.Finance
         [HttpGet("my-wallet")]
         public async Task<IActionResult> GetMyWallet()
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var result = await _transactionService.GetMyWalletAsync(userId);
             return Ok(result);
         }
@@ -54,7 +51,7 @@ namespace LG.Core.API.Controllers.Finance
         [HttpGet("my-topups")]
         public async Task<IActionResult> GetMyTopups()
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var results = await _transactionService.GetMyTopupsAsync(userId);
             return Ok(results);
         }
@@ -68,9 +65,9 @@ namespace LG.Core.API.Controllers.Finance
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var result = await _transactionService.CreateWithdrawRequestAsync(request, userId);
-            return Ok(new { message = "Tạo lệnh rút tiền thành công. Số dư đã được đóng băng chờ duyệt.", data = result });
+            return Ok(result, "Tạo lệnh rút tiền thành công. Số dư đã được đóng băng chờ duyệt.");
         }
 
         /// <summary>
@@ -79,7 +76,7 @@ namespace LG.Core.API.Controllers.Finance
         [HttpGet("my-withdraws")]
         public async Task<IActionResult> GetMyWithdraws()
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var results = await _transactionService.GetMyWithdrawsAsync(userId);
             return Ok(results);
         }

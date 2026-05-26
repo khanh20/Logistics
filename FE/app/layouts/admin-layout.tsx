@@ -1,12 +1,12 @@
 import { Outlet, redirect } from "react-router";
 import { AdminSidebar } from "~/components/admin/AdminSidebar";
 import { AdminTopbar } from "~/components/admin/AdminTopbar";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { store } from "~/lib/feature/store";
 import { STAFF_ROLES, type Role } from "~/lib/constants/roles";
 import type { UserAuthInfo } from "~/lib/types/auth";
 
 export async function clientLoader() {
-  const { token, user, roles } = useAuthStore.getState();
+  const { token, user, roles } = store.getState().authState;
 
   if (!token || !user) throw redirect("/login");
 
@@ -30,3 +30,4 @@ export default function AdminLayout({ loaderData }: { loaderData: { user: UserAu
     </div>
   );
 }
+

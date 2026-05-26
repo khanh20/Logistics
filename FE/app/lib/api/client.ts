@@ -1,5 +1,15 @@
 import axios from "axios";
-import { useAuthStore } from "~/lib/stores/authStore";
+
+function getAuthFromStorage() {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem("muaho-auth");
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
 
 function createClient(baseURL: string) {
   const client = axios.create({
@@ -8,7 +18,8 @@ function createClient(baseURL: string) {
   });
 
   client.interceptors.request.use((config) => {
-    const token = useAuthStore.getState().token;
+    const auth = getAuthFromStorage();
+    const token = auth?.token;
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
@@ -17,8 +28,10 @@ function createClient(baseURL: string) {
     (res) => res.data,
     async (err) => {
       if (err.response?.status === 401) {
-        useAuthStore.getState().logout();
-        window.location.href = "/login";
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("muaho-auth");
+          window.location.href = "/login";
+        }
       }
       return Promise.reject(err.response?.data ?? err);
     },
@@ -27,12 +40,14 @@ function createClient(baseURL: string) {
   return client;
 }
 
-// Auth service — port 7237
 export const authClient = createClient(
   import.meta.env.VITE_AUTH_API_URL ?? "https://localhost:7237",
 );
 
-// Module1 service — port 7167
 export const apiModule1Client = createClient(
   import.meta.env.VITE_MODULE1_API_URL ?? "https://localhost:7167",
+);
+
+export const apiModule3Client = createClient(
+  import.meta.env.VITE_MODULE3_API_URL ?? "https://localhost:7215",
 );

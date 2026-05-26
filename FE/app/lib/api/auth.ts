@@ -14,4 +14,7 @@ export const authApi = {
 
   logout: (refreshToken: string) =>
     authClient.post<unknown, ApiResponse<null>>("/api/auth/logout", { refreshToken }),
+
+  updateMe: (body: { fullName: string; phone?: string; avatarUrl?: string }) =>
+    authClient.put<unknown, ApiResponse<any>>("/api/users/me", body),
 };

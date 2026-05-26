@@ -53,14 +53,21 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
         public async Task<bool> UpdateAsync(Guid id, UpdateCustomerProfileDto dto)
         {
-            var profile = await _db.CustomerProfiles.FindAsync(id);
-            if (profile == null) return false;
+            try
+            {
+                var profile = await _db.CustomerProfiles.FindAsync(id);
+                if (profile == null) return false;
 
-            _mapper.Map(dto, profile);
-            profile.ModifiedDate = DateTime.UtcNow;
+                _mapper.Map(dto, profile);
+                profile.ModifiedDate = DateTime.UtcNow;
 
-            await _db.SaveChangesAsync();
-            return true;
+                await _db.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"UpdateAsync Error: {ex.Message} | Inner: {ex.InnerException?.Message}");
+            }
         }
     }
 }

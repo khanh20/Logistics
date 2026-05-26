@@ -9,8 +9,7 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
-    public class WalletTransactionController : ControllerBase
+    public class WalletTransactionController : CoreBaseController
     {
         private readonly IWalletTransactionService _service;
 
@@ -21,14 +20,14 @@ namespace LG.Core.API.Controllers.Finance
 
         [HttpGet("wallet/{walletId}")]
         [Authorize(Roles = "Admin,SuperAdmin")] // Admin viewing specific wallet transactions
-        public async Task<ActionResult<List<WalletTransactionDto>>> GetByWallet(Guid walletId)
+        public async Task<IActionResult> GetByWallet(Guid walletId)
         {
             return Ok(await _service.GetByWalletAsync(walletId));
         }
 
         [HttpGet]
         [Authorize(Roles = "Admin,SuperAdmin")]
-        public async Task<ActionResult<List<WalletTransactionDto>>> GetAll()
+        public async Task<IActionResult> GetAll()
         {
             return Ok(await _service.GetAllAsync());
         }

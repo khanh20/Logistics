@@ -9,9 +9,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize(Roles = "Admin,SuperAdmin")]
-    public class BankWebhookLogController : ControllerBase
+    public class BankWebhookLogController : CoreBaseController
     {
         private readonly IBankWebhookLogService _service;
 
@@ -21,13 +20,13 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<BankWebhookLogDto>>> GetAll()
+        public async Task<IActionResult> GetAll()
         {
             return Ok(await _service.GetAllAsync());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<BankWebhookLogDto>> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
             if (result == null) return NotFound();

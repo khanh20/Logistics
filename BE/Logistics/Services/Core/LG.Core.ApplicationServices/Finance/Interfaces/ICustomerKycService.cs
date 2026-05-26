@@ -35,5 +35,10 @@ namespace LG.Core.ApplicationServices.Finance.Interfaces
         /// Submit KYC theo userId (từ JWT)
         /// </summary>
         Task<CustomerKycDto> SubmitKycByUserIdAsync(Guid userId, UpdateKycFromOcrRequest request);
+
+        // --- Admin Methods ---
+        Task<List<CustomerKycDto>> GetAllKycsAsync();
+        Task<CustomerKycDto> ApproveKycAsync(Guid kycId, Guid adminId);
+        Task<CustomerKycDto> RejectKycAsync(Guid kycId, Guid adminId, string reason);
     }
 }

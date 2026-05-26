@@ -8,9 +8,7 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/transaction-types")]
-    [ApiController]
-    // [Authorize(Roles = "Admin")] // Tạm thời comment dòng này lại để dễ test như yêu cầu
-    public class TransactionTypeController : ControllerBase
+    public class TransactionTypeController : CoreBaseController
     {
         private readonly ITransactionTypeService _transactionTypeService;
 
@@ -43,7 +41,7 @@ namespace LG.Core.API.Controllers.Finance
                 return BadRequest(ModelState);
 
             var result = await _transactionTypeService.CreateAsync(request);
-            return Ok(result);
+            return Created(result, "Tạo loại giao dịch thành công.");
         }
 
         [HttpPut("{id}")]
@@ -59,7 +57,7 @@ namespace LG.Core.API.Controllers.Finance
             if (!success)
                 return NotFound(new { message = "Không tìm thấy loại giao dịch" });
 
-            return Ok(new { message = "Cập nhật thành công" });
+            return Ok<object?>(null, "Cập nhật thành công.");
         }
 
         [HttpDelete("{id}")]
@@ -69,7 +67,7 @@ namespace LG.Core.API.Controllers.Finance
             if (!success)
                 return NotFound(new { message = "Không tìm thấy loại giao dịch" });
 
-            return Ok(new { message = "Xóa thành công" });
+            return Ok<object?>(null, "Xóa thành công.");
         }
     }
 }

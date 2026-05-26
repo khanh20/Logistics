@@ -14,9 +14,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/bank-accounts")]
-    [ApiController]
     [Authorize] // Yêu cầu đăng nhập
-    public class BankAccountController : ControllerBase
+    public class BankAccountController : CoreBaseController
     {
         private readonly IBankAccountService _bankAccountService;
 
@@ -24,8 +23,6 @@ namespace LG.Core.API.Controllers.Finance
         {
             _bankAccountService = bankAccountService;
         }
-
-        private Guid GetCurrentUserId() => HttpContext.GetCurrentUserId();
 
         /// <summary>
         /// Thêm mới tài khoản ngân hàng (Tự động gán Type = System nếu là Admin, ngược lại là Customer)
@@ -36,12 +33,11 @@ namespace LG.Core.API.Controllers.Finance
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var type = User.IsInRole("Admin") ? BankAccountType.System : BankAccountType.Customer;
             
             var result = await _bankAccountService.CreateAsync(request, userId, type);
-            
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            return Created(result, "Tạo tài khoản ngân hàng thành công.");
         }
 
         /// <summary>
@@ -63,7 +59,8 @@ namespace LG.Core.API.Controllers.Finance
         [HttpGet("system")]
         public async Task<IActionResult> GetSystemBankAccounts()
         {
-            var accounts = await _bankAccountService.GetSystemBankAccountsAsync();
+            var isAdmin = User.IsInRole("Admin") || User.HasClaim(c => c.Type == "role" && c.Value == "Admin");
+            var accounts = await _bankAccountService.GetSystemBankAccountsAsync(activeOnly: !isAdmin);
             return Ok(accounts);
         }
 
@@ -73,7 +70,7 @@ namespace LG.Core.API.Controllers.Finance
         [HttpGet("my")]
         public async Task<IActionResult> GetCustomerBankAccounts()
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var accounts = await _bankAccountService.GetCustomerBankAccountsAsync(userId);
             return Ok(accounts);
         }
@@ -88,7 +85,7 @@ namespace LG.Core.API.Controllers.Finance
             if (!success)
                 throw new CoreException(CoreErrorCode.CoreBankAccountNotFound, 404);
 
-            return Ok(ApiResponse.Ok("Cập nhật trạng thái thành công."));
+            return Ok<object?>(null, "Cập nhật trạng thái thành công.");
         }
 
         /// <summary>
@@ -101,7 +98,7 @@ namespace LG.Core.API.Controllers.Finance
             if (!success)
                 throw new CoreException(CoreErrorCode.CoreBankAccountNotFound, 404);
 
-            return Ok(ApiResponse.Ok("Đã xóa tài khoản ngân hàng."));
+            return Ok<object?>(null, "Đã xóa tài khoản ngân hàng.");
         }
     }
 }

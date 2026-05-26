@@ -70,51 +70,55 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
         public async Task<bool> ApproveRefundAsync(Guid refundId)
         {
-            using var transaction = await _db.Database.BeginTransactionAsync();
-            try
+            var strategy = _db.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                var refund = await _db.RefundProcesses.FindAsync(refundId);
-                if (refund == null || refund.Status != RefundStatusEnum.Pending) return false;
-
-                var wallet = await _db.Wallets.FindAsync(refund.WalletId);
-                if (wallet == null) throw new CoreException(CoreErrorCode.CoreWalletNotFound);
-
-                // 1. Cập nhật số dư ví
-                wallet.AvailableBalance += refund.NetRefundVnd;
-
-                // 2. Tạo lịch sử giao dịch ví
-                var transactionType = await _db.TransactionTypes.FirstOrDefaultAsync(t => t.Code == "REFUND");
-                if (transactionType == null) throw new CoreException(CoreErrorCode.CoreTransactionTypeConfigMissing);
-
-                var walletTransaction = new WalletTransaction
+                using var transaction = await _db.Database.BeginTransactionAsync();
+                try
                 {
-                    WalletId = wallet.Id,
-                    TypeId = transactionType.Id,
-                    Amount = refund.NetRefundVnd,
-                    BalanceBefore = wallet.AvailableBalance - refund.NetRefundVnd,
-                    BalanceAfter = wallet.AvailableBalance,
-                    Note = $"Hoàn tiền cho {refund.ReferenceType} ID: {refund.ReferenceId}.",
-                    ReferenceType = refund.ReferenceType,
-                    ReferenceId = refund.ReferenceId
-                };
+                    var refund = await _db.RefundProcesses.FindAsync(refundId);
+                    if (refund == null || refund.Status != RefundStatusEnum.Pending) return false;
 
-                _db.WalletTransactions.Add(walletTransaction);
-                await _db.SaveChangesAsync(); // Save to get transaction ID
+                    var wallet = await _db.Wallets.FindAsync(refund.WalletId);
+                    if (wallet == null) throw new CoreException(CoreErrorCode.CoreWalletNotFound);
 
-                // 3. Cập nhật trạng thái Refund
-                refund.Status = RefundStatusEnum.Completed;
-                refund.RefundedAt = DateTime.UtcNow;
-                refund.WalletTransactionId = walletTransaction.Id;
+                    // 1. Cập nhật số dư ví
+                    wallet.AvailableBalance += refund.NetRefundVnd;
 
-                await _db.SaveChangesAsync();
-                await transaction.CommitAsync();
-                return true;
-            }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+                    // 2. Tạo lịch sử giao dịch ví
+                    var transactionType = await _db.TransactionTypes.FirstOrDefaultAsync(t => t.Code == "REFUND");
+                    if (transactionType == null) throw new CoreException(CoreErrorCode.CoreTransactionTypeConfigMissing);
+
+                    var walletTransaction = new WalletTransaction
+                    {
+                        WalletId = wallet.Id,
+                        TypeId = transactionType.Id,
+                        Amount = refund.NetRefundVnd,
+                        BalanceBefore = wallet.AvailableBalance - refund.NetRefundVnd,
+                        BalanceAfter = wallet.AvailableBalance,
+                        Note = $"Hoàn tiền cho {refund.ReferenceType} ID: {refund.ReferenceId}.",
+                        ReferenceType = refund.ReferenceType,
+                        ReferenceId = refund.ReferenceId
+                    };
+
+                    _db.WalletTransactions.Add(walletTransaction);
+                    await _db.SaveChangesAsync(); // Save to get transaction ID
+
+                    // 3. Cập nhật trạng thái Refund
+                    refund.Status = RefundStatusEnum.Completed;
+                    refund.RefundedAt = DateTime.UtcNow;
+                    refund.WalletTransactionId = walletTransaction.Id;
+
+                    await _db.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return true;
+                }
+                catch (Exception)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         public async Task<bool> RejectRefundAsync(Guid refundId, string reason)

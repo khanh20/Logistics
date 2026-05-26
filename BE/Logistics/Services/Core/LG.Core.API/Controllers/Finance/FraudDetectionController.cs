@@ -10,9 +10,8 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize(Roles = "Admin,SuperAdmin")]
-    public class FraudDetectionController : ControllerBase
+    public class FraudDetectionController : CoreBaseController
     {
         private readonly IFraudDetectionService _service;
 
@@ -21,16 +20,14 @@ namespace LG.Core.API.Controllers.Finance
             _service = service;
         }
 
-        private Guid GetCurrentUserId() => HttpContext.GetCurrentUserId();
-
         [HttpGet]
-        public async Task<ActionResult<List<FraudDetectionDto>>> GetAll()
+        public async Task<IActionResult> GetAll()
         {
             return Ok(await _service.GetAllAsync());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<FraudDetectionDto>> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id)
         {
             var result = await _service.GetByIdAsync(id);
             if (result == null) return NotFound();
@@ -40,10 +37,10 @@ namespace LG.Core.API.Controllers.Finance
         [HttpPut("{id}/review")]
         public async Task<IActionResult> Review(Guid id, ReviewFraudDto dto)
         {
-            var adminId = GetCurrentUserId();
+            var adminId = CurrentUserId;
             var result = await _service.ReviewAsync(id, dto, adminId);
             if (!result) return NotFound();
-            return NoContent();
+            return Ok<object?>(null, "Đã review thành công.");
         }
     }
 }

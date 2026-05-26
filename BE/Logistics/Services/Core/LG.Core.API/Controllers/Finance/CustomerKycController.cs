@@ -17,11 +17,9 @@ namespace LG.Core.API.Controllers.Finance
     /// <summary>
     /// API quản lý KYC khách hàng — bao gồm OCR đọc CCCD
     /// </summary>
-    [ApiController]
     [Route("api/kyc")]
-    [Produces("application/json")]
     [Authorize]
-    public class CustomerKycController : ControllerBase
+    public class CustomerKycController : CoreBaseController
     {
         private readonly ICustomerKycService _kycService;
 
@@ -29,8 +27,6 @@ namespace LG.Core.API.Controllers.Finance
         {
             _kycService = kycService;
         }
-
-        private Guid GetCurrentUserId() => HttpContext.GetCurrentUserId();
 
         // ── GET /api/kyc ──────────────────────────────────────────────────────────
         /// <summary>
@@ -41,7 +37,7 @@ namespace LG.Core.API.Controllers.Finance
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetKyc()
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
             var kyc = await _kycService.GetKycByUserIdAsync(userId);
             if (kyc == null)
                 throw new CoreException(CoreErrorCode.CoreKycNotFound, 404);
@@ -60,7 +56,7 @@ namespace LG.Core.API.Controllers.Finance
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> ScanCccd(IFormFile frontImage, IFormFile? backImage)
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
 
             if (frontImage == null || frontImage.Length == 0)
                 throw new CoreException(CoreErrorCode.CoreKycImageRequired);
@@ -104,7 +100,7 @@ namespace LG.Core.API.Controllers.Finance
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> SubmitKyc([FromBody] UpdateKycFromOcrRequest request)
         {
-            var userId = GetCurrentUserId();
+            var userId = CurrentUserId;
 
             if (string.IsNullOrWhiteSpace(request.IdNumber) && string.IsNullOrWhiteSpace(request.FullNameOnId))
                 throw new CoreException(CoreErrorCode.CoreKycDataRequired);

@@ -210,7 +210,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
                         WalletId = wallet.Id,
                         TypeId = typeId,
                         Amount = withdraw.AmountVnd,
-                        BalanceBefore = wallet.AvailableBalance, // Tiền khả dụng không đổi lúc này
+                        BalanceBefore = wallet.AvailableBalance + withdraw.AmountVnd, // Dùng số dư cộng với khoản đang đóng băng để hiển thị logic khấu trừ trên UI
                         BalanceAfter = wallet.AvailableBalance,
                         ReferenceType = "Withdraw",
                         ReferenceId = withdraw.Id,
@@ -244,39 +244,43 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
         public async Task<bool> RejectWithdrawAsync(Guid withdrawId, Guid adminId, string reason)
         {
-            using var transaction = await _db.Database.BeginTransactionAsync();
-            try
+            var strategy = _db.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                var withdraw = await _db.WithdrawRequests.FindAsync(withdrawId);
-                if (withdraw == null || withdraw.Status != WithdrawStatusEnum.Pending)
-                    throw new CoreException(CoreErrorCode.CoreWithdrawRequestNotFoundOrProcessed);
+                using var transaction = await _db.Database.BeginTransactionAsync();
+                try
+                {
+                    var withdraw = await _db.WithdrawRequests.FindAsync(withdrawId);
+                    if (withdraw == null || withdraw.Status != WithdrawStatusEnum.Pending)
+                        throw new CoreException(CoreErrorCode.CoreWithdrawRequestNotFoundOrProcessed);
 
-                var wallet = await _db.Wallets.FindAsync(withdraw.WalletId);
-                if (wallet == null) throw new CoreException(CoreErrorCode.CoreWalletNotFound);
+                    var wallet = await _db.Wallets.FindAsync(withdraw.WalletId);
+                    if (wallet == null) throw new CoreException(CoreErrorCode.CoreWalletNotFound);
 
-                // 1. Trả lại tiền từ FrozenBalance về AvailableBalance
-                wallet.FrozenBalance -= withdraw.AmountVnd;
-                wallet.AvailableBalance += withdraw.AmountVnd;
+                    // 1. Trả lại tiền từ FrozenBalance về AvailableBalance
+                    wallet.FrozenBalance -= withdraw.AmountVnd;
+                    wallet.AvailableBalance += withdraw.AmountVnd;
 
-                // 2. Cập nhật trạng thái
-                withdraw.Status = WithdrawStatusEnum.Rejected;
-                withdraw.ApprovedBy = adminId;
-                withdraw.RejectedReason = reason;
-                withdraw.ProcessedAt = DateTime.UtcNow;
+                    // 2. Cập nhật trạng thái
+                    withdraw.Status = WithdrawStatusEnum.Rejected;
+                    withdraw.ApprovedBy = adminId;
+                    withdraw.RejectedReason = reason;
+                    withdraw.ProcessedAt = DateTime.UtcNow;
 
-                await _db.SaveChangesAsync();
-                await transaction.CommitAsync();
+                    await _db.SaveChangesAsync();
+                    await transaction.CommitAsync();
 
-                // Gửi email thông báo rút tiền bị từ chối
-                await SendWithdrawEmailAsync(withdraw.CustomerId, withdraw.AmountVnd, wallet.AvailableBalance, false, reason);
+                    // Gửi email thông báo rút tiền bị từ chối
+                    await SendWithdrawEmailAsync(withdraw.CustomerId, withdraw.AmountVnd, wallet.AvailableBalance, false, reason);
 
-                return true;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+                    return true;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         private async Task SendWithdrawEmailAsync(Guid customerId, decimal amount, decimal currentBalance, bool isApproved, string? rejectReason = null)

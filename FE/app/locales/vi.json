@@ -263,7 +263,21 @@
     "platforms": "Sàn TMĐT",
     "ingestion": "Import sản phẩm",
     "exchange_rates": "Tỉ giá",
-    "staff": "Nhân viên"
+    "staff": "Nhân viên",
+    "finance": "Tài chính",
+    "finance_overview": "Tổng quan",
+    "finance_kyc": "Xác thực KYC",
+    "finance_withdraws": "Duyệt lệnh rút tiền",
+    "finance_transactions": "Lịch sử giao dịch ví",
+    "finance_refunds": "Quản lý hoàn tiền",
+    "finance_reconcile": "Đối soát nền tảng",
+    "finance_fraud": "Phát hiện gian lận",
+    "finance_payment_locks": "Khóa giữ tiền",
+    "finance_fee_rules": "Quy tắc tính phí",
+    "finance_vip_tiers": "Quản lý hạng VIP",
+    "finance_transaction_types": "Loại giao dịch",
+    "finance_bank_accounts": "TK Ngân hàng hệ thống",
+    "finance_webhook_logs": "Webhook Logs (ZaloPay)"
   },
   "home": {
     "badge": "Đặt hàng từ Taobao, eBay, Rakuten — giao tận nhà",

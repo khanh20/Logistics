@@ -8,8 +8,7 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    [ApiController]
-    public class FinanceManagementController : ControllerBase
+    public class FinanceManagementController : CoreBaseController
     {
         private readonly IFinanceManagementService _financeService;
 
@@ -19,7 +18,7 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpGet("credit-limit/{walletId}")]
-        public async Task<ActionResult<CreditLimitDto>> GetCreditLimit(Guid walletId)
+        public async Task<IActionResult> GetCreditLimit(Guid walletId)
         {
             var result = await _financeService.GetCreditLimitByWalletAsync(walletId);
             if (result == null) return NotFound();
@@ -27,13 +26,13 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpPost("credit-limit")]
-        public async Task<ActionResult<CreditLimitDto>> UpdateCreditLimit(UpdateCreditLimitDto dto)
+        public async Task<IActionResult> UpdateCreditLimit(UpdateCreditLimitDto dto)
         {
             return Ok(await _financeService.UpdateCreditLimitAsync(dto));
         }
 
         [HttpGet("debts/{walletId}")]
-        public async Task<ActionResult<List<DebtRecordDto>>> GetDebts(Guid walletId)
+        public async Task<IActionResult> GetDebts(Guid walletId)
         {
             return Ok(await _financeService.GetDebtsByWalletAsync(walletId));
         }
@@ -43,7 +42,7 @@ namespace LG.Core.API.Controllers.Finance
         {
             var result = await _financeService.PayDebtAsync(debtId, amount);
             if (!result) return BadRequest("Không thể thanh toán khoản nợ này.");
-            return Ok("Thanh toán nợ thành công.");
+            return Ok<object?>(null, "Thanh toán nợ thành công.");
         }
     }
 }
