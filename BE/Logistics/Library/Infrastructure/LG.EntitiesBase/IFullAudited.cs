@@ -1,0 +1,30 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace LG.EntitiesBase
+{
+    public interface IFullAudited : ICreatedBy, IModifiedBy, ISoftDelted
+    {
+    }
+    public interface ISoftDelted
+    {
+        public DateTime? DeletedDate { get; set; }
+        public bool Deleted { get; set; }
+        public Guid? DeletedBy { get; set; }
+    }
+
+    public interface ICreatedBy
+    {
+        public DateTime? CreatedDate { get; set; }
+        public Guid? CreatedBy { get; set; }
+    }
+
+    public interface IModifiedBy
+    {
+        public DateTime? ModifiedDate { get; set; }
+        public Guid? ModifiedBy { get; set; }
+    }
+}

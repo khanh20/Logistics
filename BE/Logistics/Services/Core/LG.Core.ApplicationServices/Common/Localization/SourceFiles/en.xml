@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<localizationDictionary culture="en">
+	<texts>
+		<!--Định nghĩa các lỗi validation-->
+		<text name="error_CoreCustomerNotFound">Customer information not found.</text>
+		<text name="error_validation_CoreCustomerTempAvatarMaxLength">Profile photo cannot be longer than {0} characters</text>
+		<!-- Transaction and Wallet Errors -->
+		<text name="error_CoreTransactionBankNotFoundOrInactive">Beneficiary bank account is invalid or locked.</text>
+		<text name="error_CoreWalletFrozen">Your wallet is frozen. Transaction cannot be performed.</text>
+		<text name="error_CoreInsufficientBalance">Insufficient available balance for this transaction.</text>
+		<text name="error_CoreInvalidReceiveBankAccount">Receiving bank account is invalid.</text>
+		<text name="error_CoreWithdrawRequestNotFoundOrProcessed">Withdrawal request does not exist or has been processed.</text>
+		<text name="error_CoreWalletNotFound">Wallet information not found.</text>
+		<text name="error_CoreTransactionTypeCodeExists">Transaction type code already exists in the system.</text>
+		<text name="error_CoreTransactionTypeUsedInTransactions">Cannot delete transaction type with existing actual transactions.</text>
+		<text name="error_CoreTransactionTypeConfigMissing">Required transaction type is not configured in the system.</text>
+
+		<!-- Bank Account -->
+		<text name="error_CoreBankAccountNotFound">Bank account not found.</text>
+		<text name="error_CoreBankAccountDuplicateNumber">Account number already exists in the system.</text>
+		<text name="error_CoreBankAccountInvalidNumberLength">Account number is invalid or empty.</text>
+
+		<!-- Scan ID -->
+		<text name="error_CoreFptAIConfigMissing">Please configure FptAI:ApiKey in appsettings.json</text>
+		<text name="error_CoreFptAIConnectionError">Error calling FPT.AI API (Invalid key or server error)</text>
+		<text name="error_CoreInvalidIdImage">Invalid image or ID card not recognized.</text>
+
+		<!-- KYC -->
+		<text name="error_CoreKycNotFound">KYC information not found.</text>
+		<text name="error_CoreKycImageRequired">Please upload front image of ID card.</text>
+		<text name="error_CoreKycInvalidImageType">Only JPG, PNG, or WebP images are accepted.</text>
+		<text name="error_CoreKycImageTooLarge">Image must not exceed 10MB.</text>
+		<text name="error_CoreKycDataRequired">At least ID number or full name is required.</text>
+
+		<!-- Auth/Token -->
+		<text name="error_CoreUserIdNotFoundInToken">User ID not found in token.</text>
+		<text name="error_CoreInvalidUserIdInToken">User ID in token is invalid.</text>
+
+	</texts>
+</localizationDictionary>

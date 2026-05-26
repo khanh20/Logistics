@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<localizationDictionary culture="vi">
+	<texts>
+		<!--Định nghĩa các lỗi validation-->
+		<text name="error_CoreCustomerNotFound">Không tìm thấy thông tin khách hàng.</text>
+		<text name="error_validation_CoreCustomerTempAvatarMaxLength">Ảnh đại diện không được dài hơn {0} ký tự</text>
+		<!-- Lỗi giao dịch và ví -->
+		<text name="error_CoreTransactionBankNotFoundOrInactive">Tài khoản ngân hàng thụ hưởng không hợp lệ hoặc đã bị khóa.</text>
+		<text name="error_CoreWalletFrozen">Ví của bạn đang bị đóng băng. Không thể thực hiện giao dịch.</text>
+		<text name="error_CoreInsufficientBalance">Số dư khả dụng không đủ để thực hiện giao dịch này.</text>
+		<text name="error_CoreInvalidReceiveBankAccount">Tài khoản ngân hàng nhận tiền không hợp lệ.</text>
+		<text name="error_CoreWithdrawRequestNotFoundOrProcessed">Yêu cầu rút tiền không tồn tại hoặc đã được xử lý.</text>
+		<text name="error_CoreWalletNotFound">Không tìm thấy thông tin ví.</text>
+		<text name="error_CoreTransactionTypeCodeExists">Mã loại giao dịch đã tồn tại trên hệ thống.</text>
+		<text name="error_CoreTransactionTypeUsedInTransactions">Không thể xóa loại giao dịch đã có phát sinh giao dịch thực tế.</text>
+		<text name="error_CoreTransactionTypeConfigMissing">Loại giao dịch cần thiết chưa được cấu hình trên hệ thống.</text>
+
+		<!-- Bank Account -->
+		<text name="error_CoreBankAccountNotFound">Không tìm thấy tài khoản ngân hàng.</text>
+		<text name="error_CoreBankAccountDuplicateNumber">Số tài khoản đã tồn tại trong hệ thống.</text>
+		<text name="error_CoreBankAccountInvalidNumberLength">Số tài khoản không hợp lệ hoặc trống.</text>
+
+		<!-- Scan ID -->
+		<text name="error_CoreFptAIConfigMissing">Vui lòng cấu hình FptAI:ApiKey trong appsettings.json</text>
+		<text name="error_CoreFptAIConnectionError">Lỗi khi gọi API FPT.AI (Sai key hoặc server lỗi)</text>
+		<text name="error_CoreInvalidIdImage">Ảnh không hợp lệ hoặc không nhận diện được CCCD.</text>
+
+		<!-- KYC -->
+		<text name="error_CoreKycNotFound">Chưa có thông tin KYC.</text>
+		<text name="error_CoreKycImageRequired">Vui lòng upload ảnh CCCD mặt trước.</text>
+		<text name="error_CoreKycInvalidImageType">Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.</text>
+		<text name="error_CoreKycImageTooLarge">Ảnh không được vượt quá 10MB.</text>
+		<text name="error_CoreKycDataRequired">Cần nhập ít nhất số CCCD hoặc họ tên.</text>
+
+		<!-- Auth/Token -->
+		<text name="error_CoreUserIdNotFoundInToken">Không tìm thấy user ID trong token.</text>
+		<text name="error_CoreInvalidUserIdInToken">User ID trong token không hợp lệ.</text>
+
+	</texts>
+</localizationDictionary>

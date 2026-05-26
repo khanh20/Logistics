@@ -1,0 +1,6 @@
+@LG.PlatformOrder.API_HostAddress = http://localhost:5031
+
+GET {{LG.PlatformOrder.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
