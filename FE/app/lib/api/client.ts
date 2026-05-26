@@ -1,10 +1,25 @@
 import axios, { type InternalAxiosRequestConfig, type AxiosError } from "axios";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { store } from "~/lib/feature/store";
+import { setToken } from "~/lib/feature/auth/authSlice";
 import type { ApiResponse } from "~/lib/types/common";
 import type { RefreshResponse } from "~/lib/types/auth";
 
 const AUTH_BASE_URL =
   import.meta.env.VITE_AUTH_API_URL ?? "https://localhost:7237";
+
+// ── Helper: đọc token từ Redux store ──────────────────────────────────────────
+function getToken(): string | null {
+  return store.getState().authState.token;
+}
+
+function getRefreshToken(): string | null {
+  return store.getState().authState.refreshToken;
+}
+
+function handleLogout(): void {
+  localStorage.removeItem("muaho-auth");
+  window.location.href = "/login";
+}
 
 // ── Auth client (no refresh interceptor — prevents infinite loop) ─────────────
 function createAuthClient(baseURL: string) {
@@ -14,8 +29,9 @@ function createAuthClient(baseURL: string) {
   });
 
   client.interceptors.request.use((config) => {
-    const token = useAuthStore.getState().token;
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    const token = getToken();
+    const isAuthEndpoint = config.url?.includes("/login") || config.url?.includes("/register") || config.url?.includes("/refresh");
+    if (token && !isAuthEndpoint) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
 
@@ -50,7 +66,7 @@ function createClient(baseURL: string) {
   });
 
   client.interceptors.request.use((config) => {
-    const token = useAuthStore.getState().token;
+    const token = getToken();
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
@@ -67,11 +83,10 @@ function createClient(baseURL: string) {
         return Promise.reject(err.response?.data ?? err);
       }
 
-      const { refreshToken, updateToken, logout } = useAuthStore.getState();
+      const refreshTokenValue = getRefreshToken();
 
-      if (!refreshToken) {
-        logout();
-        window.location.href = "/login";
+      if (!refreshTokenValue) {
+        handleLogout();
         return Promise.reject(err.response?.data ?? err);
       }
 
@@ -96,20 +111,20 @@ function createClient(baseURL: string) {
         // Use raw axios to avoid circular dependency with authClient
         const raw = await axios.post<ApiResponse<RefreshResponse>>(
           `${AUTH_BASE_URL}/api/auth/refresh`,
-          { refreshToken },
+          { refreshToken: refreshTokenValue },
           { headers: { "Content-Type": "application/json" } }
         );
         const newToken = raw.data.data.accessToken;
 
-        updateToken(newToken);
+        // Update Redux store
+        store.dispatch(setToken(newToken));
         original.headers.Authorization = `Bearer ${newToken}`;
         flushQueue(null, newToken);
 
         return client(original);
       } catch (refreshErr) {
         flushQueue(refreshErr, null);
-        logout();
-        window.location.href = "/login";
+        handleLogout();
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;

@@ -1,0 +1,23 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "Services\\Core\\LG.Core.API\\LG.Core.API.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Services\\Authentication\\LG.Authentication.API\\LG.Authentication.API.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Services\\Module1\\LG.Module1.API\\LG.Module1.API.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Services\\Module2\\LG.Module2.API\\LG.Module2.API.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

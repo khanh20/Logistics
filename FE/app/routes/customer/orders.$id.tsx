@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { redirect, Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { store } from "~/lib/feature/store";
 import { customerOrdersApi } from "~/lib/api/orders";
 import { StatusBadge } from "~/components/shared/StatusBadge";
 import { OrderTimeline } from "~/components/customer/OrderTimeline";
@@ -16,7 +16,7 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  const { token } = useAuthStore.getState();
+  const { token } = store.getState().authState;
   if (!token) throw redirect("/login");
 
   const res = await customerOrdersApi.getDetail(params.id!);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { redirect, Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { store } from "~/lib/feature/store";
 import { cartApi } from "~/lib/api/cart";
 import { useCart } from "~/lib/hooks/useCart";
 import { CartItemCard } from "~/components/customer/CartItemCard";
@@ -15,7 +15,7 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export async function clientLoader() {
-  const { token } = useAuthStore.getState();
+  const { token } = store.getState().authState;
   if (!token) throw redirect("/login");
 
   try {
