@@ -35,6 +35,7 @@ import {
 import dayjs from "dayjs";
 import type { FeeRuleDto, CreateFeeRuleDto } from "~/lib/types/adminFinance";
 import type { ColumnsType } from "antd/es/table";
+import { numberFormatter, numberParser } from "~/lib/utils/format";
 
 const { Title, Text } = Typography;
 
@@ -142,6 +143,44 @@ export default function AdminFeeRulesPage() {
       render: (val: number) => `${val.toLocaleString()} ₫`,
     },
     {
+      title: "Hệ số thể tích",
+      dataIndex: "intlShipVolDivisor",
+      key: "intlShipVolDivisor",
+      align: "right",
+    },
+    {
+      title: "Khối lượng tối thiểu",
+      dataIndex: "minChargeKg",
+      key: "minChargeKg",
+      align: "right",
+      render: (val: number) => `${val} kg`,
+    },
+    {
+      title: "Kiểm đếm (%)",
+      dataIndex: "inspectionFeePct",
+      key: "inspectionFeePct",
+      align: "right",
+    },
+    {
+      title: "Kiểm đếm (Min - Max)",
+      key: "inspectionMinMax",
+      align: "right",
+      render: (_, record) => `${record.inspectionMinVnd.toLocaleString()}₫ - ${record.inspectionMaxVnd.toLocaleString()}₫`,
+    },
+    {
+      title: "Bảo hiểm (Cơ bản/Toàn diện)",
+      key: "insurance",
+      align: "right",
+      render: (_, record) => `${record.insuranceBasicPct}% / ${record.insuranceFullPct}%`,
+    },
+    {
+      title: "Lưu kho (đ/kg/ngày)",
+      dataIndex: "storageDailyPerKgVnd",
+      key: "storageDailyPerKgVnd",
+      align: "right",
+      render: (val: number) => `${val.toLocaleString()} ₫`,
+    },
+    {
       title: "Trạng thái",
       dataIndex: "isActive",
       key: "isActive",
@@ -192,7 +231,7 @@ export default function AdminFeeRulesPage() {
         </Button>
       </div>
 
-      <Card className="shadow-sm">
+      <Card className="">
         <Table
           columns={columns}
           dataSource={feeRules}
@@ -203,7 +242,7 @@ export default function AdminFeeRulesPage() {
             showSizeChanger: true,
             defaultPageSize: 10,
           }}
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1800 }}
         />
       </Card>
 
@@ -212,10 +251,9 @@ export default function AdminFeeRulesPage() {
         open={isModalVisible}
         onCancel={handleCloseModal}
         footer={null}
-        width={800}
+        width={1000}
         destroyOnClose
         style={{ top: 20 }}
-        styles={{ body: { maxHeight: 'calc(100vh - 120px)', overflowY: 'auto', overflowX: 'hidden', paddingRight: '8px' } }}
       >
         <Form form={form} layout="vertical" onFinish={handleSave}>
           <Row gutter={16}>
@@ -270,8 +308,8 @@ export default function AdminFeeRulesPage() {
                   className="w-full"
                   min={0}
                   step={1000}
-                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(val) => val!.replace(/\$\s?|(,*)/g, "") as any}
+                  formatter={numberFormatter}
+                  parser={numberParser}
                 />
               </Form.Item>
             </Col>
@@ -314,8 +352,8 @@ export default function AdminFeeRulesPage() {
                   className="w-full"
                   min={0}
                   step={1000}
-                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(val) => val!.replace(/\$\s?|(,*)/g, "") as any}
+                  formatter={numberFormatter}
+                  parser={numberParser}
                 />
               </Form.Item>
             </Col>
@@ -330,8 +368,8 @@ export default function AdminFeeRulesPage() {
                   className="w-full"
                   min={0}
                   step={1000}
-                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(val) => val!.replace(/\$\s?|(,*)/g, "") as any}
+                  formatter={numberFormatter}
+                  parser={numberParser}
                 />
               </Form.Item>
             </Col>
@@ -345,8 +383,8 @@ export default function AdminFeeRulesPage() {
                   className="w-full"
                   min={0}
                   step={100}
-                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(val) => val!.replace(/\$\s?|(,*)/g, "") as any}
+                  formatter={numberFormatter}
+                  parser={numberParser}
                 />
               </Form.Item>
             </Col>

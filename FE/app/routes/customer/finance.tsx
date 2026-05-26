@@ -53,8 +53,10 @@ import {
   WITHDRAW_STATUS_COLORS 
 } from "~/lib/constants/finance";
 import { TopupStatusEnum, WithdrawStatusEnum } from "~/lib/enums/finance";
+import { TOPUP_RULES, WITHDRAW_RULES } from "~/lib/validations/finance";
 import type { WalletDto, TopupResponseDto, WithdrawResponseDto } from "~/lib/types/finance";
 import type { BankAccountDto } from "~/lib/types/bankAccount";
+import { numberFormatter, numberParser } from "~/lib/utils/format";
 
 const { Title, Text } = Typography;
 
@@ -209,7 +211,12 @@ const FinancePage: React.FC = () => {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <Title level={2}>Quản lý tài chính</Title>
+      <div className="flex justify-between items-center mb-4">
+        <Title level={2} className="!mb-0">Quản lý tài chính</Title>
+        <Link to="/bank-accounts">
+          <Button>Quản lý tài khoản ngân hàng</Button>
+        </Link>
+      </div>
 
       {error && <Alert message={error} type="error" showIcon className="mb-4" />}
 
@@ -276,7 +283,7 @@ const FinancePage: React.FC = () => {
                     <Form.Item
                       name="bankAccountId"
                       label="Tài khoản ngân hàng của hệ thống"
-                      rules={[{ required: true, message: "Vui lòng chọn tài khoản ngân hàng" }]}
+                      rules={TOPUP_RULES.bankAccountId}
                     >
                       <Select placeholder="Chọn tài khoản" disabled={activeSystemBankAccounts.length === 0}>
                         {activeSystemBankAccounts.map((b) => (
@@ -289,14 +296,13 @@ const FinancePage: React.FC = () => {
                     <Form.Item 
                       name="amount" 
                       label="Số tiền muốn nạp" 
-                      rules={[{ required: true, message: "Vui lòng nhập số tiền" }]}
+                      rules={TOPUP_RULES.amount}
                     >
                       <InputNumber
                         className="w-full"
-                        min={10000}
                         step={50000}
-                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                        parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as any}
+                        formatter={numberFormatter}
+                        parser={numberParser}
                         addonAfter="VND"
                       />
                     </Form.Item>
@@ -326,7 +332,7 @@ const FinancePage: React.FC = () => {
                     <Form.Item
                       name="bankAccountId"
                       label="Tài khoản ngân hàng nhận tiền"
-                      rules={[{ required: true, message: "Vui lòng chọn tài khoản ngân hàng" }]}
+                      rules={WITHDRAW_RULES.bankAccountId}
                     >
                       <Select placeholder="Chọn tài khoản" disabled={activeBankAccounts.length === 0}>
                         {activeBankAccounts.map((b) => (
@@ -339,14 +345,13 @@ const FinancePage: React.FC = () => {
                     <Form.Item 
                       name="amount" 
                       label="Số tiền muốn rút" 
-                      rules={[{ required: true, message: "Vui lòng nhập số tiền" }]}
+                      rules={WITHDRAW_RULES.amount}
                     >
                       <InputNumber
                         className="w-full"
-                        min={50000}
                         step={100000}
-                        formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                        parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as any}
+                        formatter={numberFormatter}
+                        parser={numberParser}
                         addonAfter="VND"
                       />
                     </Form.Item>

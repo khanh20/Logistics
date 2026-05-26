@@ -44,6 +44,7 @@ import {
   PREFERRED_CHANNEL_LABELS,
 } from "~/lib/constants/finance";
 import { VIETNAM_BANKS } from "~/lib/constants/banks";
+import { CUSTOMER_PROFILE_RULES, BANK_ACCOUNT_RULES, KYC_RULES } from "~/lib/validations/finance";
 import type { UpdateKycFromOcrRequest } from "~/lib/types/customerProfile";
 
 const { Title, Text } = Typography;
@@ -65,6 +66,9 @@ export default function CustomerProfilePage() {
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
   const [ocrData, setOcrData] = useState<UpdateKycFromOcrRequest | null>(null);
+  const [isUpdatingPersonal, setIsUpdatingPersonal] = useState(false);
+  const [isUpdatingContact, setIsUpdatingContact] = useState(false);
+  const [isAddingBank, setIsAddingBank] = useState(false);
 
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
@@ -114,6 +118,7 @@ export default function CustomerProfilePage() {
 
   const handleUpdate = async (payload: any) => {
     try {
+      setIsUpdatingPersonal(true);
       if (profile?.id) {
         await dispatch(updateProfile({ id: profile.id, data: payload })).unwrap();
         if (payload.phone !== undefined || payload.email !== undefined) {
@@ -131,6 +136,8 @@ export default function CustomerProfilePage() {
       }
     } catch (error: any) {
       message.error(error || "Lỗi cập nhật thông tin");
+    } finally {
+      setIsUpdatingPersonal(false);
     }
   };
 
@@ -146,17 +153,21 @@ export default function CustomerProfilePage() {
 
   const onContactFinish = async (values: any) => {
     try {
+      setIsUpdatingContact(true);
       const fullName = personalForm.getFieldValue("fullName") ?? profile?.fullName ?? user?.fullName ?? "Chưa có tên";
       await authApi.updateMe({ fullName, phone: values.phone });
       dispatch(updateUserLocal({ phone: values.phone }));
       message.success("Cập nhật thông tin liên hệ thành công");
     } catch (error: any) {
-      message.error(error?.message || "Lỗi cập nhật thông tin liên hệ");
+      message.error(error?.message || "Lỗi cập nhật thông liên hệ");
+    } finally {
+      setIsUpdatingContact(false);
     }
   };
 
   const onBankFinish = async (values: any) => {
     try {
+      setIsAddingBank(true);
       await financeApi.createBankAccount(values);
       message.success("Thêm tài khoản ngân hàng thành công");
       bankForm.resetFields();
@@ -164,6 +175,8 @@ export default function CustomerProfilePage() {
       fetchBanks();
     } catch (err: any) {
       message.error(err?.message || "Lỗi khi thêm ngân hàng");
+    } finally {
+      setIsAddingBank(false);
     }
   };
 
@@ -362,7 +375,7 @@ export default function CustomerProfilePage() {
                         <Form.Item label={<span className="font-medium text-gray-600">Username</span>} className="mb-5">
                           <Input value={user?.email?.split('@')[0] || "username"} disabled className="bg-gray-100 cursor-not-allowed text-gray-500" size="large" />
                         </Form.Item>
-                        <Form.Item label={<span className="font-medium text-gray-600">Họ & tên của bạn</span>} name="fullName" className="mb-5" rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}>
+                        <Form.Item label={<span className="font-medium text-gray-600">Họ & tên của bạn</span>} name="fullName" className="mb-5" rules={CUSTOMER_PROFILE_RULES.fullName}>
                           <Input placeholder="Nhập họ và tên" size="large" />
                         </Form.Item>
                         <Row gutter={16}>
@@ -402,7 +415,7 @@ export default function CustomerProfilePage() {
                           </Col>
                         </Row>
                         <div className="flex justify-center mt-auto border-t border-gray-100 pt-4">
-                          <Button type="primary" htmlType="submit" className="bg-red-500 hover:bg-red-600 border-none px-6 shadow font-medium" size="large">
+                          <Button type="primary" htmlType="submit" loading={isUpdatingPersonal} className="bg-red-500 hover:bg-red-600 border-none px-6 shadow font-medium" size="large">
                             Cập nhật
                           </Button>
                         </div>
@@ -431,7 +444,7 @@ export default function CustomerProfilePage() {
                         </Form.Item>
 
                         <div className="flex justify-center mt-auto border-t border-gray-100 pt-4">
-                          <Button type="primary" htmlType="submit" className="bg-red-500 hover:bg-red-600 border-none px-6 shadow font-medium" size="large">
+                          <Button type="primary" htmlType="submit" loading={isUpdatingContact} className="bg-red-500 hover:bg-red-600 border-none px-6 shadow font-medium" size="large">
                             Cập nhật
                           </Button>
                         </div>
@@ -474,7 +487,7 @@ export default function CustomerProfilePage() {
                           requiredMark={false}
                           className="flex flex-col flex-1"
                         >
-                          <Form.Item label={<span className="font-medium text-gray-600">Ngân hàng</span>} name="bankCode" className="mb-4" rules={[{ required: true, message: "Bắt buộc chọn ngân hàng" }]}>
+                          <Form.Item label={<span className="font-medium text-gray-600">Ngân hàng</span>} name="bankCode" className="mb-4" rules={BANK_ACCOUNT_RULES.bankCode}>
                             <Select
                               placeholder="Chọn ngân hàng"
                               size="large"
@@ -497,11 +510,11 @@ export default function CustomerProfilePage() {
                             <Input />
                           </Form.Item>
 
-                          <Form.Item label={<span className="font-medium text-gray-600">Tên chủ tài khoản</span>} name="accountHolder" className="mb-4" rules={[{ required: true, message: "Bắt buộc nhập" }]}>
+                          <Form.Item label={<span className="font-medium text-gray-600">Tên chủ tài khoản</span>} name="accountHolder" className="mb-4" rules={BANK_ACCOUNT_RULES.accountHolder}>
                             <Input placeholder="VD: NGUYEN VAN A" size="large" />
                           </Form.Item>
 
-                          <Form.Item label={<span className="font-medium text-gray-600">Số tài khoản</span>} name="accountNumber" className="mb-4" rules={[{ required: true, message: "Bắt buộc nhập" }]}>
+                          <Form.Item label={<span className="font-medium text-gray-600">Số tài khoản</span>} name="accountNumber" className="mb-4" rules={BANK_ACCOUNT_RULES.accountNumber}>
                             <Input placeholder="Số tài khoản" size="large" />
                           </Form.Item>
 
@@ -513,7 +526,7 @@ export default function CustomerProfilePage() {
                             {bankAccounts.length > 0 && (
                               <Button onClick={() => setShowBankForm(false)} size="large">Hủy</Button>
                             )}
-                            <Button type="primary" htmlType="submit" icon={<PlusOutlined />} className="bg-red-500 hover:bg-red-600 border-none px-6 shadow font-medium" size="large">
+                            <Button type="primary" htmlType="submit" loading={isAddingBank} icon={<PlusOutlined />} className="bg-red-500 hover:bg-red-600 border-none px-6 shadow font-medium" size="large">
                               Thêm mới
                             </Button>
                           </div>
@@ -594,7 +607,7 @@ export default function CustomerProfilePage() {
                           </Row>
                           <div className="mt-6 flex justify-center">
                             <Button type="primary" onClick={handleScan} loading={scanning} className="bg-blue-600 hover:bg-blue-700 px-8 shadow-md" size="large">
-                              Quét CCCD bằng AI
+                              Quét Căn cước công dân
                             </Button>
                           </div>
                         </>
@@ -609,12 +622,12 @@ export default function CustomerProfilePage() {
                           >
                             <Row gutter={16}>
                               <Col span={12}>
-                                <Form.Item label={<span className="font-medium text-gray-600">Số CCCD</span>} name="idNumber" rules={[{ required: true, message: "Vui lòng nhập số CCCD" }]} className="mb-4">
+                                <Form.Item label={<span className="font-medium text-gray-600">Số CCCD</span>} name="idNumber" rules={KYC_RULES.idNumber} className="mb-4">
                                   <Input disabled className="bg-gray-100 text-gray-700 font-bold" size="large" />
                                 </Form.Item>
                               </Col>
                               <Col span={12}>
-                                <Form.Item label={<span className="font-medium text-gray-600">Họ và tên</span>} name="fullNameOnId" rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]} className="mb-4">
+                                <Form.Item label={<span className="font-medium text-gray-600">Họ và tên</span>} name="fullNameOnId" rules={KYC_RULES.fullNameOnId} className="mb-4">
                                   <Input size="large" />
                                 </Form.Item>
                               </Col>
@@ -644,8 +657,8 @@ export default function CustomerProfilePage() {
                                 </Form.Item>
                               </Col>
                             </Row>
-                            <div className="text-right border-t border-gray-200 pt-4">
-                              <Button type="primary" htmlType="submit" className="bg-blue-600 hover:bg-blue-700 px-8 shadow-md" size="large">
+                            <div className="flex justify-center border-t border-gray-200 pt-4">
+                              <Button type="primary" htmlType="submit" loading={status === "loading"} className="bg-blue-600 hover:bg-blue-700 px-8 shadow-md" size="large">
                                 Gửi yêu cầu xác thực
                               </Button>
                             </div>

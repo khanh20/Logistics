@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading;
 
 using AutoMapper;
 using LG.ApplicationBase.Localization;
@@ -41,23 +42,72 @@ namespace LG.Core.ApplicationServices.Finance.Services
             _emailNotificationService = emailNotificationService;
         }
 
+        private static readonly SemaphoreSlim _walletLock = new SemaphoreSlim(1, 1);
+
         private async Task<Wallet> GetOrCreateWalletAsync(Guid userId)
         {
-            var wallet = await _db.Wallets.FirstOrDefaultAsync(w => w.CustomerId == userId);
-            if (wallet == null)
+            await _walletLock.WaitAsync();
+            try
             {
-                wallet = new Wallet
+                var wallets = await _db.Wallets
+                    .Where(w => w.CustomerId == userId && w.Currency == "VND")
+                    .OrderBy(w => w.CreatedDate)
+                    .ToListAsync();
+
+                if (wallets.Count == 0)
                 {
-                    CustomerId = userId,
-                    Currency = "VND",
-                    AvailableBalance = 0,
-                    FrozenBalance = 0,
-                    CreatedDate = DateTime.UtcNow
-                };
-                await _db.Wallets.AddAsync(wallet);
-                await _db.SaveChangesAsync();
+                    var wallet = new Wallet
+                    {
+                        CustomerId = userId,
+                        Currency = "VND",
+                        AvailableBalance = 0,
+                        FrozenBalance = 0,
+                        CreatedDate = DateTime.UtcNow
+                    };
+                    await _db.Wallets.AddAsync(wallet);
+                    await _db.SaveChangesAsync();
+                    return wallet;
+                }
+
+                var mainWallet = wallets.First();
+
+                if (wallets.Count > 1)
+                {
+                    for (int i = 1; i < wallets.Count; i++)
+                    {
+                        mainWallet.AvailableBalance += wallets[i].AvailableBalance;
+                        mainWallet.FrozenBalance += wallets[i].FrozenBalance;
+                        mainWallet.TotalDepositedEver += wallets[i].TotalDepositedEver;
+
+                        var topups = await _db.TopupRequests.Where(t => t.WalletId == wallets[i].Id).ToListAsync();
+                        topups.ForEach(t => t.WalletId = mainWallet.Id);
+
+                        var withdraws = await _db.WithdrawRequests.Where(t => t.WalletId == wallets[i].Id).ToListAsync();
+                        withdraws.ForEach(t => t.WalletId = mainWallet.Id);
+
+                        var txs = await _db.WalletTransactions.Where(t => t.WalletId == wallets[i].Id).ToListAsync();
+                        txs.ForEach(t => t.WalletId = mainWallet.Id);
+
+                        var refunds = await _db.RefundProcesses.Where(t => t.WalletId == wallets[i].Id).ToListAsync();
+                        refunds.ForEach(t => t.WalletId = mainWallet.Id);
+
+                        var locks = await _db.PaymentLocks.Where(t => t.WalletId == wallets[i].Id).ToListAsync();
+                        locks.ForEach(t => t.WalletId = mainWallet.Id);
+
+                        var frauds = await _db.FraudDetections.Where(t => t.WalletId == wallets[i].Id).ToListAsync();
+                        frauds.ForEach(t => t.WalletId = mainWallet.Id);
+
+                        _db.Wallets.Remove(wallets[i]);
+                    }
+                    await _db.SaveChangesAsync();
+                }
+
+                return mainWallet;
             }
-            return wallet;
+            finally
+            {
+                _walletLock.Release();
+            }
         }
 
         public async Task<TopupResponseDto> CreateTopupRequestAsync(CreateTopupDto dto, Guid currentUserId)
@@ -261,11 +311,30 @@ namespace LG.Core.ApplicationServices.Finance.Services
                     wallet.FrozenBalance -= withdraw.AmountVnd;
                     wallet.AvailableBalance += withdraw.AmountVnd;
 
-                    // 2. Cập nhật trạng thái
+                    // 2. Tạo Lịch sử giao dịch ví (WalletTransaction) để user biết tiền đã được hoàn
+                    var transactionType = await _db.TransactionTypes.FirstOrDefaultAsync(t => t.Code == "REFUND" || t.Code == "SYSTEM");
+                    var typeId = transactionType?.Id ?? Guid.Empty;
+
+                    var walletTx = new WalletTransaction
+                    {
+                        WalletId = wallet.Id,
+                        TypeId = typeId,
+                        Amount = withdraw.AmountVnd,
+                        BalanceBefore = wallet.AvailableBalance - withdraw.AmountVnd, // Số dư trước khi hoàn
+                        BalanceAfter = wallet.AvailableBalance, // Số dư sau khi hoàn
+                        ReferenceType = "WithdrawRejected",
+                        ReferenceId = withdraw.Id,
+                        Note = $"Hoàn tiền do từ chối yêu cầu rút tiền ({reason})",
+                        CreatedDate = DateTime.UtcNow
+                    };
+                    await _db.WalletTransactions.AddAsync(walletTx);
+
+                    // 3. Cập nhật trạng thái
                     withdraw.Status = WithdrawStatusEnum.Rejected;
                     withdraw.ApprovedBy = adminId;
                     withdraw.RejectedReason = reason;
                     withdraw.ProcessedAt = DateTime.UtcNow;
+                    withdraw.WalletTransactionId = walletTx.Id;
 
                     await _db.SaveChangesAsync();
                     await transaction.CommitAsync();

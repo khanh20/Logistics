@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { 
   Table, Card, Button, Modal, Form, Input, 
-  Switch, Popconfirm, message, Typography, Space 
+  Switch, Popconfirm, message, Typography, Space, Select 
 } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
@@ -13,6 +13,7 @@ import {
 } from "~/lib/feature/finance/financeThunk";
 import { selectBankAccounts, selectFinanceStatus } from "~/lib/feature/finance/financeSelector";
 import { BANK_ACCOUNT_RULES } from "~/lib/validations/finance";
+import { VIETNAM_BANKS } from "~/lib/constants/banks";
 import type { CreateBankAccountDto, BankAccountDto } from "~/lib/types/bankAccount";
 import type { ColumnsType } from "antd/es/table";
 
@@ -175,19 +176,36 @@ export default function CustomerBankAccountsPage() {
           className="mt-4"
         >
           <Form.Item
+            name="bankCode"
+            label="Ngân hàng"
+            rules={BANK_ACCOUNT_RULES.bankCode}
+          >
+            <Select 
+              showSearch
+              placeholder="Chọn ngân hàng"
+              optionFilterProp="children"
+              onChange={(value, option: any) => {
+                form.setFieldsValue({ bankName: option?.['data-name'] || '' });
+              }}
+              filterOption={(input, option) =>
+                String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {VIETNAM_BANKS.map((bank) => (
+                <Select.Option key={bank.code} value={bank.code} data-name={bank.shortName}>
+                  {`${bank.shortName} - ${bank.name}`}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
             name="bankName"
             label="Tên ngân hàng"
             rules={BANK_ACCOUNT_RULES.bankName}
+            hidden
           >
-            <Input placeholder="VD: Vietcombank" />
-          </Form.Item>
-          
-          <Form.Item
-            name="bankCode"
-            label="Mã ngân hàng"
-            rules={BANK_ACCOUNT_RULES.bankCode}
-          >
-            <Input placeholder="VD: VCB" />
+            <Input />
           </Form.Item>
 
           <Form.Item

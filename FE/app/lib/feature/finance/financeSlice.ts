@@ -61,27 +61,41 @@ const financeSlice = createSlice({
         state.status = ReduxStatus.FAILURE;
         state.error = action.payload as string;
       })
+      // Submit Topup
+      .addCase(submitTopup.pending, (state) => {
+        state.status = ReduxStatus.LOADING;
+      })
+      .addCase(submitTopup.fulfilled, (state, action: PayloadAction<TopupResponseDto>) => {
+        state.status = ReduxStatus.SUCCESS;
+        state.topups.unshift(action.payload);
+      })
+      .addCase(submitTopup.rejected, (state, action) => {
+        state.status = ReduxStatus.FAILURE;
+        state.error = action.payload as string;
+      })
       // Fetch Topups
       .addCase(fetchMyTopups.fulfilled, (state, action: PayloadAction<TopupResponseDto[]>) => {
         state.topups = action.payload;
       })
-      // Submit Topup
-      .addCase(submitTopup.fulfilled, (state, action: PayloadAction<TopupResponseDto>) => {
-        state.topups.unshift(action.payload);
-      })
-      // Fetch Withdraws
-      .addCase(fetchMyWithdraws.fulfilled, (state, action: PayloadAction<WithdrawResponseDto[]>) => {
-        state.withdraws = action.payload;
-      })
       // Submit Withdraw
+      .addCase(submitWithdraw.pending, (state) => {
+        state.status = ReduxStatus.LOADING;
+      })
       .addCase(submitWithdraw.fulfilled, (state, action: PayloadAction<WithdrawResponseDto>) => {
+        state.status = ReduxStatus.SUCCESS;
         state.withdraws.unshift(action.payload);
-        // Note: Wallet balance changes after withdraw request, might need to re-fetch wallet
-        // or optimistically decrease balance
         if (state.wallet) {
           state.wallet.availableBalance -= action.payload.amountVnd;
           state.wallet.frozenBalance += action.payload.amountVnd;
         }
+      })
+      .addCase(submitWithdraw.rejected, (state, action) => {
+        state.status = ReduxStatus.FAILURE;
+        state.error = action.payload as string;
+      })
+      // Fetch Withdraws
+      .addCase(fetchMyWithdraws.fulfilled, (state, action: PayloadAction<WithdrawResponseDto[]>) => {
+        state.withdraws = action.payload;
       })
       // Bank Accounts
       .addCase(fetchMyBankAccounts.fulfilled, (state, action: PayloadAction<BankAccountDto[]>) => {

@@ -16,6 +16,7 @@ import { ReduxStatus } from "~/lib/feature/const";
 import type { WebhookServiceEnum } from "~/lib/enums/finance";
 import { WEBHOOK_SERVICE_LABELS } from "~/lib/constants/finance";
 import { BANK_ACCOUNT_RULES } from "~/lib/validations/finance";
+import { VIETNAM_BANKS } from "~/lib/constants/banks";
 import dayjs from "dayjs";
 import type { BankAccountDto, CreateBankAccountDto } from "~/lib/types/bankAccount";
 
@@ -201,19 +202,33 @@ export default function SystemBankAccountsPage() {
           onFinish={handleCreate}
           className="mt-4"
         >
-          <Row gutter={16}>
-            <Col span={16}>
-              <Form.Item name="bankName" label="Tên ngân hàng" rules={BANK_ACCOUNT_RULES.bankName}>
-                <Input placeholder="VD: Vietcombank" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="bankCode" label="Mã NH (BIN)" rules={BANK_ACCOUNT_RULES.bankCode}>
-                <Input placeholder="VD: VCB" />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item
+            name="bankCode"
+            label="Ngân hàng"
+            rules={BANK_ACCOUNT_RULES.bankCode}
+          >
+            <Select 
+              showSearch
+              placeholder="Chọn ngân hàng"
+              optionFilterProp="children"
+              onChange={(value, option: any) => {
+                form.setFieldsValue({ bankName: option?.['data-name'] || '' });
+              }}
+              filterOption={(input, option) =>
+                String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {VIETNAM_BANKS.map((bank) => (
+                <Select.Option key={bank.code} value={bank.code} data-name={bank.shortName}>
+                  {`${bank.shortName} - ${bank.name}`}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
 
+          <Form.Item name="bankName" hidden>
+            <Input />
+          </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="accountNumber" label="Số tài khoản" rules={BANK_ACCOUNT_RULES.accountNumber}>

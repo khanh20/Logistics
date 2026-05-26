@@ -76,12 +76,16 @@ const customerProfileSlice = createSlice({
         state.addresses = action.payload;
       })
       .addCase(fetchMyAddresses.rejected, rejectedAction)
+      .addCase(createAddress.pending, pendingAction)
       .addCase(createAddress.fulfilled, (state, action) => {
         if (action.payload.isDefault) {
           state.addresses.forEach(a => a.isDefault = false);
         }
         state.addresses.push(action.payload);
+        state.status = ReduxStatus.SUCCESS;
       })
+      .addCase(createAddress.rejected, rejectedAction)
+      .addCase(updateAddress.pending, pendingAction)
       .addCase(updateAddress.fulfilled, (state, action) => {
         const index = state.addresses.findIndex(a => a.id === action.payload.id);
         if (index !== -1) {
@@ -90,15 +94,23 @@ const customerProfileSlice = createSlice({
           }
           state.addresses[index] = { ...state.addresses[index], ...action.payload.data };
         }
+        state.status = ReduxStatus.SUCCESS;
       })
+      .addCase(updateAddress.rejected, rejectedAction)
+      .addCase(deleteAddress.pending, pendingAction)
       .addCase(deleteAddress.fulfilled, (state, action) => {
         state.addresses = state.addresses.filter(a => a.id !== action.payload);
+        state.status = ReduxStatus.SUCCESS;
       })
+      .addCase(deleteAddress.rejected, rejectedAction)
+      .addCase(setDefaultAddress.pending, pendingAction)
       .addCase(setDefaultAddress.fulfilled, (state, action) => {
         state.addresses.forEach(a => {
           a.isDefault = a.id === action.payload;
         });
+        state.status = ReduxStatus.SUCCESS;
       })
+      .addCase(setDefaultAddress.rejected, rejectedAction)
 
       // KYC
       .addCase(fetchKyc.pending, pendingAction)
@@ -107,9 +119,12 @@ const customerProfileSlice = createSlice({
         state.kyc = action.payload;
       })
       .addCase(fetchKyc.rejected, rejectedAction)
+      .addCase(submitKyc.pending, pendingAction)
       .addCase(submitKyc.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.kyc = action.payload;
-      });
+      })
+      .addCase(submitKyc.rejected, rejectedAction);
   },
 });
 

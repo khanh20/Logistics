@@ -30,6 +30,8 @@ import {
 } from "~/lib/constants/finance";
 import { RefundReasonEnum, RefundStatusEnum } from "~/lib/enums/finance";
 import type { CreateRefundDto, RefundDto } from "~/lib/types/adminFinance";
+import { REFUND_RULES } from "~/lib/validations/finance";
+import { numberFormatter, numberParser } from "~/lib/utils/format";
 
 const { Title, Text } = Typography;
 
@@ -88,6 +90,7 @@ export default function AdminRefundsPage() {
 
   const handleApprove = async (id: string) => {
     try {
+      setSubmitting(true);
       const res = await adminFinanceApi.approveRefund(id);
       if (res.success) {
         message.success("Duyệt hoàn tiền thành công");
@@ -98,6 +101,8 @@ export default function AdminRefundsPage() {
     } catch (error) {
       console.error(error);
       message.error("Đã xảy ra lỗi khi duyệt hoàn tiền");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -201,8 +206,9 @@ export default function AdminRefundsPage() {
               onConfirm={() => handleApprove(record.id)}
               okText="Đồng ý"
               cancelText="Hủy"
+              okButtonProps={{ loading: submitting }}
             >
-              <Button type="primary" size="small" icon={<FiCheck />} />
+              <Button type="primary" size="small" icon={<FiCheck />} loading={submitting} />
             </Popconfirm>
             <Button
               danger
@@ -303,7 +309,7 @@ export default function AdminRefundsPage() {
           <Form.Item
             name="walletId"
             label="Mã ví khách hàng"
-            rules={[{ required: true, message: "Vui lòng nhập mã ví!" }]}
+            rules={REFUND_RULES.walletId}
           >
             <Input placeholder="Nhập mã ví (Wallet ID)" />
           </Form.Item>
@@ -313,7 +319,7 @@ export default function AdminRefundsPage() {
               <Form.Item
                 name="referenceType"
                 label="Loại tham chiếu"
-                rules={[{ required: true, message: "Vui lòng nhập loại tham chiếu!" }]}
+                rules={REFUND_RULES.referenceType}
                 initialValue="Order"
               >
                 <Input placeholder="Ví dụ: Order, Topup..." />
@@ -323,7 +329,7 @@ export default function AdminRefundsPage() {
               <Form.Item
                 name="referenceId"
                 label="Mã tham chiếu"
-                rules={[{ required: true, message: "Vui lòng nhập mã tham chiếu!" }]}
+                rules={REFUND_RULES.referenceId}
               >
                 <Input placeholder="Mã đơn hàng hoặc mã giao dịch" />
               </Form.Item>
@@ -335,16 +341,14 @@ export default function AdminRefundsPage() {
               <Form.Item
                 name="grossAmountVnd"
                 label="Số tiền hoàn (VND)"
-                rules={[{ required: true, message: "Vui lòng nhập số tiền!" }]}
+                rules={REFUND_RULES.grossAmountVnd}
               >
                 <InputNumber
                   style={{ width: "100%" }}
                   min={0}
                   step={1000}
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value!.replace(/\$\s?|(,*)/g, "") as any}
+                  formatter={numberFormatter}
+                  parser={numberParser}
                   placeholder="Nhập số tiền"
                 />
               </Form.Item>
@@ -354,7 +358,7 @@ export default function AdminRefundsPage() {
                 name="penaltyPct"
                 label="Phần trăm phạt (%)"
                 initialValue={0}
-                rules={[{ required: true, message: "Vui lòng nhập phần trăm phạt!" }]}
+                rules={REFUND_RULES.penaltyPct}
               >
                 <InputNumber
                   style={{ width: "100%" }}

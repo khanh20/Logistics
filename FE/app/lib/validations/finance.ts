@@ -40,7 +40,7 @@ export const WITHDRAW_RULES = {
   bankAccountId: [{ required: true, message: "Vui lòng chọn tài khoản ngân hàng" }] as Rule[],
   amount: [
     { required: true, message: "Vui lòng nhập số tiền rút" },
-    { type: "number" as const, min: 10000, message: "Số tiền rút tối thiểu là 10,000₫" },
+    { type: "number" as const, min: 50000, message: "Số tiền rút tối thiểu là 50,000₫" },
     { type: "number" as const, max: 1_000_000_000, message: "Số tiền rút tối đa là 1,000,000,000₫" },
   ] as Rule[],
 };
@@ -172,12 +172,23 @@ export const REFUND_RULES = {
     { required: true, message: "Vui lòng nhập số tiền hoàn" },
     { type: "number" as const, min: 0, message: "Số tiền phải lớn hơn 0" },
   ] as Rule[],
+  penaltyPct: [
+    { required: true, message: "Vui lòng nhập phần trăm phạt!" }
+  ] as Rule[],
+};
+
+// ── Approve Withdraw Rules ────────────────────────────────────────
+export const APPROVE_WITHDRAW_RULES = {
+  transferRef: [
+    { required: true, message: "Vui lòng nhập mã giao dịch!" },
+    maxLength(100, "Mã giao dịch"),
+  ] as Rule[],
 };
 
 // ── Reject Withdraw Rules ────────────────────────────────────────
 export const REJECT_WITHDRAW_RULES = {
   reason: [
-    { required: true, message: "Vui lòng nhập lý do từ chối" },
+    { required: true, message: "Vui lòng nhập lý do từ chối!" },
     maxLength(500, "Lý do"),
   ] as Rule[],
 };

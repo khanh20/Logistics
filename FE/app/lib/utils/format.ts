@@ -17,3 +17,9 @@ export const formatRelative = (iso: string) => dayjs(iso).fromNow();
 
 export const formatWeight = (kg: number) =>
   kg >= 1 ? `${kg.toFixed(2)} kg` : `${(kg * 1000).toFixed(0)} g`;
+
+export const numberFormatter = (value: string | number | undefined) =>
+  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+export const numberParser = (value: string | undefined) =>
+  value?.replace(/\$\s?|(,*)/g, "") as any;

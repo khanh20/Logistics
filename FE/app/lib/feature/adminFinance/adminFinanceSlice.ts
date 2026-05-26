@@ -120,12 +120,18 @@ const adminFinanceSlice = createSlice({
         state.pendingWithdraws = action.payload;
       })
       .addCase(fetchPendingWithdraws.rejected, rejectedAction)
+      .addCase(approveWithdraw.pending, pendingAction)
       .addCase(approveWithdraw.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.pendingWithdraws = state.pendingWithdraws.filter(w => w.id !== action.payload);
       })
+      .addCase(approveWithdraw.rejected, rejectedAction)
+      .addCase(rejectWithdraw.pending, pendingAction)
       .addCase(rejectWithdraw.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.pendingWithdraws = state.pendingWithdraws.filter(w => w.id !== action.payload);
       })
+      .addCase(rejectWithdraw.rejected, rejectedAction)
 
       // Fee Rules
       .addCase(fetchFeeRules.pending, pendingAction)
@@ -134,18 +140,27 @@ const adminFinanceSlice = createSlice({
         state.feeRules = action.payload;
       })
       .addCase(fetchFeeRules.rejected, rejectedAction)
+      .addCase(createFeeRule.pending, pendingAction)
       .addCase(createFeeRule.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.feeRules.unshift(action.payload);
       })
+      .addCase(createFeeRule.rejected, rejectedAction)
+      .addCase(updateFeeRule.pending, pendingAction)
       .addCase(updateFeeRule.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         const index = state.feeRules.findIndex(f => f.id === action.payload.id);
         if (index !== -1) {
           state.feeRules[index] = { ...state.feeRules[index], ...action.payload.data };
         }
       })
+      .addCase(updateFeeRule.rejected, rejectedAction)
+      .addCase(deleteFeeRule.pending, pendingAction)
       .addCase(deleteFeeRule.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.feeRules = state.feeRules.filter(f => f.id !== action.payload);
       })
+      .addCase(deleteFeeRule.rejected, rejectedAction)
 
       // VIP Tiers
       .addCase(fetchVipTiers.pending, pendingAction)
@@ -154,18 +169,27 @@ const adminFinanceSlice = createSlice({
         state.vipTiers = action.payload;
       })
       .addCase(fetchVipTiers.rejected, rejectedAction)
+      .addCase(createVipTier.pending, pendingAction)
       .addCase(createVipTier.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.vipTiers.unshift(action.payload);
       })
+      .addCase(createVipTier.rejected, rejectedAction)
+      .addCase(updateVipTier.pending, pendingAction)
       .addCase(updateVipTier.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         const index = state.vipTiers.findIndex(v => v.id === action.payload.id);
         if (index !== -1) {
           state.vipTiers[index] = { ...state.vipTiers[index], ...action.payload.data };
         }
       })
+      .addCase(updateVipTier.rejected, rejectedAction)
+      .addCase(deleteVipTier.pending, pendingAction)
       .addCase(deleteVipTier.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.vipTiers = state.vipTiers.filter(v => v.id !== action.payload);
       })
+      .addCase(deleteVipTier.rejected, rejectedAction)
 
       // Transaction Types
       .addCase(fetchTransactionTypes.pending, pendingAction)
@@ -174,18 +198,27 @@ const adminFinanceSlice = createSlice({
         state.transactionTypes = action.payload;
       })
       .addCase(fetchTransactionTypes.rejected, rejectedAction)
+      .addCase(createTransactionType.pending, pendingAction)
       .addCase(createTransactionType.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.transactionTypes.unshift(action.payload);
       })
+      .addCase(createTransactionType.rejected, rejectedAction)
+      .addCase(updateTransactionType.pending, pendingAction)
       .addCase(updateTransactionType.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         const index = state.transactionTypes.findIndex(t => t.id === action.payload.id);
         if (index !== -1) {
           state.transactionTypes[index] = { ...state.transactionTypes[index], ...action.payload.data };
         }
       })
+      .addCase(updateTransactionType.rejected, rejectedAction)
+      .addCase(deleteTransactionType.pending, pendingAction)
       .addCase(deleteTransactionType.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.transactionTypes = state.transactionTypes.filter(t => t.id !== action.payload);
       })
+      .addCase(deleteTransactionType.rejected, rejectedAction)
 
       // Refunds
       .addCase(fetchRefunds.pending, pendingAction)
@@ -194,18 +227,27 @@ const adminFinanceSlice = createSlice({
         state.refunds = action.payload;
       })
       .addCase(fetchRefunds.rejected, rejectedAction)
+      .addCase(createRefund.pending, pendingAction)
       .addCase(createRefund.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         state.refunds.unshift(action.payload);
       })
+      .addCase(createRefund.rejected, rejectedAction)
+      .addCase(approveRefund.pending, pendingAction)
       .addCase(approveRefund.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         // Will refresh list in UI or update status locally
         const index = state.refunds.findIndex(r => r.id === action.payload);
         if (index !== -1) state.refunds[index].status = 3; // Completed
       })
+      .addCase(approveRefund.rejected, rejectedAction)
+      .addCase(rejectRefund.pending, pendingAction)
       .addCase(rejectRefund.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         const index = state.refunds.findIndex(r => r.id === action.payload);
         if (index !== -1) state.refunds[index].status = 4; // Failed
       })
+      .addCase(rejectRefund.rejected, rejectedAction)
 
       // Fraud Cases
       .addCase(fetchFraudCases.pending, pendingAction)
@@ -214,7 +256,9 @@ const adminFinanceSlice = createSlice({
         state.fraudCases = action.payload;
       })
       .addCase(fetchFraudCases.rejected, rejectedAction)
+      .addCase(reviewFraudCase.pending, pendingAction)
       .addCase(reviewFraudCase.fulfilled, (state, action) => {
+        state.status = ReduxStatus.SUCCESS;
         const index = state.fraudCases.findIndex(f => f.id === action.payload.id);
         if (index !== -1) {
            state.fraudCases[index].status = action.payload.data.status;
@@ -223,6 +267,7 @@ const adminFinanceSlice = createSlice({
            }
         }
       })
+      .addCase(reviewFraudCase.rejected, rejectedAction)
 
       // Reconciles
       .addCase(fetchReconciles.pending, pendingAction)

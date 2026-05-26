@@ -30,6 +30,7 @@ import {
 import { ReduxStatus } from "~/lib/feature/const";
 import type { WithdrawResponseDto } from "~/lib/types/finance";
 import { WITHDRAW_STATUS_LABELS, WITHDRAW_STATUS_COLORS } from "~/lib/constants/finance";
+import { APPROVE_WITHDRAW_RULES, REJECT_WITHDRAW_RULES } from "~/lib/validations/finance";
 
 const { Title, Text } = Typography;
 
@@ -253,7 +254,7 @@ export default function AdminFinanceWithdraws() {
           <Form.Item
             name="transferRef"
             label="Mã giao dịch chuyển khoản"
-            rules={[{ required: true, message: "Vui lòng nhập mã giao dịch!" }]}
+            rules={APPROVE_WITHDRAW_RULES.transferRef}
           >
             <Input placeholder="Nhập mã giao dịch từ ngân hàng..." />
           </Form.Item>
@@ -286,7 +287,7 @@ export default function AdminFinanceWithdraws() {
           <Form.Item
             name="reason"
             label="Lý do từ chối"
-            rules={[{ required: true, message: "Vui lòng nhập lý do từ chối!" }]}
+            rules={REJECT_WITHDRAW_RULES.reason}
           >
             <Input.TextArea rows={3} placeholder="Ví dụ: Sai thông tin ngân hàng, tài khoản không hợp lệ..." />
           </Form.Item>
