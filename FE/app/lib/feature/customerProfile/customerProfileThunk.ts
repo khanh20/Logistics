@@ -118,6 +118,9 @@ export const fetchKyc = createAsyncThunk(
       const res = await customerProfileApi.getKyc();
       return res.data;
     } catch (err: any) {
+      if (err.errorCode === "error_CoreKycNotFound") {
+        return null;
+      }
       return rejectWithValue(err.message || "Lỗi tải thông tin KYC");
     }
   }

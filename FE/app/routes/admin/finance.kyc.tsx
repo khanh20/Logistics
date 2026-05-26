@@ -165,7 +165,7 @@ export default function AdminFinanceKycPage() {
         {selectedKyc && (
           <Row gutter={[24, 24]}>
             <Col span={12}>
-              <h3 className="text-lg font-semibold mb-4">Thông tin OCR trích xuất</h3>
+              <h3 className="text-lg font-semibold mb-4">Thông tin trích xuất</h3>
               <Descriptions column={1} bordered size="small">
                 <Descriptions.Item label="Họ và tên">{selectedKyc.fullNameOnId}</Descriptions.Item>
                 <Descriptions.Item label="Số CMND/CCCD">{selectedKyc.idNumber}</Descriptions.Item>

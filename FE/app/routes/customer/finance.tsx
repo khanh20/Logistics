@@ -1,44 +1,44 @@
 import React, { useEffect } from "react";
 import { Link } from "react-router";
-import { 
-  Card, 
-  Tabs, 
-  Form, 
-  InputNumber, 
-  Button, 
-  Table, 
-  Tag, 
-  Typography, 
-  Statistic, 
-  Row, 
-  Col, 
+import {
+  Card,
+  Tabs,
+  Form,
+  InputNumber,
+  Button,
+  Table,
+  Tag,
+  Typography,
+  Statistic,
+  Row,
+  Col,
   Space,
   Alert,
   message,
   Select
 } from "antd";
-import { 
-  WalletOutlined, 
-  ArrowUpOutlined, 
+import {
+  WalletOutlined,
+  ArrowUpOutlined,
   ArrowDownOutlined,
   HistoryOutlined
 } from "@ant-design/icons";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
-import { 
-  fetchMyWallet, 
-  fetchMyTopups, 
-  fetchMyWithdraws, 
-  submitTopup, 
+import {
+  fetchMyWallet,
+  fetchMyTopups,
+  fetchMyWithdraws,
+  submitTopup,
   submitWithdraw,
   fetchMyBankAccounts,
   fetchSystemBankAccounts,
   createZaloPayPayment
 } from "~/lib/feature/finance/financeThunk";
-import { 
-  selectWallet, 
-  selectTopups, 
-  selectWithdraws, 
-  selectFinanceStatus, 
+import {
+  selectWallet,
+  selectTopups,
+  selectWithdraws,
+  selectFinanceStatus,
   selectFinanceError,
   selectBankAccounts,
   selectSystemBankAccounts
@@ -46,11 +46,11 @@ import {
 import { ReduxStatus } from "~/lib/feature/const";
 import dayjs from "dayjs";
 
-import { 
-  TOPUP_STATUS_LABELS, 
+import {
+  TOPUP_STATUS_LABELS,
   TOPUP_STATUS_COLORS,
   WITHDRAW_STATUS_LABELS,
-  WITHDRAW_STATUS_COLORS 
+  WITHDRAW_STATUS_COLORS
 } from "~/lib/constants/finance";
 import { TopupStatusEnum, WithdrawStatusEnum } from "~/lib/enums/finance";
 import { TOPUP_RULES, WITHDRAW_RULES } from "~/lib/validations/finance";
@@ -88,9 +88,9 @@ const FinancePage: React.FC = () => {
     try {
       const res = await dispatch(createZaloPayPayment(topupId)).unwrap();
       if (res && res.payUrl) {
-         window.open(res.payUrl, '_blank');
+        window.open(res.payUrl, '_blank');
       } else {
-         message.error("Không nhận được URL thanh toán");
+        message.error("Không nhận được URL thanh toán");
       }
     } catch (err: any) {
       message.error(err || "Lỗi tạo thanh toán ZaloPay");
@@ -99,9 +99,9 @@ const FinancePage: React.FC = () => {
 
   const onTopupSubmit = async (values: { amount: number; bankAccountId: string }) => {
     try {
-      await dispatch(submitTopup({ 
-        amount: values.amount, 
-        bankAccountId: values.bankAccountId 
+      await dispatch(submitTopup({
+        amount: values.amount,
+        bankAccountId: values.bankAccountId
       })).unwrap();
       message.success("Yêu cầu nạp tiền đã được gửi!");
       topupForm.resetFields();
@@ -117,9 +117,9 @@ const FinancePage: React.FC = () => {
     }
 
     try {
-      await dispatch(submitWithdraw({ 
-        amount: values.amount, 
-        bankAccountId: values.bankAccountId 
+      await dispatch(submitWithdraw({
+        amount: values.amount,
+        bankAccountId: values.bankAccountId
       })).unwrap();
       message.success("Yêu cầu rút tiền đã được gửi!");
       withdrawForm.resetFields();
@@ -162,9 +162,9 @@ const FinancePage: React.FC = () => {
       render: (_: any, record: TopupResponseDto) => {
         if (record.status === TopupStatusEnum.Pending) {
           return (
-            <Button 
-              type="primary" 
-              size="small" 
+            <Button
+              type="primary"
+              size="small"
               onClick={() => handleZaloPayPayment(record.id)}
             >
               Thanh toán ZaloPay
@@ -200,12 +200,12 @@ const FinancePage: React.FC = () => {
       },
     },
     {
-        title: "Ngân hàng",
-        dataIndex: "bankName",
-        key: "bankName",
-        render: (_: any, record: any) => (
-            <span>{record.bankName} - {record.bankAccountNo}</span>
-        )
+      title: "Ngân hàng",
+      dataIndex: "bankName",
+      key: "bankName",
+      render: (_: any, record: any) => (
+        <span>{record.bankName} - {record.bankAccountNo}</span>
+      )
     }
   ];
 
@@ -221,7 +221,7 @@ const FinancePage: React.FC = () => {
       {error && <Alert message={error} type="error" showIcon className="mb-4" />}
 
       {bankAccounts.length === 0 && (
-        <Alert 
+        <Alert
           message="Chưa có tài khoản ngân hàng"
           description={
             <span>
@@ -293,9 +293,9 @@ const FinancePage: React.FC = () => {
                         ))}
                       </Select>
                     </Form.Item>
-                    <Form.Item 
-                      name="amount" 
-                      label="Số tiền muốn nạp" 
+                    <Form.Item
+                      name="amount"
+                      label="Số tiền muốn nạp"
                       rules={TOPUP_RULES.amount}
                     >
                       <InputNumber
@@ -306,17 +306,17 @@ const FinancePage: React.FC = () => {
                         addonAfter="VND"
                       />
                     </Form.Item>
-                    <Alert 
-                      message="Lưu ý" 
+                    <Alert
+                      message="Lưu ý"
                       description="Sau khi gửi yêu cầu, vui lòng thực hiện chuyển khoản theo nội dung hiển thị trong lịch sử."
                       type="info"
                       showIcon
                       className="mb-4"
                     />
-                    <Button 
-                      type="primary" 
-                      htmlType="submit" 
-                      block 
+                    <Button
+                      type="primary"
+                      htmlType="submit"
+                      block
                       loading={status === ReduxStatus.LOADING}
                     >
                       Tạo yêu cầu nạp tiền
@@ -342,9 +342,9 @@ const FinancePage: React.FC = () => {
                         ))}
                       </Select>
                     </Form.Item>
-                    <Form.Item 
-                      name="amount" 
-                      label="Số tiền muốn rút" 
+                    <Form.Item
+                      name="amount"
+                      label="Số tiền muốn rút"
                       rules={WITHDRAW_RULES.amount}
                     >
                       <InputNumber
@@ -358,11 +358,11 @@ const FinancePage: React.FC = () => {
                     <Text type="secondary" className="block mb-4">
                       Số dư khả dụng: {wallet?.availableBalance.toLocaleString()}₫
                     </Text>
-                    <Button 
-                      type="primary" 
-                      danger 
-                      htmlType="submit" 
-                      block 
+                    <Button
+                      type="primary"
+                      danger
+                      htmlType="submit"
+                      block
                       loading={status === ReduxStatus.LOADING}
                     >
                       Tạo yêu cầu rút tiền
@@ -375,8 +375,8 @@ const FinancePage: React.FC = () => {
         </Col>
 
         <Col lg={14} xs={24}>
-          <Card 
-            title={<span><HistoryOutlined /> Lịch sử giao dịch</span>} 
+          <Card
+            title={<span><HistoryOutlined /> Lịch sử giao dịch</span>}
             className="shadow-sm"
           >
             <Tabs defaultActiveKey="topup-history" items={[
@@ -384,10 +384,10 @@ const FinancePage: React.FC = () => {
                 key: "topup-history",
                 label: "Nạp tiền",
                 children: (
-                  <Table 
-                    dataSource={topups} 
-                    columns={topupColumns} 
-                    rowKey="id" 
+                  <Table
+                    dataSource={topups}
+                    columns={topupColumns}
+                    rowKey="id"
                     size="small"
                     pagination={{ pageSize: 5 }}
                   />
@@ -397,10 +397,10 @@ const FinancePage: React.FC = () => {
                 key: "withdraw-history",
                 label: "Rút tiền",
                 children: (
-                  <Table 
-                    dataSource={withdraws} 
-                    columns={withdrawColumns} 
-                    rowKey="id" 
+                  <Table
+                    dataSource={withdraws}
+                    columns={withdrawColumns}
+                    rowKey="id"
                     size="small"
                     pagination={{ pageSize: 5 }}
                   />

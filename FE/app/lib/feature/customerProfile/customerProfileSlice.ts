@@ -114,7 +114,7 @@ const customerProfileSlice = createSlice({
 
       // KYC
       .addCase(fetchKyc.pending, pendingAction)
-      .addCase(fetchKyc.fulfilled, (state, action: PayloadAction<CustomerKycDto>) => {
+      .addCase(fetchKyc.fulfilled, (state, action: PayloadAction<CustomerKycDto | null>) => {
         state.status = ReduxStatus.SUCCESS;
         state.kyc = action.payload;
       })
