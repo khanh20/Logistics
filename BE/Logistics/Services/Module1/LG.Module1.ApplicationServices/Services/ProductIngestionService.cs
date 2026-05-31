@@ -162,7 +162,7 @@ public class ProductIngestionService(
                 OriginalTitle: raw.Title,
                 Slug: slug,
                 OriginalUrl: raw.ProductUrl,
-                TranslatedTitle: null,                  // Translation ở phase 5
+                TranslatedTitle: null,                  
                 SeoDescription: raw.Description,
                 CrawlTaskId: null,
                 Variants: new List<UpsertVariantRequest>

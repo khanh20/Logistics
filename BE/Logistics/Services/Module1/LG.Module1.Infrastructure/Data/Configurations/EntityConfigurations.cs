@@ -139,7 +139,9 @@ public class PlatformConfig : IEntityTypeConfiguration<Platform>
             new { Id = Guid.Parse("60000000-0000-0000-0000-000000000001"), Name = "Taobao",     BaseUrl = "https://www.taobao.com",      ApiProvider = ApiProvider.Apify,     IsActive = true, CreatedAt = now },
             new { Id = Guid.Parse("60000000-0000-0000-0000-000000000002"), Name = "1688",       BaseUrl = "https://www.1688.com",         ApiProvider = ApiProvider.Apify,     IsActive = true, CreatedAt = now },
             new { Id = Guid.Parse("60000000-0000-0000-0000-000000000003"), Name = "AliExpress", BaseUrl = "https://www.aliexpress.com",   ApiProvider = ApiProvider.PublicApi, IsActive = true, CreatedAt = now },
-            new { Id = Guid.Parse("60000000-0000-0000-0000-000000000004"), Name = "eBay",       BaseUrl = "https://www.ebay.com",         ApiProvider = ApiProvider.PublicApi, IsActive = true, CreatedAt = now }
+            new { Id = Guid.Parse("60000000-0000-0000-0000-000000000004"), Name = "eBay",       BaseUrl = "https://www.ebay.com",         ApiProvider = ApiProvider.PublicApi, IsActive = true, CreatedAt = now },
+            new { Id = Guid.Parse("60000000-0000-0000-0000-000000000005"), Name = "Tmall",      BaseUrl = "https://www.tmall.com",        ApiProvider = ApiProvider.Apify,     IsActive = true, CreatedAt = now },
+            new { Id = Guid.Parse("60000000-0000-0000-0000-000000000006"), Name = "Rakuten",    BaseUrl = "https://www.rakuten.co.jp",    ApiProvider = ApiProvider.PublicApi, IsActive = true, CreatedAt = now }
         );
     }
 }
@@ -402,5 +404,25 @@ public class StaffAssignmentConfig : IEntityTypeConfiguration<StaffAssignment>
 
         b.HasOne(x => x.Order).WithMany()
          .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+// ── Phase 8 — Extension scraping ─────────────────────────────────────────────
+public class ExtensionScrapeLogConfig : IEntityTypeConfiguration<ExtensionScrapeLog>
+{
+    public void Configure(EntityTypeBuilder<ExtensionScrapeLog> b)
+    {
+        b.ToTable("extension_scrape_logs");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Platform).HasMaxLength(20).IsRequired();
+        b.Property(x => x.PlatformProductId).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Url).HasMaxLength(2000).IsRequired();
+        b.Property(x => x.ExtensionVersion).HasMaxLength(20);
+        b.Property(x => x.ErrorMessage).HasMaxLength(1000);
+        b.Property(x => x.ConfidenceTier).HasMaxLength(20);
+
+        // Analytics queries: filter theo platform + success, theo customer
+        b.HasIndex(x => new { x.Platform, x.Success, x.CreatedAt });
+        b.HasIndex(x => x.CustomerId);
     }
 }

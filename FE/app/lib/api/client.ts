@@ -11,6 +11,7 @@ function createAuthClient(baseURL: string) {
   const client = axios.create({
     baseURL,
     headers: { "Content-Type": "application/json" },
+    withCredentials: true, 
   });
 
   client.interceptors.request.use((config) => {
@@ -47,6 +48,7 @@ function createClient(baseURL: string) {
   const client = axios.create({
     baseURL,
     headers: { "Content-Type": "application/json" },
+    withCredentials: true, 
   });
 
   client.interceptors.request.use((config) => {
@@ -97,7 +99,7 @@ function createClient(baseURL: string) {
         const raw = await axios.post<ApiResponse<RefreshResponse>>(
           `${AUTH_BASE_URL}/api/auth/refresh`,
           { refreshToken },
-          { headers: { "Content-Type": "application/json" } }
+          { headers: { "Content-Type": "application/json" }, withCredentials: true }
         );
         const newToken = raw.data.data.accessToken;
 

@@ -112,6 +112,13 @@ public interface IProductAttributeService
     Task<List<ProductAttributeResponse>> SyncAsync(Guid productId, List<AddAttributeRequest> attributes, CancellationToken ct = default);
 }
 
+// ── Extension Cart (Chrome Extension scraping) ─────────────────────
+public interface IExtensionCartService
+{
+    Task<AddFromExtensionResponse> AddAsync(Guid customerId,
+        AddFromExtensionRequest req, CancellationToken ct = default);
+}
+
 // ── Cart ────────────────────────────────────────────────────────────
 public interface ICartService
 {

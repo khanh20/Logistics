@@ -225,6 +225,12 @@ public interface IStaffAssignmentRepository
     Task UpdateAsync(StaffAssignment assignment, CancellationToken ct = default);
 }
 
+// ── Extension Scrape Log ──────────────────────────────────────────────────────
+public interface IExtensionScrapeLogRepository
+{
+    Task AddAsync(ExtensionScrapeLog log, CancellationToken ct = default);
+}
+
 // ── Unit of Work ──────────────────────────────────────────────────────────────
 public interface IModule1UnitOfWork
 {

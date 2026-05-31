@@ -7,8 +7,40 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace LG.Authentication.API.Controllers;
 
 [Route("api/auth")]
-public class AuthController(IAuthService authService) : BaseController
+public class AuthController(
+    IAuthService authService,
+    IConfiguration config) : BaseController
 {
+    private const string AccessCookie  = "muaho.access";
+    private const string RefreshCookie = "muaho.refresh";
+
+    private CookieOptions BuildCookieOptions(DateTime expires)
+    {
+        var domain = config["Cookie:Domain"];
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            Secure   = true,
+            SameSite = SameSiteMode.None,
+            Path     = "/",
+            Expires  = expires,
+            Domain   = string.IsNullOrWhiteSpace(domain) ? null : domain,
+        };
+    }
+
+    private void SetAuthCookies(AuthResponse r)
+    {
+        Response.Cookies.Append(AccessCookie,  r.AccessToken,  BuildCookieOptions(r.AccessTokenExpiresAt));
+        Response.Cookies.Append(RefreshCookie, r.RefreshToken, BuildCookieOptions(r.RefreshTokenExpiresAt));
+    }
+
+    private void ClearAuthCookies()
+    {
+        var opt = BuildCookieOptions(DateTime.UtcNow.AddDays(-1));
+        Response.Cookies.Delete(AccessCookie,  opt);
+        Response.Cookies.Delete(RefreshCookie, opt);
+    }
+
     // Register a new customer account
     [HttpPost("register")]
     [AllowAnonymous]
@@ -20,6 +52,7 @@ public class AuthController(IAuthService authService) : BaseController
         [FromBody] RegisterRequest req, CancellationToken ct)
     {
         var result = await authService.RegisterAsync(req, ct);
+        SetAuthCookies(result);   
         return Created(result, "Registration successful.");
     }
 
@@ -34,6 +67,7 @@ public class AuthController(IAuthService authService) : BaseController
         [FromBody] LoginRequest req, CancellationToken ct)
     {
         var result = await authService.LoginAsync(req, ClientIp, ct);
+        SetAuthCookies(result);
         return Ok(result, "Login successful.");
     }
 
@@ -48,6 +82,8 @@ public class AuthController(IAuthService authService) : BaseController
         [FromBody] RefreshTokenRequest req, CancellationToken ct)
     {
         var result = await authService.RefreshTokenAsync(req.RefreshToken, ClientIp, ct);
+        Response.Cookies.Append(AccessCookie, result.AccessToken,
+            BuildCookieOptions(result.AccessTokenExpiresAt));
         return Ok(result);
     }
 
@@ -58,6 +94,7 @@ public class AuthController(IAuthService authService) : BaseController
         [FromBody] RefreshTokenRequest req, CancellationToken ct)
     {
         await authService.LogoutAsync(req.RefreshToken, ClientIp, ct);
+        ClearAuthCookies();
         return Ok<object?>(null, "Logged out successfully.");
     }
 
@@ -67,6 +104,7 @@ public class AuthController(IAuthService authService) : BaseController
     public async Task<IActionResult> LogoutAll(CancellationToken ct)
     {
         await authService.LogoutAllDevicesAsync(CurrentUserId, ClientIp, ct);
+        ClearAuthCookies();
         return Ok<object?>(null, "Logged out from all devices.");
     }
 

@@ -81,6 +81,7 @@ public static class Module1ServiceExtensions
         services.AddScoped<IOrderStatusHistoryRepository, OrderStatusHistoryRepository>();
         services.AddScoped<IPlatformOrderRepository, PlatformOrderRepository>();
         services.AddScoped<IStaffAssignmentRepository, StaffAssignmentRepository>();
+        services.AddScoped<IExtensionScrapeLogRepository, ExtensionScrapeLogRepository>();
         services.AddScoped<IModule1UnitOfWork, Module1UnitOfWork>();
 
         services.AddDataProtection()
@@ -99,6 +100,7 @@ public static class Module1ServiceExtensions
         AddAdapters(services, config);
         services.AddScoped<IProductIngestionService, ProductIngestionService>();
         services.AddScoped<ICartService, CartService>();
+        services.AddScoped<IExtensionCartService, ExtensionCartService>();
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
         services.AddScoped<IOrderManagementService, OrderManagementService>();
         services.AddScoped<IWalletService, WalletServiceStub>();

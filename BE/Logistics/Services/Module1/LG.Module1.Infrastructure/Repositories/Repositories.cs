@@ -693,3 +693,13 @@ public class StaffAssignmentRepository(Module1DbContext db) : IStaffAssignmentRe
         return Task.CompletedTask;
     }
 }
+
+// ── ExtensionScrapeLog ────────────────────────────────────────────────────────
+public class ExtensionScrapeLogRepository(Module1DbContext db) : IExtensionScrapeLogRepository
+{
+    public async Task AddAsync(ExtensionScrapeLog log, CancellationToken ct = default)
+    {
+        if (db.Entry(log).State == EntityState.Detached)
+            await db.ExtensionScrapeLogs.AddAsync(log, ct);
+    }
+}

@@ -1,0 +1,8 @@
+# Build / đóng gói
+*.zip
+*.crx
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db

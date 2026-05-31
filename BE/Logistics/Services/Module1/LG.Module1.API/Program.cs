@@ -205,8 +205,11 @@ builder.Services.AddAuthorization(opt =>
 var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
               ?? ["http://localhost:3000", "http://localhost:5173"];
 
+// Chrome Extension origin có format chrome-extension://{id}
 builder.Services.AddCors(opt => opt.AddPolicy("FE", p =>
-    p.WithOrigins(origins)
+    p.SetIsOriginAllowed(origin =>
+        origin.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase) ||
+        origins.Contains(origin, StringComparer.OrdinalIgnoreCase))
      .AllowAnyHeader()
      .AllowAnyMethod()
      .AllowCredentials()
