@@ -34,12 +34,10 @@
       return pageData;
     },
 
-    // Detect sàn từ URL hiện tại. Lưu ý: 1688.com và alibaba.com là 2 sàn KHÁC nhau
-    // (1688 = B2B nội địa TQ, alibaba.com = B2B quốc tế) nên tách riêng.
+    // Detect sàn từ URL hiện tại.
     getHomeLand: function () {
       var url = location.href;
       if (/1688\.com/.test(url)) return "1688";
-      if (/alibaba\.com/.test(url)) return "ALIBABA";
       if (/tmall\.com|tmall\.hk/.test(url)) return "TMALL";
       if (/taobao\.com/.test(url)) return "TAOBAO";
       if (/rakuten\.co\.jp/.test(url)) return "RAKUTEN";

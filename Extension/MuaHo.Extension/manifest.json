@@ -23,7 +23,6 @@
     "https://*.taobao.com/*",
     "https://*.tmall.com/*",
     "https://*.tmall.hk/*",
-    "https://*.alibaba.com/*",
     "https://localhost:7167/*",
     "https://localhost:7237/*",
     "http://localhost:5173/*",
@@ -41,7 +40,6 @@
         "js/config.js",
         "js/adapters/common.js",
         "js/adapters/alibaba.js",
-        "js/adapters/alibaba_global.js",
         "js/adapters/taobao.js",
         "js/adapters/tmall.js",
         "js/script.js"
@@ -50,8 +48,7 @@
         "https://*.1688.com/*",
         "https://*.taobao.com/*",
         "https://*.tmall.com/*",
-        "https://*.tmall.hk/*",
-        "https://*.alibaba.com/*"
+        "https://*.tmall.hk/*"
       ],
       "run_at": "document_idle"
     }
