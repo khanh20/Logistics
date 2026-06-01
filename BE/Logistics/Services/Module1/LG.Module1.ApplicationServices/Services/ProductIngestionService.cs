@@ -19,6 +19,7 @@ public class ProductIngestionService(
     IProductCategoryRepository categoryRepo,
     IProductRepository productRepo,
     IProductService productService,
+    ExtensionProductUpserter upserter,
     IModule1UnitOfWork uow,
     ILogger<ProductIngestionService> logger
 ) : IProductIngestionService
@@ -29,6 +30,77 @@ public class ProductIngestionService(
 
     public List<string> GetAvailablePlatforms() =>
         _adapterByName.Keys.OrderBy(n => n).ToList();
+
+    // ── Resolve URL cho customer (web dán link) ───────────────────────────────
+    public async Task<ResolveUrlResponse> ResolveUrlForCustomerAsync(
+        ResolveUrlRequest req, CancellationToken ct = default)
+    {
+        // Nhánh 1: extension đã scrape sẵn (1688/Taobao/Tmall) → chỉ upsert.
+        if (req.ScrapedData is not null)
+        {
+            var d = req.ScrapedData;
+            var upsert = await upserter.UpsertAsync(d, req.CategoryId, req.Url, ct);
+
+            if (upsert.IsForbidden)
+                return new ResolveUrlResponse(
+                    PlatformName: ExtensionProductUpserter.NormalizePlatformName(d.Platform),
+                    ProductId:    upsert.Product.Id,
+                    Status:       "Forbidden",
+                    Reason:       upsert.ForbiddenReason,
+                    Product:      upsert.Product);
+
+            return new ResolveUrlResponse(
+                PlatformName: ExtensionProductUpserter.NormalizePlatformName(d.Platform),
+                ProductId:    upsert.Product.Id,
+                Status:       "Resolved",
+                Reason:       null,
+                Product:      upsert.Product);
+        }
+
+        // Nhánh 2: tự resolve qua adapter API (eBay/Rakuten). Detect adapter theo URL.
+        IPlatformAdapter? adapter = null;
+        string? platformProductId = null;
+        foreach (var a in _adapterByName.Values)
+        {
+            var id = a.ExtractIdFromUrl(req.Url);
+            if (id is not null) { adapter = a; platformProductId = id; break; }
+        }
+
+        // Không adapter nào nhận → sàn cần extension (1688/Taobao/Tmall) nhưng thiếu ScrapedData.
+        if (adapter is null || platformProductId is null)
+            return new ResolveUrlResponse(
+                PlatformName: "",
+                ProductId:    null,
+                Status:       "NeedExtension",
+                Reason:       "URL này cần MuaHo Extension để lấy thông tin sản phẩm.",
+                Product:      null);
+
+        var platforms = await platformRepo.GetAllActiveAsync(ct);
+        var platform  = platforms.FirstOrDefault(p =>
+            p.Name.Equals(adapter.PlatformName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new PlatformNotFoundException(adapter.PlatformName);
+
+        var categoryId = await ResolveCategoryAsync(req.CategoryId, ct);
+
+        var raw = await adapter.GetDetailAsync(platformProductId, ct);
+        if (raw is null)
+            return new ResolveUrlResponse(adapter.PlatformName, null, "Error",
+                "Không lấy được thông tin sản phẩm từ sàn.", null);
+
+        var result = await ProcessSingleAsync(raw, platform, categoryId, ct);
+        if (result.SavedProductId is null)
+            return new ResolveUrlResponse(adapter.PlatformName, null,
+                result.Status == "Forbidden" ? "Forbidden" : "Error", result.Reason, null);
+
+        // Load full detail để popup render.
+        var detail = await productService.GetByIdAsync(result.SavedProductId.Value, ct);
+        return new ResolveUrlResponse(
+            PlatformName: adapter.PlatformName,
+            ProductId:    result.SavedProductId,
+            Status:       result.Status == "Forbidden" ? "Forbidden" : "Resolved",
+            Reason:       result.Reason,
+            Product:      detail);
+    }
 
     // ── Crawl by keyword ──────────────────────────────────────────────────────
     public async Task<CrawlResultResponse> CrawlByKeywordAsync(

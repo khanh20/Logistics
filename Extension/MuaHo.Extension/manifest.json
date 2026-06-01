@@ -16,7 +16,8 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["storage", "cookies"],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1LeGKaVMAwoUSNrWhiC/JYAq9JTtw3S5ORM4vCi1qTwTLDg2v9bqKzGUMkbvViGO4YMHXcJ65K/9espyaHoKsAxbo81UhXN+oC1GOXXNhXDlrUB9ADai2MQbGh+hJzCL/Fw94M+R2L7XvRkysYObSoh62xPqLOmxop8vD8b3R4ogwygXKrmzXbM2WLllwPnjrIKGxGZrQAgUKhbRfOOqRpT0GNopYbAUJ+x0qOciPDySEaQOslBPJv5QhCioF+0BnMX4XJq557cPphdVo13BzXrVSJB6xVEyfNGxwigcOk7w81wI6GsTzFr4C6mW6XeBlBK8/IJMyrrnkv22PTp6yQIDAQAB",
+  "permissions": ["storage", "cookies", "tabs"],
   "host_permissions": [
     "https://*.1688.com/*",
     "https://*.taobao.com/*",
@@ -67,5 +68,12 @@
       ]
     }
   ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:5173/*",
+      "https://muaho.vn/*",
+      "https://*.muaho.vn/*"
+    ]
+  },
   "options_page": "options.html"
 }

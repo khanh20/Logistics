@@ -342,7 +342,29 @@
     "shop_rating": "Internal rating",
     "back_btn": "← Back",
     "adding_to_cart": "Adding...",
-    "volume_pricing": "Volume pricing"
+    "volume_pricing": "Volume pricing",
+    "forbidden": "Forbidden product"
+  },
+  "url_order": {
+    "nav_button": "Order by link",
+    "title": "Order by product link",
+    "subtitle": "Paste a product link from 1688, Taobao, Tmall. We'll fetch the details so you can pick a variant and add to cart.",
+    "url_label": "Product link",
+    "resolve": "Fetch product",
+    "resolving": "Fetching...",
+    "loading_hint": "Opening the product page to fetch data, please wait a moment...",
+    "added": "Added to cart!",
+    "go_cart": "Go to cart",
+    "add_another": "Add another",
+    "back": "Back",
+    "need_ext_title": "MuaHo Extension required",
+    "need_ext_desc": "To fetch data from 1688/Taobao/Tmall, please install the MuaHo browser extension and try again.",
+    "install_ext": "Install Extension",
+    "err_empty": "Please enter a product link.",
+    "err_unsupported": "Link is not from a supported marketplace (1688, Taobao, Tmall).",
+    "err_timeout": "Fetching took too long. Please try again.",
+    "err_forbidden": "This product is in a forbidden category. {{reason}}",
+    "err_generic": "Could not fetch product info. Please try again."
   },
   "category": {
     "title": "Product Categories",

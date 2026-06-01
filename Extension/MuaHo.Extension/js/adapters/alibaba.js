@@ -36,17 +36,22 @@
       var priceTiers = [];
       var priceOriginal = 0;
       if (Array.isArray(page.priceRange) && page.priceRange.length) {
-        page.priceRange
+        var sorted = page.priceRange
+          .slice()
           .sort(function (a, b) {
             return a[0] - b[0];
           })
-          .forEach(function (pair, idx, arr) {
-            var min = pair[0] || 1;
-            var max = idx + 1 < arr.length ? arr[idx + 1][0] - 1 : null;
-            priceTiers.push({ minQuantity: min, maxQuantity: max, priceOriginal: pair[1] });
+          .filter(function (pair, idx, arr) {
+            return idx === 0 || (Number(pair[0]) || 1) !== (Number(arr[idx - 1][0]) || 1);
           });
+        sorted.forEach(function (pair, idx, arr) {
+          var min = Math.max(Number(pair[0]) || 1, 1);
+          var max = idx + 1 < arr.length ? Math.max(Number(arr[idx + 1][0]) || 1, 1) - 1 : null;
+          if (max != null && max < min) return; 
+          priceTiers.push({ minQuantity: min, maxQuantity: max, priceOriginal: pair[1] });
+        });
         // Giá hiển thị mặc định = bậc thấp nhất (mua ít nhất).
-        priceOriginal = priceTiers[0].priceOriginal;
+        if (priceTiers.length) priceOriginal = priceTiers[0].priceOriginal;
       } else if (page.price) {
         priceOriginal = C.parsePrice(page.price);
       } else {

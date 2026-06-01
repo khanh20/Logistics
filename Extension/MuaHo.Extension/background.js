@@ -96,6 +96,80 @@ chrome.runtime.onMessage.addListener(function (req, sender, sendResponse) {
   return false;
 });
 
+// ── Web MuaHo gọi extension (externally_connectable) ─────────────────────────
+// Web dán URL → extension tự mở tab ẩn trang sàn → content script scrape → trả data.
+chrome.runtime.onMessageExternal.addListener(function (req, sender, sendResponse) {
+  if (!req || !req.action) return false;
+
+  if (req.action === "ping") {
+    sendResponse({ ok: true, version: chrome.runtime.getManifest().version });
+    return false;
+  }
+
+  if (req.action === "scrapeUrl" && req.url) {
+    scrapeUrlInHiddenTab(req.url).then(sendResponse);
+    return true; // async
+  }
+
+  return false;
+});
+
+// Mở tab ẩn, chờ content script scrape xong, đóng tab. Timeout 15s.
+function scrapeUrlInHiddenTab(url) {
+  return new Promise(function (resolve) {
+    var settled = false;
+    var tabId = null;
+    var timer = null;
+
+    function cleanup(result) {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (tabId != null) {
+        try { chrome.tabs.remove(tabId); } catch (e) {}
+      }
+      resolve(result);
+    }
+
+    try {
+      chrome.tabs.create({ url: url, active: false }, function (tab) {
+        if (chrome.runtime.lastError || !tab) {
+          cleanup({ ok: false, reason: "cannot_open_tab" });
+          return;
+        }
+        tabId = tab.id;
+
+        // Timeout 15s — trang sàn load chậm / SPA chưa render.
+        timer = setTimeout(function () {
+          cleanup({ ok: false, reason: "timeout" });
+        }, 15000);
+
+        // Chờ tab load xong rồi yêu cầu content script scrape.
+        function onUpdated(updatedTabId, info) {
+          if (updatedTabId !== tabId || info.status !== "complete") return;
+          chrome.tabs.onUpdated.removeListener(onUpdated);
+
+          // Content script đã được inject (matches domain sàn). Nhờ nó scrape.
+          // Cho trang 1.2s để window object / SPA kịp khởi tạo trước khi hỏi.
+          setTimeout(function () {
+            chrome.tabs.sendMessage(tabId, { action: "scrapeNow" }, function (resp) {
+              if (chrome.runtime.lastError) {
+                cleanup({ ok: false, reason: "no_content_script" });
+                return;
+              }
+              if (resp && resp.ok && resp.data) cleanup({ ok: true, data: resp.data });
+              else cleanup({ ok: false, reason: (resp && resp.reason) || "scrape_failed" });
+            });
+          }, 1200);
+        }
+        chrome.tabs.onUpdated.addListener(onUpdated);
+      });
+    } catch (e) {
+      cleanup({ ok: false, reason: String(e) });
+    }
+  });
+}
+
 // Refresh: đọc cookie muaho.refresh → gửi trong body cho Auth (Auth đọc refreshToken từ body).
 // Auth set lại cookie access mới → đọc lại để retry.
 async function tryRefresh(cfg) {

@@ -98,6 +98,7 @@ public static class Module1ServiceExtensions
         services.AddScoped<IProductAttributeService, ProductAttributeService>();
         services.AddScoped<IPlatformService, PlatformService>();
         AddAdapters(services, config);
+        services.AddScoped<ExtensionProductUpserter>();
         services.AddScoped<IProductIngestionService, ProductIngestionService>();
         services.AddScoped<ICartService, CartService>();
         services.AddScoped<IExtensionCartService, ExtensionCartService>();

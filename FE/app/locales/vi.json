@@ -342,7 +342,29 @@
     "shop_rating": "Đánh giá nội bộ",
     "back_btn": "← Quay lại",
     "adding_to_cart": "Đang thêm...",
-    "volume_pricing": "Giá theo số lượng"
+    "volume_pricing": "Giá theo số lượng",
+    "forbidden": "Sản phẩm bị cấm"
+  },
+  "url_order": {
+    "nav_button": "Đặt bằng link",
+    "title": "Đặt hàng bằng link sản phẩm",
+    "subtitle": "Dán link sản phẩm từ 1688, Taobao, Tmall. Hệ thống sẽ lấy thông tin để bạn chọn phân loại và thêm vào giỏ.",
+    "url_label": "Link sản phẩm",
+    "resolve": "Lấy thông tin sản phẩm",
+    "resolving": "Đang lấy thông tin...",
+    "loading_hint": "Đang mở trang sản phẩm để lấy dữ liệu, vui lòng đợi trong giây lát...",
+    "added": "Đã thêm vào giỏ hàng!",
+    "go_cart": "Tới giỏ hàng",
+    "add_another": "Thêm sản phẩm khác",
+    "back": "Quay lại",
+    "need_ext_title": "Cần cài MuaHo Extension",
+    "need_ext_desc": "Để lấy thông tin từ 1688/Taobao/Tmall, vui lòng cài tiện ích MuaHo cho trình duyệt rồi thử lại.",
+    "install_ext": "Cài đặt Extension",
+    "err_empty": "Vui lòng nhập link sản phẩm.",
+    "err_unsupported": "Link không thuộc sàn được hỗ trợ (1688, Taobao, Tmall).",
+    "err_timeout": "Lấy dữ liệu quá lâu. Vui lòng thử lại.",
+    "err_forbidden": "Sản phẩm thuộc danh mục bị cấm. {{reason}}",
+    "err_generic": "Không lấy được thông tin sản phẩm. Vui lòng thử lại."
   },
   "category": {
     "title": "Danh mục sản phẩm",

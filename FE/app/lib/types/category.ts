@@ -76,3 +76,68 @@ export interface CrawlUrlResultResponse {
   status: string;
   reason: string | null;
 }
+
+// ── Resolve URL (customer dán link) ─────────────────────────────────────────
+import type { ScrapedData } from "~/lib/extension/bridge";
+import type { ProductDetail } from "~/lib/types/product";
+
+export interface ResolveUrlRequest {
+  url: string;
+  categoryId?: string;
+  // 1688/Taobao/Tmall: extension scrape sẵn rồi gửi kèm.
+  scrapedData?: ExtensionScrapedDataPayload;
+}
+
+// Payload gửi BE — map từ ScrapedData (bridge) nhưng KHÔNG có quantity.
+export interface ExtensionScrapedDataPayload {
+  platform: string;
+  platformProductId: string;
+  shopIdOnPlatform: string;
+  shopName: string;
+  shopUrl: string | null;
+  titleOriginal: string;
+  titleTranslated: string | null;
+  priceOriginal: number;
+  pricePromotion: number | null;
+  currency: string;
+  stock: number | null;
+  primaryImageUrl: string | null;
+  imageUrls: string[];
+  propertiesTranslated: string | null;
+  propertiesOriginal: string | null;
+  selectedSkuId: string | null;
+  priceTiers: { minQuantity: number; maxQuantity: number | null; priceOriginal: number }[];
+  confidenceTier: string | null;
+}
+
+export interface ResolveUrlResponse {
+  platformName: string;
+  productId: string | null;
+  status: "Resolved" | "NeedExtension" | "Forbidden" | "Error";
+  reason: string | null;
+  product: ProductDetail | null;
+}
+
+// Map ScrapedData (từ extension) → payload BE.
+export function toScrapedPayload(d: ScrapedData): ExtensionScrapedDataPayload {
+  return {
+    platform: d.platform,
+    platformProductId: d.platformProductId,
+    shopIdOnPlatform: d.shopIdOnPlatform,
+    shopName: d.shopName,
+    shopUrl: d.shopUrl,
+    titleOriginal: d.titleOriginal,
+    titleTranslated: d.titleTranslated,
+    priceOriginal: d.priceOriginal,
+    pricePromotion: d.pricePromotion,
+    currency: d.currency,
+    stock: d.stock,
+    primaryImageUrl: d.primaryImageUrl,
+    imageUrls: d.imageUrls,
+    propertiesTranslated: d.propertiesTranslated,
+    propertiesOriginal: d.propertiesOriginal,
+    selectedSkuId: d.selectedSkuId,
+    priceTiers: d.priceTiers,
+    confidenceTier: d.confidence,
+  };
+}
