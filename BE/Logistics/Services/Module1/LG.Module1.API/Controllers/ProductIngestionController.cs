@@ -3,6 +3,7 @@ using LG.Module1.ApplicationServices.Interfaces;
 using LG.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LG.Module1.API.Controllers;
 
@@ -66,5 +67,23 @@ public class ProductIngestionController(IProductIngestionService ingestionServic
     {
         var result = await ingestionService.CrawlByUrlAsync(req, ct);
         return Ok(ApiResponse<CrawlUrlResultResponse>.Ok(result));
+    }
+
+    /// Customer dán URL trên web → resolve thành ProductDetail để hiện popup chọn variant.
+    /// Quyền: customer đã đăng nhập (cart.manage). Khác crawl/url (chỉ staff product.manage).
+    [HttpPost("resolve-url")]
+    [Authorize(Policy = Permissions.CartManage)]
+    [EnableRateLimiting("auth-sensitive")]
+    [ProducesResponseType(typeof(ApiResponse<ResolveUrlResponse>), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    [ProducesResponseType(403)]
+    [ProducesResponseType(429)]
+    public async Task<IActionResult> ResolveUrl(
+        [FromBody] ResolveUrlRequest req,
+        CancellationToken ct)
+    {
+        var result = await ingestionService.ResolveUrlForCustomerAsync(req, ct);
+        return Ok(ApiResponse<ResolveUrlResponse>.Ok(result));
     }
 }

@@ -9,6 +9,8 @@ import type {
   ExchangeRate,
   CrawlResultResponse,
   CrawlUrlResultResponse,
+  ResolveUrlRequest,
+  ResolveUrlResponse,
 } from "~/lib/types/category";
 
 export const categoriesApi = {
@@ -79,6 +81,13 @@ export const ingestionApi = {
   crawlByUrl: (body: { url: string; categoryId?: string }) =>
     apiModule1Client.post<unknown, ApiResponse<CrawlUrlResultResponse>>(
       "/api/ingestion/crawl/url",
+      body
+    ),
+
+  // Customer dán URL → resolve thành ProductDetail để popup chọn variant.
+  resolveUrl: (body: ResolveUrlRequest) =>
+    apiModule1Client.post<unknown, ApiResponse<ResolveUrlResponse>>(
+      "/api/ingestion/resolve-url",
       body
     ),
 };

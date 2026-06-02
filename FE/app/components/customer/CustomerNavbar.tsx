@@ -4,8 +4,9 @@ import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { selectUser, selectAuth } from "~/lib/feature/auth/authSelector";
 import { logout as logoutThunk } from "~/lib/feature/auth/authThunk";
 import { store } from "~/lib/feature/store";
-import { useTransition } from "react";
+import { useTransition, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { UrlOrderModal } from "./UrlOrderModal";
 
 
 export function CustomerNavbar() {
@@ -14,6 +15,7 @@ export function CustomerNavbar() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  const [urlModalOpen, setUrlModalOpen] = useState(false);
 
   const NAV_ITEMS = [
     { to: "/", label: t("nav.home") },
@@ -68,6 +70,13 @@ export function CustomerNavbar() {
 
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setUrlModalOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1 rounded-lg bg-white/15 px-3 py-1.5
+                         text-sm font-medium text-white hover:bg-white/25 transition-colors"
+            >
+              🔗 {t("url_order.nav_button")}
+            </button>
+            <button
               onClick={toggleLanguage}
               className="flex items-center gap-1 px-2.5 py-1 rounded-lg 
                         border border-gray-200 text-xs font-semibold 
@@ -111,6 +120,8 @@ export function CustomerNavbar() {
           </div>
         </div>
       </div>
+
+      <UrlOrderModal open={urlModalOpen} onClose={() => setUrlModalOpen(false)} />
     </header>
   );
 }

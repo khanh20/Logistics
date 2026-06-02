@@ -31,6 +31,8 @@ public class Module1DbContext(DbContextOptions<Module1DbContext> options) : DbCo
     public DbSet<OrderFeeDetail>     OrderFeeDetails     => Set<OrderFeeDetail>();
     public DbSet<StaffAssignment>    StaffAssignments    => Set<StaffAssignment>();
 
+    public DbSet<ExtensionScrapeLog> ExtensionScrapeLogs => Set<ExtensionScrapeLog>();
+
     protected override void OnModelCreating(ModelBuilder mb)
     {
         mb.HasDefaultSchema("mod1");
