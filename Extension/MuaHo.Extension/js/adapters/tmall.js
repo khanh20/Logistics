@@ -16,29 +16,26 @@
 
     scrape: function () {
       var page = C.getPageData() || {};
-      var jsonLd = this.readJsonLd();
-      var og = this.readOpenGraph();
+      var jsonLd = C.readJsonLdProduct();
       var confidence = "high";
 
-      // ── Title ────────────────────────────────────────────────────────────
+      // ── Title ──
       var title =
-        (jsonLd && jsonLd.name) ||
         page.title ||
-        this.domText(
-          '[class*="mainTitle"], .tb-main-title, .ItemHeader--mainTitle, [class*="ItemTitle"]'
-        ) ||
-        (og && og.title) ||
-        document.title;
+        (jsonLd && jsonLd.name) ||
+        this.titleFromDom() ||
+        C.metaContent("og:title") ||
+        C.stripSiteSuffix(document.title);
 
       // ── Giá ──────────────────────────────────────────────────────────────
       var priceOriginal = 0;
       if (jsonLd && jsonLd.offers && jsonLd.offers.price) {
         priceOriginal = C.parsePrice(jsonLd.offers.price);
       } else {
-        // Legacy id + modern partial-match class
+        // Legacy id + modern partial-match class (có "--" để né class ngắn)
         var priceText =
           this.domText("#J_PromoPrice .tm-price, #J_StrPrice .tm-price, #J_StrPriceModBox .tm-price") ||
-          this.domText('[class*="priceText"], [class*="highlightPrice"], [class*="Price--priceText"]');
+          this.domText('[class*="priceText--"], [class*="highlightPrice--"], [class*="Price--priceText"]');
         priceOriginal = C.parsePrice(priceText);
         if (priceOriginal > 0) confidence = "medium";
       }
@@ -48,7 +45,10 @@
       if (jsonLd && jsonLd.image) {
         images = [].concat(jsonLd.image).map(C.normalizeImage);
       }
-      if (!images.length && og && og.image) images = [C.normalizeImage(og.image)];
+      if (!images.length) {
+        var ogImg = C.metaContent("og:image");
+        if (ogImg) images = [C.normalizeImage(ogImg)];
+      }
       if (!images.length) {
         document
           .querySelectorAll('[class*="thumbnail"] img, #J_UlThumb img, .tb-thumb img')
@@ -61,11 +61,8 @@
         return v && a.indexOf(v) === i;
       });
 
-      // ── Shop ─────────────────────────────────────────────────────────────
-      var shopName =
-        page.companyName ||
-        this.domText('[class*="ShopHeader--shopName"], .slogo-shopname, .shop-name') ||
-        "Tmall Shop";
+      // ── Shop ──
+      var shopName = page.companyName || page.shopName || this.shopFromDom() || "Shop Tmall";
       var sellerId = (page.sellerId && String(page.sellerId)) || C.getUrlParam("user_id") || "";
 
       // ── Variant đang chọn ────────────────────────────────────────────────
@@ -95,29 +92,43 @@
       };
     },
 
-    // Đọc <script type="application/ld+json"> Product
-    readJsonLd: function () {
-      var scripts = document.querySelectorAll('script[type="application/ld+json"]');
-      for (var i = 0; i < scripts.length; i++) {
-        try {
-          var data = JSON.parse(scripts[i].textContent);
-          var arr = Array.isArray(data) ? data : [data];
-          for (var j = 0; j < arr.length; j++) {
-            if (arr[j] && (arr[j]["@type"] === "Product" || arr[j].name)) return arr[j];
-          }
-        } catch (e) {
-          // skip invalid JSON
-        }
+    titleFromDom: function () {
+      var t = document.querySelector(".tb-main-title");
+      if (t) {
+        var dt = t.getAttribute("data-text");
+        if (dt && dt.trim()) return dt.trim();
+        if (t.textContent.trim()) return t.textContent.trim();
       }
-      return null;
+      t = document.querySelector(".tb-detail-hd h3, .tb-detail-hd h1, h3.tb-item-title, .tb-item-title");
+      if (t && t.textContent.trim()) return t.textContent.trim();
+      t = document.querySelector(
+        ".ItemHeader--mainTitle--1rJcXZz, .ItemTitle--mainTitle--2OrrwrD, .mainTitle--O1XCl8e2"
+      );
+      if (t && t.textContent.trim()) return t.textContent.trim();
+      var cands = document.querySelectorAll('[class*="mainTitle--"]');
+      var best = "";
+      for (var i = 0; i < cands.length; i++) {
+        var txt = cands[i].textContent.trim();
+        if (txt.length > best.length) best = txt;
+      }
+      return best;
     },
 
-    readOpenGraph: function () {
-      function meta(prop) {
-        var el = document.querySelector('meta[property="' + prop + '"]');
-        return el ? el.getAttribute("content") : null;
+    shopFromDom: function () {
+      var s = document.querySelector(".tb-seller-name");
+      if (s && s.textContent.trim()) return s.textContent.trim();
+      var nick = document.querySelector("[data-nick]");
+      if (nick) {
+        var dn = nick.getAttribute("data-nick");
+        if (dn && dn.trim()) return dn.trim();
       }
-      return { title: meta("og:title"), image: meta("og:image") };
+      s = document.querySelector(".ShopHeader--shopName--zZ3913d, .shopName--mTDZGIPO");
+      if (s && s.textContent.trim()) return s.textContent.trim();
+      s = document.querySelector('[class*="shopName--"]');
+      if (s && s.textContent.trim()) return s.textContent.trim();
+      s = document.querySelector(".slogo-shopname");
+      if (s && s.textContent.trim()) return s.textContent.trim();
+      return "";
     },
 
     // Variant selection: legacy #J_DetailMeta .tb-prop + modern [class*="SkuContent"]

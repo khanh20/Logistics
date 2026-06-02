@@ -91,11 +91,11 @@
       var out = { site: "TAOBAO" };
       // g_config: global của trang item.taobao.com legacy
       if (window.g_config) {
-        out.sellerId = window.g_config.sellerId || (window.g_config.shopId);
+        out.sellerId = window.g_config.sellerId || window.g_config.shopId;
         out.shopName = window.g_config.shopName;
         out.title = window.g_config.itemTitle || window.g_config.title;
       }
-      // Hub.config.get('sku') — skuId/price (modern Taobao)
+      // Hub.config.get('sku'/'item') — skuId/title (modern Taobao)
       try {
         if (window.Hub && window.Hub.config && window.Hub.config.get) {
           var sku = window.Hub.config.get("sku");
@@ -103,19 +103,34 @@
             out.skuId = sku.skuId;
             if (sku.valItemInfo) out.skuMap = sku.valItemInfo.skuMap;
           }
+          var item = window.Hub.config.get("item");
+          if (item) {
+            out.title = out.title || item.title;
+            out.image = out.image || (item.images && item.images[0]);
+          }
+          var seller = window.Hub.config.get("seller");
+          if (seller) {
+            out.sellerId = out.sellerId || seller.userId || seller.shopId;
+            out.shopName = out.shopName || seller.shopName || seller.nick;
+          }
         }
       } catch (e) {}
-      // __INIT_DATA (Taobao React)
-      if (window.__INIT_DATA && window.__INIT_DATA.globalData) {
-        var g = window.__INIT_DATA.globalData;
-        if (g.item) {
-          out.title = out.title || g.item.title;
-          out.image = g.item.images && g.item.images[0];
-          out.imageList = g.item.images || [];
+      // __INIT_DATA / __GLOBAL_DATA (Taobao React) — nhiều path theo version
+      var g =
+        (window.__INIT_DATA && window.__INIT_DATA.globalData) ||
+        (window.__GLOBAL_DATA && window.__GLOBAL_DATA) ||
+        null;
+      if (g) {
+        var itemDO = g.item || g.itemDO || (g.data && g.data.item) || null;
+        if (itemDO) {
+          out.title = out.title || itemDO.title || itemDO.subtitle;
+          out.image = out.image || (itemDO.images && itemDO.images[0]);
+          out.imageList = out.imageList || itemDO.images || [];
         }
-        if (g.seller) {
-          out.sellerId = out.sellerId || g.seller.userId || g.seller.shopId;
-          out.shopName = out.shopName || g.seller.shopName;
+        var sellerDO = g.seller || g.sellerDO || (g.data && g.data.seller) || null;
+        if (sellerDO) {
+          out.sellerId = out.sellerId || sellerDO.userId || sellerDO.shopId || sellerDO.sellerId;
+          out.shopName = out.shopName || sellerDO.shopName || sellerDO.nick || sellerDO.title;
         }
       }
       return out;
@@ -172,28 +187,41 @@
   // ── Tmall ─────────────────────────────────────────────────────────────────
   function readTmall() {
     try {
-      // Path A: window.__GLOBAL_DATA / window.__INIT_DATA (Tmall React detail)
+      var out = { site: "TMALL" };
+      // Hub.config (Tmall cũng dùng Hub trên một số version)
+      try {
+        if (window.Hub && window.Hub.config && window.Hub.config.get) {
+          var hItem = window.Hub.config.get("item");
+          if (hItem) {
+            out.title = hItem.title;
+            out.image = hItem.images && hItem.images[0];
+          }
+          var hSeller = window.Hub.config.get("seller");
+          if (hSeller) {
+            out.sellerId = hSeller.userId || hSeller.shopId;
+            out.companyName = hSeller.shopName || hSeller.nick;
+          }
+        }
+      } catch (e) {}
+      // __INIT_DATA / __GLOBAL_DATA (Tmall React detail) — nhiều nhánh
       var root =
-        (window.__INIT_DATA && window.__INIT_DATA) ||
+        (window.__INIT_DATA && (window.__INIT_DATA.globalData || window.__INIT_DATA)) ||
         (window.__GLOBAL_DATA && window.__GLOBAL_DATA) ||
         null;
       if (root) {
-        // Cấu trúc Tmall thay đổi theo phiên bản — chỉ lấy được phần phổ biến.
-        var item = root.item || (root.data && root.data.item) || {};
-        var seller = root.seller || (root.data && root.data.seller) || {};
-        return {
-          site: "TMALL",
-          sellerId: seller.userId || seller.shopId,
-          companyName: seller.shopName || seller.title,
-          title: item.title,
-          image: item.images && item.images[0],
-          imageList: item.images || [],
-        };
+        var item = root.item || root.itemDO || (root.data && root.data.item) || {};
+        var seller = root.seller || root.sellerDO || (root.data && root.data.seller) || {};
+        out.title = out.title || item.title || item.subtitle;
+        out.image = out.image || (item.images && item.images[0]);
+        out.imageList = item.images || out.imageList || [];
+        out.sellerId = out.sellerId || seller.userId || seller.shopId || seller.sellerId;
+        out.companyName =
+          out.companyName || seller.shopName || seller.title || seller.nick;
       }
+      return out;
     } catch (e) {
       return { site: "TMALL", error: String(e) };
     }
-    return null;
   }
 
   function poll() {

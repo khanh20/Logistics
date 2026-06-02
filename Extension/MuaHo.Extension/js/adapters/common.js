@@ -137,6 +137,41 @@
       return r === null ? "" : decodeURIComponent(r[1].replace(/\+/g, " "));
     },
 
+    // Đọc <meta property=...> hoặc <meta name=...> → content.
+    metaContent: function (prop) {
+      var el =
+        document.querySelector('meta[property="' + prop + '"]') ||
+        document.querySelector('meta[name="' + prop + '"]');
+      return el ? (el.getAttribute("content") || "").trim() : "";
+    },
+
+    // Tìm <script type="application/ld+json"> có @type=Product → {name, image, offers}.
+    readJsonLdProduct: function () {
+      var scripts = document.querySelectorAll('script[type="application/ld+json"]');
+      for (var i = 0; i < scripts.length; i++) {
+        try {
+          var data = JSON.parse(scripts[i].textContent);
+          var arr = Array.isArray(data) ? data : [data];
+          for (var j = 0; j < arr.length; j++) {
+            var o = arr[j];
+            if (o && (o["@type"] === "Product" || o.name)) return o;
+          }
+        } catch (e) {
+          // skip invalid JSON
+        }
+      }
+      return null;
+    },
+
+    // Bỏ hậu tố tên sàn khỏi document.title (vd "Áo thun - 淘宝网" → "Áo thun").
+    stripSiteSuffix: function (title) {
+      if (!title) return "";
+      return String(title)
+        .replace(/[-_|]\s*(淘宝网|淘宝|天猫|Tmall|Taobao|TMALL|1688|阿里巴巴)\s*$/i, "")
+        .replace(/^\s*【.*?】\s*/, "") // bỏ tag 【...】 đầu nếu có
+        .trim();
+    },
+
     // Merge nhiều kết quả tier theo priority (phần tử đầu ưu tiên cao nhất).
     // Mỗi field: lấy giá trị non-empty đầu tiên theo thứ tự.
     mergePriority: function (results) {

@@ -15,21 +15,24 @@
 
     scrape: function () {
       var page = C.getPageData() || {};
+      var jsonLd = C.readJsonLdProduct();
       var confidence = "high";
 
-      // ── Title ────────────────────────────────────────────────────────────
+      // ── Title ──
       var title =
         page.title ||
-        this.domText(
-          ".tb-main-title, [class*='mainTitle'], [class*='ItemTitle'], #J_Title h3"
-        ) ||
-        document.title;
+        (jsonLd && jsonLd.name) ||
+        this.titleFromDom() ||
+        C.metaContent("og:title") ||
+        C.stripSiteSuffix(document.title);
 
       // ── Giá ──────────────────────────────────────────────────────────────
       var priceText =
         this.domText("#J_PromoPrice .tb-rmb-num, #J_StrPrice .tb-rmb-num, #J_StrPriceModBox .tb-rmb-num") ||
-        this.domText("[class*='priceText'], [class*='highlightPrice'], [class*='Price--priceText']");
+        this.domText("[class*='priceText--'], [class*='highlightPrice--'], [class*='Price--priceText']");
       var priceOriginal = C.parsePrice(priceText);
+      if (jsonLd && jsonLd.offers && jsonLd.offers.price && priceOriginal === 0)
+        priceOriginal = C.parsePrice(jsonLd.offers.price);
       if (priceOriginal > 0 && !page.title) confidence = "medium";
 
       // ── Ảnh ──────────────────────────────────────────────────────────────
@@ -48,11 +51,8 @@
         return v && a.indexOf(v) === i;
       });
 
-      // ── Shop ─────────────────────────────────────────────────────────────
-      var shopName =
-        page.shopName ||
-        this.domText(".tb-shop-name, .shop-name, [class*='ShopHeader--shopName'], .slogo-shopname") ||
-        "Taobao Shop";
+      // ── Shop ──
+      var shopName = page.shopName || this.shopFromDom() || "Shop Taobao";
       var sellerId =
         (page.sellerId && String(page.sellerId)) ||
         C.getUrlParam("user_id") ||
@@ -84,6 +84,47 @@
         originalUrl: location.href.split("&")[0],
         confidence: priceOriginal > 0 ? confidence : "low",
       };
+    },
+
+    
+    titleFromDom: function () {
+      var t = document.querySelector(".tb-main-title");
+      if (t) {
+        var dt = t.getAttribute("data-text");
+        if (dt && dt.trim()) return dt.trim();
+        if (t.textContent.trim()) return t.textContent.trim();
+      }
+      t = document.querySelector(".tb-detail-hd h3, .tb-detail-hd h1, h3.tb-item-title, .tb-item-title");
+      if (t && t.textContent.trim()) return t.textContent.trim();
+      t = document.querySelector(
+        ".ItemHeader--mainTitle--1rJcXZz, .ItemTitle--mainTitle--2OrrwrD, .mainTitle--O1XCl8e2"
+      );
+      if (t && t.textContent.trim()) return t.textContent.trim();
+    
+      var cands = document.querySelectorAll('[class*="mainTitle--"]');
+      var best = "";
+      for (var i = 0; i < cands.length; i++) {
+        var txt = cands[i].textContent.trim();
+        if (txt.length > best.length) best = txt;
+      }
+      return best;
+    },
+
+    shopFromDom: function () {
+      var s = document.querySelector(".tb-seller-name");
+      if (s && s.textContent.trim()) return s.textContent.trim();
+      var nick = document.querySelector("[data-nick]");
+      if (nick) {
+        var dn = nick.getAttribute("data-nick");
+        if (dn && dn.trim()) return dn.trim();
+      }
+      s = document.querySelector(".ShopHeader--shopName--zZ3913d, .shopName--mTDZGIPO");
+      if (s && s.textContent.trim()) return s.textContent.trim();
+      s = document.querySelector('[class*="shopName--"]');
+      if (s && s.textContent.trim()) return s.textContent.trim();
+      s = document.querySelector(".slogo-shopname");
+      if (s && s.textContent.trim()) return s.textContent.trim();
+      return "";
     },
 
     // Variant đang chọn: legacy #J_isku .J_Prop + modern [class*="SkuContent"]
