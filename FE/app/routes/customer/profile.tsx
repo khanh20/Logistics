@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import {
   Tabs,
   Form,
@@ -17,7 +18,7 @@ import {
   Table,
   Popconfirm,
 } from "antd";
-import { CameraFilled, UploadOutlined, SaveOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { CameraFilled, UploadOutlined, SaveOutlined, DeleteOutlined, PlusOutlined, CrownOutlined, SafetyCertificateOutlined, StarOutlined, ThunderboltOutlined, RightOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import {
@@ -28,6 +29,7 @@ import {
   submitKyc,
   fetchMyAddresses,
 } from "~/lib/feature/customerProfile/customerProfileThunk";
+import { fetchVipTiers } from "~/lib/feature/adminFinance/adminFinanceThunk";
 import { updateUserLocal } from "~/lib/feature/auth/authSlice";
 import {
   selectProfile,
@@ -35,6 +37,8 @@ import {
   selectProfileStatus,
   selectAddresses,
 } from "~/lib/feature/customerProfile/customerProfileSelector";
+import { selectVipTiers } from "~/lib/feature/adminFinance/adminFinanceSelector";
+import { formatColor } from "~/lib/utils/format";
 import { customerProfileApi } from "~/lib/api/customerProfile";
 import { financeApi } from "~/lib/api/finance";
 import { authApi } from "~/lib/api/auth";
@@ -56,6 +60,29 @@ export default function CustomerProfilePage() {
   const status = useAppSelector(selectProfileStatus);
   const addresses = useAppSelector(selectAddresses);
   const user = useAppSelector((state: any) => state.authState.user);
+  const vipTiers = useAppSelector(selectVipTiers);
+
+  const getTierIcon = (level: number, tierName: string) => {
+    const nameLower = tierName.toLowerCase();
+    if (nameLower.includes("đồng") || nameLower.includes("bronze") || level === 1) {
+      return <SafetyCertificateOutlined />;
+    }
+    if (nameLower.includes("bạc") || nameLower.includes("silver") || level === 2) {
+      return <StarOutlined />;
+    }
+    if (nameLower.includes("vàng") || nameLower.includes("gold") || level === 3) {
+      return <CrownOutlined />;
+    }
+    if (nameLower.includes("kim cương") || nameLower.includes("diamond") || level >= 4) {
+      return <ThunderboltOutlined />;
+    }
+    return <SafetyCertificateOutlined />;
+  };
+
+  const currentTier = vipTiers.find(t => t.id === profile?.vipTierId) || (vipTiers.length > 0 ? [...vipTiers].sort((a, b) => a.level - b.level)[0] : null);
+  const currentTierName = currentTier?.name || "";
+  const tierColor = formatColor(currentTier?.colorHex, "#2563eb");
+  const tierIcon = currentTier ? getTierIcon(currentTier.level, currentTier.name) : <CrownOutlined />;
 
   const [personalForm] = Form.useForm();
   const [contactForm] = Form.useForm();
@@ -92,6 +119,7 @@ export default function CustomerProfilePage() {
     dispatch(fetchMyProfile());
     dispatch(fetchKyc());
     dispatch(fetchMyAddresses());
+    dispatch(fetchVipTiers());
     fetchBanks();
   }, [dispatch]);
 
@@ -286,28 +314,80 @@ export default function CustomerProfilePage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
           <Card className="shadow-sm h-full flex flex-col items-center justify-center py-6 border border-gray-200">
-            <div className="relative inline-block mb-4 text-center">
-              <div className="w-32 h-32 rounded-full bg-gray-100 border-4 border-white shadow flex items-center justify-center overflow-hidden mx-auto relative group cursor-pointer">
+            <div className="relative w-32 h-32 mx-auto mb-4">
+              <div className="w-full h-full rounded-full bg-gray-100 border-4 border-white shadow flex items-center justify-center overflow-hidden relative group cursor-pointer">
                 {user?.avatarUrl ? (
                   <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-gray-400 font-medium text-center leading-tight text-sm">
+                  <span className="text-gray-400 font-semibold text-center leading-tight text-xs">
                     NO IMAGE<br />AVAILABLE
                   </span>
                 )}
                 <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <CameraFilled className="text-white text-2xl" />
+                  <CameraFilled className="text-white text-xl" />
                 </div>
               </div>
-              <button className="absolute bottom-1 right-1/4 translate-x-1 bg-red-500 text-white p-2 rounded-full shadow hover:bg-red-600 transition flex items-center justify-center z-10 border-2 border-white cursor-pointer">
-                <CameraFilled />
+              <button className="absolute bottom-0 right-0 bg-red-500 text-white p-2 rounded-full shadow hover:bg-red-600 transition flex items-center justify-center z-10 border-2 border-white cursor-pointer w-8 h-8">
+                <CameraFilled className="text-xs" />
               </button>
             </div>
-            <div className="text-center mt-2">
+            <div className="text-center mt-2 w-full">
               <Title level={4} className="!mb-1 text-blue-600 uppercase">
                 {user?.fullName || user?.email?.split('@')[0] || "KHÁCH HÀNG"}
               </Title>
               <Text type="secondary" className="text-sm block">{user?.roles?.length ? user.roles.join(', ') : "Không có"}</Text>
+ 
+              {/* Premium VIP Pill Badge - Thiết kế giống y hệt mẫu ảnh thứ 2 nhưng nhỏ gọn, thon thả */}
+              {profile && currentTierName && (
+                <div className="mt-4 w-full px-1 max-w-[210px] mx-auto">
+                  <Link 
+                    to="/vip-tier" 
+                    className="relative flex items-center justify-between rounded-full pl-1.5 pr-4 py-1.5 overflow-hidden transition-all duration-300 group hover:scale-[1.02] active:scale-[0.98] w-full border"
+                    style={{
+                      background: `${tierColor}0d`, // Nền siêu nhạt 5% của màu hạng VIP
+                      borderColor: `${tierColor}40`, // Viền mảnh opacity 25% của màu hạng VIP
+                      boxShadow: `0 2px 8px ${tierColor}10`
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      {/* Hình tròn viền kép đồng tâm bên trái nhỏ gọn */}
+                      <div 
+                        className="flex h-8 w-8 items-center justify-center rounded-full p-[2px] transition-transform duration-300 group-hover:rotate-12"
+                        style={{
+                          border: `1.2px solid ${tierColor}50` // Vòng viền kép ngoài cùng
+                        }}
+                      >
+                        <div 
+                          className="flex h-full w-full items-center justify-center rounded-full text-white shadow-sm"
+                          style={{
+                            background: `linear-gradient(135deg, ${tierColor}, ${tierColor}dd)`
+                          }}
+                        >
+                          {/* Lấy đúng icon giống bên màn vip-tier */}
+                          <span className="text-sm flex items-center justify-center text-white">
+                            {tierIcon}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Thông tin Text ở giữa chỉ gồm tên VIP tier từ DB */}
+                      <div className="text-left flex flex-col justify-center">
+                        <span className="text-[#1f2937] font-extrabold text-sm leading-tight tracking-wide">
+                          {currentTierName}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Biểu tượng Mũi tên > bên phải đồng bộ màu */}
+                    <div 
+                      className="transition-transform duration-300 group-hover:translate-x-0.5 flex items-center justify-center"
+                      style={{ color: tierColor }}
+                    >
+                      <RightOutlined className="text-xs font-black" />
+                    </div>
+                  </Link>
+                </div>
+              )}
             </div>
           </Card>
         </Col>

@@ -12,6 +12,7 @@ export default [
     index("routes/customer/_index.tsx"),
     route("finance", "routes/customer/finance.tsx"),
     route("profile", "routes/customer/profile.tsx"),
+    route("vip-tier", "routes/customer/vip-tier.tsx"),
     route("bank-accounts", "routes/customer/bank-accounts.tsx"),
     route("addresses", "routes/customer/addresses.tsx"),
     // route("cart",           "routes/customer/cart.tsx"),
