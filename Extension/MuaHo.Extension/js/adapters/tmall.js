@@ -63,7 +63,11 @@
 
       // ── Shop ──
       var shopName = page.companyName || page.shopName || this.shopFromDom() || "Shop Tmall";
-      var sellerId = (page.sellerId && String(page.sellerId)) || C.getUrlParam("user_id") || "";
+      var sellerId =
+        (page.sellerId && String(page.sellerId)) ||
+        this.sellerFromDom() ||
+        C.getUrlParam("user_id") ||
+        "";
 
       // ── Variant đang chọn ────────────────────────────────────────────────
       var selectedProps = this.readSelectedProps();
@@ -114,30 +118,91 @@
       return best;
     },
 
-    // Port ĐẦY ĐỦ getShopName của Giang Huy (đúng thứ tự + data-nick trong context cụ thể).
+   
     shopFromDom: function () {
-      function txt(el) { return el && el.textContent ? el.textContent.trim() : ""; }
-      function nick(sel) {
-        var el = document.querySelector(sel);
-        if (el) { var n = el.getAttribute("data-nick"); if (n && n.trim()) return n.trim(); }
-        return "";
+      var shop_name = "";
+      // 1. .hd-shop-name a → innerText ; fallback .shop-intro a
+      try {
+        shop_name = document.getElementsByClassName("hd-shop-name")[0]
+          .getElementsByTagName("a")[0].innerText;
+        if (shop_name == "" || shop_name == undefined) {
+          shop_name = document.getElementsByClassName("shop-intro")[0]
+            .getElementsByTagName("a")[0].innerText;
+        }
+      } catch (ex) {}
+
+      // 2. .slogo-shopname strong
+      if (!shop_name) {
+        try {
+          shop_name = document.getElementsByClassName("slogo-shopname")[0]
+            .getElementsByTagName("strong")[0].innerText;
+        } catch (ex) {}
       }
-      var v;
-      v = txt(document.querySelector(".tb-seller-name")); if (v) return v;
-      v = nick(".shop-card .ww-light[data-nick]"); if (v) return v;
-      v = nick(".base-info .seller .J_WangWang[data-nick]"); if (v) return v;
-      v = nick(".base-info .seller .ww-light[data-nick]"); if (v) return v;
-      v = nick("#J_tab_shopDetail span[data-nick]"); if (v) return v;
-      var a = document.querySelector(".tb-shop-name h3 a[title]");
-      if (a && a.getAttribute("title")) return a.getAttribute("title").trim();
-      v = txt(document.querySelector(".shop-title-text, .shop-name-text, .slogo-shopname")); if (v) return v;
-      v = txt(document.querySelector(
-        ".ShopHeader--shopName--zZ3913d, .shopName--mTDZGIPO, .shopName--cSjM9uKk, [class*='shopName--']"
-      )); if (v) return v;
-      a = document.querySelector("[class*='ShopHeader--'] a[title], [class*='shopHeader--'] a[title]");
-      if (a) { var t = a.getAttribute("title") || a.textContent; if (t && t.trim()) return t.trim(); }
-      v = txt(document.querySelector("[class*='ShopHeader--shopName'], [class*='shopHeader--shopName']"));
-      if (v) return v;
+
+      // 3. input[type=hidden][name=seller_nickname]
+      if (!shop_name) {
+        try {
+          shop_name = document.querySelectorAll(
+            '[type="hidden"][name="seller_nickname"]'
+          )[0].value;
+        } catch (ex) {}
+      }
+
+      // 4. .ShopHeader--title--2qsBE1A
+      if (!shop_name) {
+        var t = document.querySelector(".ShopHeader--title--2qsBE1A");
+        if (t != null) shop_name = t.innerHTML;
+      }
+
+      // 5. React shopName class-hash
+      if (!shop_name) {
+        try {
+          var s1 = document.querySelector(".ShopHeader--shopName--zZ3913d");
+          if (s1 != null) shop_name = s1.innerHTML;
+          else {
+            s1 = document.querySelector(".shopName--mTDZGIPO");
+            if (s1 != null) shop_name = s1.innerHTML;
+            else {
+              s1 = document.querySelector('[class*="shopName--ccf81bdd"]');
+              if (s1 != null) shop_name = s1.innerHTML;
+              else {
+                s1 = document.querySelector('[class*="shopName--cSjM9uKk"]');
+                if (s1 != null) shop_name = s1.innerHTML;
+                else {
+                  // mở rộng: bất kỳ class shopName--/ShopHeader--title nào (layout mới hash khác)
+                  s1 = document.querySelector(
+                    '[class*="shopName--"], [class*="ShopHeader--title"], [class*="ShopHeader--shopName"]'
+                  );
+                  if (s1 != null) shop_name = s1.textContent;
+                }
+              }
+            }
+          }
+        } catch (ex) {}
+      }
+
+      // 6. mở rộng: ShopHeader link[title] (layout mới)
+      if (!shop_name) {
+        var shl = document.querySelector('[class*="ShopHeader--"] a[title]');
+        if (shl) shop_name = shl.getAttribute("title") || shl.textContent;
+      }
+
+      return (shop_name || "").replace(/<[^>]*>/g, "").trim();
+    },
+
+   
+    sellerFromDom: function () {
+      try {
+        var meta = document.querySelector('meta[name="microscope-data"]');
+        if (meta) {
+          var c = meta.getAttribute("content") || "";
+          var parts = c.split(";");
+          for (var i = 0; i < parts.length; i++) {
+            var kv = parts[i].split("=");
+            if (kv[0] && kv[0].trim() === "userid" && kv[1]) return kv[1].trim();
+          }
+        }
+      } catch (e) {}
       return "";
     },
 
