@@ -66,6 +66,10 @@ export default function AdminOrderDetailPage({
   const [cancelReason, setCancelReason] = useState("");
   const [issueNote, setIssueNote] = useState("");
   const [reassignStaffId, setReassignStaffId] = useState("");
+  // ArrivedVN form
+  const [weightKg, setWeightKg] = useState("");
+  const [volumeCm3, setVolumeCm3] = useState("");
+  const [storageDays, setStorageDays] = useState("0");
 
   const actions = availableActions(order.status);
 
@@ -141,6 +145,10 @@ export default function AdminOrderDetailPage({
               <div className={`font-medium text-right ${order.isDepositPaid ? "text-green-700" : "text-amber-600"}`}>
                 {formatVND(order.depositVnd)}{order.isDepositPaid ? " ✓" : ""}
               </div>
+              <div className="text-gray-500">Thanh toán cuối kỳ</div>
+              <div className={`font-medium text-right ${order.isFinalPaid ? "text-green-700" : "text-gray-500"}`}>
+                {formatVND(order.finalAmountVnd - order.depositVnd)}{order.isFinalPaid ? " ✓" : " (chưa TT)"}
+              </div>
               <div className="text-gray-500">{t("order.locked_rate")}</div>
               <div className="font-mono text-right">{order.rateVndPerCny.toLocaleString("vi-VN")} ₫/¥</div>
               <div className="text-gray-500">{t("common.created_at")}</div>
@@ -158,6 +166,55 @@ export default function AdminOrderDetailPage({
                 </>
               )}
             </div>
+
+            {/* Fee breakdown */}
+            {order.fees.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-600 mb-2">Phân tích phí</p>
+                <div className="space-y-1">
+                  {order.fees.map((f) => (
+                    <div key={f.feeType} className="flex justify-between text-xs text-gray-600">
+                      <span>{feeLabel(f.feeType)}</span>
+                      <span className="font-medium">{formatVND(f.amountVnd)}</span>
+                    </div>
+                  ))}
+                  {order.shippingFeeVnd > 0 && (
+                    <div className="flex justify-between text-xs text-gray-600">
+                      <span>Phí ship quốc tế</span>
+                      <span className="font-medium">{formatVND(order.shippingFeeVnd)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs font-bold text-gray-900 border-t border-gray-100 pt-1 mt-1">
+                    <span>Tổng đơn hàng</span>
+                    <span>{formatVND(order.finalAmountVnd)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Shipping info if recorded */}
+            {order.actualWeightKg != null && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <p className="text-xs font-semibold text-blue-700 mb-2">📦 Thông tin vận chuyển thực tế</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <span className="text-gray-500">Cân nặng:</span>
+                  <span className="font-medium">{order.actualWeightKg} kg</span>
+                  {order.volumeCm3 != null && (
+                    <>
+                      <span className="text-gray-500">Thể tích:</span>
+                      <span className="font-medium">{order.volumeCm3?.toLocaleString()} cm³</span>
+                    </>
+                  )}
+                  {order.storageDaysOverFree > 0 && (
+                    <>
+                      <span className="text-gray-500">Ngày lưu kho vượt:</span>
+                      <span className="font-medium">{order.storageDaysOverFree} ngày</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {order.staffNote && (
               <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
                 <span className="text-gray-500">{t("order.staff_note_label")}: </span>
@@ -379,16 +436,66 @@ export default function AdminOrderDetailPage({
                 />
               )}
               {actions.canArrivedVN && (
-                <TransitionBtn
-                  label={t("order.transition_arrived_vn")}
-                  loading={loading}
-                  onClick={() =>
-                    callAction(
-                      () => manageOrdersApi.arrivedVietnam(order.id, { note: transitionNote || undefined }),
-                      t("order.arrived_vn_success")
-                    )
-                  }
-                />
+                <div className="border border-blue-100 bg-blue-50 rounded-xl p-3 mb-2">
+                  <p className="text-xs font-semibold text-blue-800 mb-2">📦 Nhập thông tin hàng về kho VN</p>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[11px] text-gray-500">Cân nặng thực (kg) *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={weightKg}
+                        onChange={(e) => setWeightKg(e.target.value)}
+                        placeholder="VD: 1.5"
+                        className="action-input mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-500">Thể tích (cm³) — tuỳ chọn</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={volumeCm3}
+                        onChange={(e) => setVolumeCm3(e.target.value)}
+                        placeholder="VD: 3000"
+                        className="action-input mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-gray-500">Ngày lưu kho vượt miễn phí</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={storageDays}
+                        onChange={(e) => setStorageDays(e.target.value)}
+                        className="action-input mt-0.5"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full mt-3"
+                    loading={loading}
+                    disabled={!weightKg || parseFloat(weightKg) <= 0}
+                    onClick={() =>
+                      callAction(
+                        () =>
+                          manageOrdersApi.arrivedVietnam(order.id, {
+                            actualWeightKg: parseFloat(weightKg),
+                            volumeCm3: volumeCm3 ? parseFloat(volumeCm3) : undefined,
+                            storageDaysOverFree: parseInt(storageDays) || 0,
+                            note: transitionNote || undefined,
+                          }),
+                        "Đã ghi nhận hàng về kho VN và tính phí ship."
+                      )
+                    }
+                  >
+                    ✅ Xác nhận hàng về kho VN
+                  </Button>
+                </div>
               )}
               {actions.canDelivering && (
                 <TransitionBtn
@@ -600,4 +707,14 @@ function TransitionBtn({
       {label}
     </Button>
   );
+}
+
+function feeLabel(feeType: string): string {
+  const labels: Record<string, string> = {
+    ServiceFee: "Phí dịch vụ",
+    InspectionFee: "Phí kiểm hàng",
+    InsuranceFee: "Phí bảo hiểm",
+    ShippingFee: "Phí vận chuyển",
+  };
+  return labels[feeType] ?? feeType;
 }

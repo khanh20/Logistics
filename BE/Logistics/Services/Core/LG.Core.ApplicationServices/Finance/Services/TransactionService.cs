@@ -119,9 +119,11 @@ namespace LG.Core.ApplicationServices.Finance.Services
             if (bankAccount == null)
                 throw new CoreException(CoreErrorCode.CoreTransactionBankNotFoundOrInactive);
 
-            // Sinh mã chuyển khoản ngẫu nhiên: NAP + 6 số
+            // Sinh mã chuyển khoản ngẫu nhiên: NAP + 6 số (hoặc lấy từ dto.Note nếu có)
             var random = new Random();
-            string transferContent = $"NAP{random.Next(100000, 999999)}";
+            string transferContent = !string.IsNullOrEmpty(dto.Note) 
+                ? dto.Note 
+                : $"NAP{random.Next(100000, 999999)}";
 
             var topup = new TopupRequest
             {

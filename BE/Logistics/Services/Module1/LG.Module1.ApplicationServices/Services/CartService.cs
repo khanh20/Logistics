@@ -19,6 +19,7 @@ public class CartService(
     ICustomerOrderRepository       orderRepo,
     IDepositConfigRepository       depositRepo,
     IExchangeRateHistoryRepository rateRepo,
+    IWalletService                 walletService,
     IModule1UnitOfWork             uow,
     ILogger<CartService>           logger
 ) : ICartService
@@ -166,12 +167,24 @@ public class CartService(
             ));
         }
 
-        var totalSubtotalVnd          = groups.Sum(g => g.SubtotalVnd);
-        const decimal serviceFeeVnd   = 0m;        // stub — Phase 8
-        const decimal shippingFeeVnd  = 0m;        // stub — Phase 8
-        var totalVnd     = totalSubtotalVnd + serviceFeeVnd + shippingFeeVnd;
-        var depositVnd   = Math.Round(totalVnd * depositCfg.DepositPct, 0);
+        var totalSubtotalVnd = groups.Sum(g => g.SubtotalVnd);
+
+        // Gọi Core API để tính toán phí thực tế từ FeeRule
+        var feeCalc = await walletService.CalculateCheckoutFeesAsync(customerId, totalSubtotalVnd, req.InsuranceOption, ct);
+        var serviceFeeVnd = feeCalc.ServiceFeeVnd;
+        var inspectionFeeVnd = feeCalc.InspectionFeeVnd;
+        var insuranceFeeVnd = feeCalc.InsuranceFeeVnd;
+
+        const decimal shippingFeeVnd = 0m; // Phí ship quốc tế ước tính lúc này tạm để 0 (sẽ tính sau khi có cân nặng thực tế)
+        
+        var totalVnd = totalSubtotalVnd + serviceFeeVnd + inspectionFeeVnd + insuranceFeeVnd + shippingFeeVnd;
+        var depositVnd = Math.Round(totalVnd * depositCfg.DepositPct, 0);
         var remainingVnd = totalVnd - depositVnd;
+
+        // Lấy số dư ví thực tế để check sufficiency
+        var walletBalance = await walletService.GetBalanceAsync(customerId, ct);
+        var isSufficient = walletBalance >= depositVnd;
+        var shortageVnd = isSufficient ? 0m : depositVnd - walletBalance;
 
         return new CheckoutPreviewResponse(
             ExchangeRateVndPerCny:   rateVnd,
@@ -179,13 +192,15 @@ public class CartService(
             Groups:                  groups,
             SubtotalVnd:             totalSubtotalVnd,
             ServiceFeeVnd:           serviceFeeVnd,
+            InspectionFeeVnd:        inspectionFeeVnd,
+            InsuranceFeeVnd:         insuranceFeeVnd,
             EstimatedShippingFeeVnd: shippingFeeVnd,
             TotalVnd:                totalVnd,
             DepositVnd:              depositVnd,
             RemainingPaymentVnd:     remainingVnd,
-            WalletBalanceSufficient: true,   // stub — wallet Phase 8
-            WalletBalanceVnd:        0m,     // stub
-            WalletShortageVnd:       0m      // stub
+            WalletBalanceSufficient: isSufficient,
+            WalletBalanceVnd:        walletBalance,
+            WalletShortageVnd:       shortageVnd
         );
     }
 
@@ -240,7 +255,12 @@ public class CartService(
                     );
                 }
 
-                order.CalculateDeposit();
+                var subtotalCny = shopGroup.Sum(ci => ci.Quantity * ci.PriceCnySnapshot);
+                var subtotalVnd = Math.Round(subtotalCny * rate.RateVndPerCny, 0);
+
+                var feeCalc = await walletService.CalculateCheckoutFeesAsync(customerId, subtotalVnd, req.InsuranceOption, innerCt);
+                order.CalculateDeposit(feeCalc.ServiceFeeVnd, feeCalc.InspectionFeeVnd, feeCalc.InsuranceFeeVnd);
+
                 await orderRepo.AddAsync(order, innerCt);
 
                 createdOrderIds.Add(order.Id.ToString());

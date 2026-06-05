@@ -56,14 +56,16 @@ public record CheckoutPreviewResponse(
     string                           RateAsOf,              // ISO-8601 string
     List<CheckoutPreviewGroupResponse> Groups,
     decimal                          SubtotalVnd,
-    decimal                          ServiceFeeVnd,          // stub = 0
-    decimal                          EstimatedShippingFeeVnd, // stub = 0
+    decimal                          ServiceFeeVnd,
+    decimal                          InspectionFeeVnd,
+    decimal                          InsuranceFeeVnd,
+    decimal                          EstimatedShippingFeeVnd,
     decimal                          TotalVnd,
     decimal                          DepositVnd,
     decimal                          RemainingPaymentVnd,
-    bool                             WalletBalanceSufficient, // stub = true
-    decimal                          WalletBalanceVnd,        // stub = 0
-    decimal                          WalletShortageVnd        // stub = 0
+    bool                             WalletBalanceSufficient,
+    decimal                          WalletBalanceVnd,
+    decimal                          WalletShortageVnd
 );
 
 // ── Confirm checkout ──────────────────────────────────────────────────────────
@@ -71,8 +73,8 @@ public record CheckoutPreviewResponse(
 /// Response aligned with FE ConfirmCheckoutResponse interface.
 public record ConfirmCheckoutResponse(
     List<string> CreatedOrderIds,
-    decimal      TotalChargedFromWallet,   // stub = 0 (wallet Phase 8)
-    string       CountdownDeadline         // ISO-8601 — payment deadline
+    decimal      TotalChargedFromWallet,
+    string       CountdownDeadline
 );
 
 // ── Requests ──────────────────────────────────────────────────────────────────
@@ -92,11 +94,13 @@ public record UpdateCartItemQuantityRequest(
 /// Null / empty = include all shops.
 public record CheckoutPreviewRequest(
     List<Guid>? ShopIds,
-    string?     DeliveryAddressNote
+    string?     DeliveryAddressNote,
+    string      InsuranceOption = "none" // "none" | "basic" | "full"
 );
 
 public record ConfirmCheckoutRequest(
     List<Guid>? ShopIds,
     string?     DeliveryAddressNote,
-    string?     CustomerNote
+    string?     CustomerNote,
+    string      InsuranceOption = "none" // "none" | "basic" | "full"
 );

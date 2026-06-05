@@ -76,6 +76,10 @@ public record OrderDetailResponse(
     decimal                      RateVndPerCny,
     bool                         IsDepositPaid,
     bool                         IsFinalPaid,
+    decimal?                     ActualWeightKg,
+    decimal?                     VolumeCm3,
+    int                          StorageDaysOverFree,
+    decimal                      ShippingFeeVnd,
     string?                      DeliveryAddressNote,
     string?                      CustomerNote,
     string?                      StaffNote,
@@ -131,6 +135,13 @@ public record RecordIssueRequest(
 /// Staff: chuyển trạng thái với note tuỳ chọn
 public record OrderTransitionRequest(
     string? Note
+);
+
+public record ArrivedVietnamRequest(
+    decimal  ActualWeightKg,
+    decimal? VolumeCm3,
+    int      StorageDaysOverFree,
+    string?  Note
 );
 
 /// Admin/Staff: hủy đơn

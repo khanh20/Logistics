@@ -30,6 +30,7 @@ export interface TopupResponseDto {
 export interface CreateTopupDto {
   bankAccountId: string;
   amount: number;
+  note?: string;
 }
 
 export interface WithdrawResponseDto {

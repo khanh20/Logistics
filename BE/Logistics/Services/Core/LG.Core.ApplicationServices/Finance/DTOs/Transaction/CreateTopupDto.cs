@@ -11,5 +11,7 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.Transaction
         [Required]
         [Range(10000, 1000000000, ErrorMessage = "Số tiền nạp phải từ 10,000 VNĐ đến 1 tỷ VNĐ.")]
         public decimal Amount { get; set; }     // Số tiền nạp
+
+        public string? Note { get; set; }        // Ghi chú hoặc nội dung đặc biệt cho giao dịch (ví dụ: thanh toán đơn hàng)
     }
 }

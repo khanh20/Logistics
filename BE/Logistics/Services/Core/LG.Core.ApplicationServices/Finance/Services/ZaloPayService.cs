@@ -59,7 +59,9 @@ namespace LG.Core.ApplicationServices.Finance.Services
             return await CreateOrderInternalAsync(
                 appUser: topup.WalletId.ToString(),
                 amount: (long)topup.AmountVnd,
-                description: $"Nap tien vi Logistics - {topup.TransferContent}",
+                description: topup.TransferContent.StartsWith("NAP") 
+                    ? $"Nap tien vi Logistics - {topup.TransferContent}" 
+                    : topup.TransferContent,
                 referenceId: topup.Id,
                 embedData: embedData
             );

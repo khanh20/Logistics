@@ -61,6 +61,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IBankWebhookLogService, BankWebhookLogService>();
         services.AddScoped<LG.Core.ApplicationServices.Common.Interfaces.IEmailService, LG.Core.ApplicationServices.Common.Services.EmailService>();
         services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+        // ── Wallet Payment Service ──────────────────────────────────────────────
+        services.AddScoped<IWalletPaymentService, WalletPaymentService>();
 
         return services;
     }

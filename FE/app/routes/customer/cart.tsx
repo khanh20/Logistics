@@ -41,6 +41,7 @@ export default function CartPage({
 
   const [deliveryNote, setDeliveryNote] = useState("");
   const [customerNote, setCustomerNote] = useState("");
+  const [insuranceOption, setInsuranceOption] = useState<string>("none");
   const [preview, setPreview] = useState<CheckoutPreviewResponse | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -61,6 +62,7 @@ export default function CartPage({
       const res = await cartApi.previewCheckout({
         shopIds: selectedShopIds,
         deliveryAddressNote: deliveryNote || undefined,
+        insuranceOption: insuranceOption,
       });
       setPreview(res.data);
     } catch (err: unknown) {
@@ -81,6 +83,7 @@ export default function CartPage({
         shopIds: selectedShopIds,
         deliveryAddressNote: deliveryNote || undefined,
         customerNote: customerNote || undefined,
+        insuranceOption: insuranceOption,
       });
       setCheckoutSuccess(res.data.createdOrderIds);
       await reload();
@@ -227,6 +230,40 @@ export default function CartPage({
             />
           </div>
 
+          {/* Insurance Option */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <h2 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1">
+              🛡️ {t("cart.insurance_option", "Tùy chọn bảo hiểm")}
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: "none", label: "Không", desc: "0% phí" },
+                { value: "basic", label: "Cơ bản", desc: "2% phí" },
+                { value: "full", label: "Toàn bộ", desc: "5% phí" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setInsuranceOption(opt.value);
+                    setPreview(null); // Clear preview when changing option to force refresh
+                  }}
+                  className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
+                    insuranceOption === opt.value
+                      ? "border-primary bg-primary/5 text-primary font-semibold shadow-sm"
+                      : "border-gray-200 hover:bg-gray-50 text-gray-600"
+                  }`}
+                >
+                  <span className="text-xs">{opt.label}</span>
+                  <span className="text-[9px] opacity-75 mt-0.5">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2">
+              * Bảo hiểm bảo vệ đơn hàng khi vận chuyển nếu xảy ra thất lạc.
+            </p>
+          </div>
+
           {/* Summary */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
             <h2 className="text-sm font-semibold text-gray-800 mb-3">
@@ -261,37 +298,58 @@ export default function CartPage({
 
             {/* Preview result */}
             {preview && (
-              <div className="bg-gray-50 rounded-lg p-3 mb-4 space-y-1.5 text-xs">
-                <div className="flex justify-between text-gray-600">
-                  <span>{t("cart.rate_label")}</span>
+              <div className="bg-gray-50 rounded-xl p-3 mb-4 space-y-1.5 text-xs border border-gray-100">
+                <div className="flex justify-between text-gray-500">
+                  <span>Tỷ giá áp dụng</span>
                   <span className="font-medium">
                     {preview.exchangeRateVndPerCny.toLocaleString("vi-VN")} ₫/¥
                   </span>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>{t("cart.product_total_vnd")}</span>
+                <div className="flex justify-between text-gray-600 border-t border-gray-100 pt-1.5">
+                  <span>Tiền hàng</span>
                   <span>{formatVND(preview.subtotalVnd)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>{t("cart.service_fee")}</span>
+                  <span>Phí dịch vụ</span>
                   <span>{formatVND(preview.serviceFeeVnd)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>{t("cart.estimated_shipping")}</span>
+                  <span>Phí kiểm hàng</span>
+                  <span>{formatVND(preview.inspectionFeeVnd)}</span>
+                </div>
+                {preview.insuranceFeeVnd > 0 && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>Phí bảo hiểm ({insuranceOption})</span>
+                    <span>{formatVND(preview.insuranceFeeVnd)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-gray-400 italic">
+                  <span>Phí ship quốc tế (ước tính)</span>
                   <span>{formatVND(preview.estimatedShippingFeeVnd)}</span>
                 </div>
                 <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-200 pt-1.5 mt-1.5">
-                  <span>{t("cart.grand_total")}</span>
+                  <span>Tổng giá trị đơn</span>
                   <span>{formatVND(preview.totalVnd)}</span>
                 </div>
                 <div className="flex justify-between text-primary font-bold text-sm border-t border-gray-200 pt-1.5 mt-0.5">
-                  <span>{t("cart.deposit_label")}</span>
+                  <span>Số tiền đặt cọc</span>
                   <span>{formatVND(preview.depositVnd)}</span>
                 </div>
-                {!preview.walletBalanceSufficient && (
-                  <p className="text-red-600 bg-red-50 rounded px-2 py-1 text-xs mt-1">
-                    {t("cart.wallet_insufficient", { amount: formatVND(preview.walletShortageVnd) })}
-                  </p>
+                
+                {/* Wallet Balance Info */}
+                <div className="flex justify-between text-[11px] text-gray-500 border-t border-gray-100 pt-1.5">
+                  <span>Số dư ví hiện tại</span>
+                  <span className="font-medium text-gray-700">{formatVND(preview.walletBalanceVnd)}</span>
+                </div>
+
+                {!preview.walletBalanceSufficient ? (
+                  <div className="text-red-600 bg-red-50 border border-red-200 rounded px-2.5 py-1.5 text-[11px] mt-2 font-medium">
+                    ⚠️ {t("cart.wallet_insufficient", "Ví của bạn thiếu {amount} để đặt cọc.").replace("{amount}", formatVND(preview.walletShortageVnd))}
+                  </div>
+                ) : (
+                  <div className="text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2.5 py-1.5 text-[11px] mt-2 font-medium">
+                    ✅ Số dư ví khả dụng để đóng cọc.
+                  </div>
                 )}
               </div>
             )}
