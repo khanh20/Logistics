@@ -55,6 +55,7 @@
       var shopName = page.shopName || this.shopFromDom() || "Shop Taobao";
       var sellerId =
         (page.sellerId && String(page.sellerId)) ||
+        this.sellerFromDom() ||
         C.getUrlParam("user_id") ||
         C.getUrlParam("seller_id") ||
         "";
@@ -110,20 +111,63 @@
       return best;
     },
 
+    // Port ĐẦY ĐỦ getShopName của Giang Huy (đúng thứ tự + data-nick trong context cụ thể).
     shopFromDom: function () {
-      var s = document.querySelector(".tb-seller-name");
-      if (s && s.textContent.trim()) return s.textContent.trim();
-      var nick = document.querySelector("[data-nick]");
-      if (nick) {
-        var dn = nick.getAttribute("data-nick");
-        if (dn && dn.trim()) return dn.trim();
+      function txt(el) { return el && el.textContent ? el.textContent.trim() : ""; }
+      function nick(sel) {
+        var el = document.querySelector(sel);
+        if (el) { var n = el.getAttribute("data-nick"); if (n && n.trim()) return n.trim(); }
+        return "";
       }
-      s = document.querySelector(".ShopHeader--shopName--zZ3913d, .shopName--mTDZGIPO");
-      if (s && s.textContent.trim()) return s.textContent.trim();
-      s = document.querySelector('[class*="shopName--"]');
-      if (s && s.textContent.trim()) return s.textContent.trim();
-      s = document.querySelector(".slogo-shopname");
-      if (s && s.textContent.trim()) return s.textContent.trim();
+      var v;
+      // 1. Legacy seller name
+      v = txt(document.querySelector(".tb-seller-name")); if (v) return v;
+      // 2. data-nick TRONG context cụ thể (không generic — tránh lấy nhầm)
+      v = nick(".shop-card .ww-light[data-nick]"); if (v) return v;
+      v = nick(".base-info .seller .J_WangWang[data-nick]"); if (v) return v;
+      v = nick(".base-info .seller .ww-light[data-nick]"); if (v) return v;
+      v = nick("#J_tab_shopDetail span[data-nick]"); if (v) return v;
+      // 3. .tb-shop-name h3 a[title]
+      var a = document.querySelector(".tb-shop-name h3 a[title]");
+      if (a && a.getAttribute("title")) return a.getAttribute("title").trim();
+      // 4. shop title link text
+      v = txt(document.querySelector(".shop-title-text, .shop-name-text")); if (v) return v;
+      // 5. React shopName classes (cụ thể Giang Huy + wildcard)
+      v = txt(document.querySelector(
+        ".ShopHeader--shopName--zZ3913d, .shopName--mTDZGIPO, .shopName--cSjM9uKk, [class*='shopName--']"
+      )); if (v) return v;
+      // 6. React ShopHeader link/title (layout mới)
+      a = document.querySelector("[class*='ShopHeader--'] a[title], [class*='shopHeader--'] a[title]");
+      if (a) { var t = a.getAttribute("title") || a.textContent; if (t && t.trim()) return t.trim(); }
+      v = txt(document.querySelector("[class*='ShopHeader--shopName'], [class*='shopHeader--shopName']"));
+      if (v) return v;
+      // 7. slogo
+      v = txt(document.querySelector(".slogo-shopname")); if (v) return v;
+      return "";
+    },
+
+    // Seller id từ DOM — port getSellerId Giang Huy (để shopIdOnPlatform không bị "unknown").
+    sellerFromDom: function () {
+      // 1. microscope-data userid (đáng tin, có sẵn ở head)
+      var meta = document.querySelector('meta[name="microscope-data"]');
+      if (meta) {
+        var c = meta.getAttribute("content") || "";
+        var parts = c.split(";");
+        for (var i = 0; i < parts.length; i++) {
+          var kv = parts[i].split("=");
+          if (kv[0] && kv[0].trim() === "userid" && kv[1]) return kv[1].trim();
+        }
+      }
+      // 2. #J_Pine[data-sellerid]
+      var pine = document.querySelector("#J_Pine");
+      if (pine && pine.getAttribute("data-sellerid")) return pine.getAttribute("data-sellerid");
+      // 3. #J_listBuyerOnView[data-api] → seller_num_id
+      var bv = document.querySelector("#J_listBuyerOnView");
+      if (bv) {
+        var api = bv.getAttribute("data-api") || "";
+        var m = api.match(/seller_num_id=(\d+)/);
+        if (m) return m[1];
+      }
       return "";
     },
 
