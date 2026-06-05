@@ -9,8 +9,8 @@ namespace LG.Core.ApplicationServices.Finance.Interfaces
     {
         Task<List<CustomerAddressDto>> GetByCustomerIdAsync(Guid customerId);
         Task<CustomerAddressDto> CreateAsync(CreateCustomerAddressDto dto, Guid customerId);
-        Task<bool> UpdateAsync(Guid id, UpdateCustomerAddressDto dto);
-        Task<bool> DeleteAsync(Guid id);
-        Task<bool> SetDefaultAsync(Guid id, Guid customerId);
+        Task UpdateAsync(Guid id, UpdateCustomerAddressDto dto);
+        Task DeleteAsync(Guid id);
+        Task SetDefaultAsync(Guid id, Guid customerId);
     }
 }

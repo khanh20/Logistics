@@ -36,5 +36,9 @@
 		<text name="error_CoreUserIdNotFoundInToken">Không tìm thấy user ID trong token.</text>
 		<text name="error_CoreInvalidUserIdInToken">User ID trong token không hợp lệ.</text>
 
+		<!-- Customer Address -->
+		<text name="error_CoreCustomerAddressNotFound">Không tìm thấy địa chỉ.</text>
+		<text name="error_CoreCustomerAddressLimitExceeded">Bạn đã đạt số lượng địa chỉ tối đa cho phép.</text>
+
 	</texts>
 </localizationDictionary>

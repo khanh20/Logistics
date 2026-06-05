@@ -12,6 +12,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LG.ApplicationBase.Exceptions;
+using LG.Shared.Constants.ErrorCodes;
 
 namespace LG.Core.ApplicationServices.Finance.Services
 {
@@ -57,10 +59,11 @@ namespace LG.Core.ApplicationServices.Finance.Services
             return _mapper.Map<CustomerAddressDto>(address);
         }
 
-        public async Task<bool> UpdateAsync(Guid id, UpdateCustomerAddressDto dto)
+        public async Task UpdateAsync(Guid id, UpdateCustomerAddressDto dto)
         {
             var address = await _db.CustomerAddresses.FindAsync(id);
-            if (address == null || address.Deleted) return false;
+            if (address == null || address.Deleted) 
+                throw new CoreException(CoreErrorCode.CoreCustomerAddressNotFound);
 
             if (dto.IsDefault.HasValue && dto.IsDefault.Value)
             {
@@ -71,25 +74,25 @@ namespace LG.Core.ApplicationServices.Finance.Services
             address.ModifiedDate = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
-            return true;
         }
 
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task DeleteAsync(Guid id)
         {
             var address = await _db.CustomerAddresses.FindAsync(id);
-            if (address == null || address.Deleted) return false;
+            if (address == null || address.Deleted) 
+                throw new CoreException(CoreErrorCode.CoreCustomerAddressNotFound);
 
             address.Deleted = true;
             address.DeletedDate = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
-            return true;
         }
 
-        public async Task<bool> SetDefaultAsync(Guid id, Guid customerId)
+        public async Task SetDefaultAsync(Guid id, Guid customerId)
         {
             var address = await _db.CustomerAddresses.FindAsync(id);
-            if (address == null || address.CustomerId != customerId || address.Deleted) return false;
+            if (address == null || address.CustomerId != customerId || address.Deleted) 
+                throw new CoreException(CoreErrorCode.CoreCustomerAddressNotFound);
 
             await ClearDefaultAddressAsync(customerId);
 
@@ -97,7 +100,6 @@ namespace LG.Core.ApplicationServices.Finance.Services
             address.ModifiedDate = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
-            return true;
         }
 
         private async Task ClearDefaultAddressAsync(Guid customerId)

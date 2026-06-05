@@ -1,10 +1,5 @@
-import { useState, useEffect } from "react";
-import { 
-  Table, Card, Button, Modal, Form, 
-  InputNumber, DatePicker, Space, Tag, Typography, message, 
-  Popconfirm, Input, Row, Col 
-} from "antd";
-import { PlusOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import React, { useState, useEffect, useMemo } from "react";
+import { PiPlusBold, PiCheckCircleBold, PiXBold } from "react-icons/pi";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { 
   fetchReconciles, 
@@ -21,10 +16,27 @@ import {
 } from "~/lib/constants/finance";
 import { ReconcileStatusEnum } from "~/lib/enums/finance";
 import dayjs from "dayjs";
-import type { PlatformReconcileDto } from "~/lib/types/adminFinance";
 import { ReduxStatus } from "~/lib/feature/const";
 
-const { Title, Text } = Typography;
+function StatusBadge({ status }: { status: ReconcileStatusEnum }) {
+  const label = RECONCILE_STATUS_LABELS[status] || status;
+  const color = RECONCILE_STATUS_COLORS[status] || "default";
+
+  let classes = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ";
+  if (color === "success") {
+    classes += "bg-green-50 text-green-700 border-green-200/60";
+  } else if (color === "processing" || color === "blue" || color === "cyan") {
+    classes += "bg-blue-50 text-blue-700 border-blue-200/60";
+  } else if (color === "warning") {
+    classes += "bg-amber-50 text-amber-700 border-amber-200/60";
+  } else if (color === "error") {
+    classes += "bg-rose-50 text-rose-700 border-rose-200/60";
+  } else {
+    classes += "bg-gray-50 text-gray-700 border-gray-200/60";
+  }
+
+  return <span className={classes}>{label}</span>;
+}
 
 export default function ReconcilePage() {
   const dispatch = useAppDispatch();
@@ -33,259 +45,372 @@ export default function ReconcilePage() {
   const loading = status === ReduxStatus.LOADING;
 
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [form] = Form.useForm();
+
+  // Form State
+  const [reconcileDate, setReconcileDate] = useState("");
+  const [platformId, setPlatformId] = useState("");
+  const [platformAccountId, setPlatformAccountId] = useState("");
+  const [cnySpent, setCnySpent] = useState<number>(0);
+  const [vndEquivalent, setVndEquivalent] = useState<number>(0);
+  const [serviceFeeCollectedVnd, setServiceFeeCollectedVnd] = useState<number>(0);
+  const [alipayStatementUrl, setAlipayStatementUrl] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     dispatch(fetchReconciles());
   }, [dispatch]);
 
-  const handleCreate = async (values: any) => {
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reconcileDate || !platformId.trim() || !platformAccountId.trim()) {
+      setErrorMessage("Vui lòng điền đầy đủ các thông tin bắt buộc");
+      return;
+    }
     try {
+      setErrorMessage("");
+      setSuccessMessage("");
       const payload = {
-        reconcileDate: values.reconcileDate.toISOString(),
-        platformId: values.platformId,
-        platformAccountId: values.platformAccountId,
-        cnySpent: values.cnySpent,
-        vndEquivalent: values.vndEquivalent,
-        serviceFeeCollectedVnd: values.serviceFeeCollectedVnd,
-        alipayStatementUrl: values.alipayStatementUrl,
-        notes: values.notes,
+        reconcileDate: new Date(reconcileDate).toISOString(),
+        platformId: platformId.trim(),
+        platformAccountId: platformAccountId.trim(),
+        cnySpent,
+        vndEquivalent,
+        serviceFeeCollectedVnd,
+        alipayStatementUrl: alipayStatementUrl.trim(),
+        notes: notes.trim(),
       };
 
       await dispatch(createReconcile(payload)).unwrap();
-      message.success("Tạo đối soát thành công!");
+      setSuccessMessage("Tạo đối soát thành công!");
       setIsModalVisible(false);
-      form.resetFields();
+      // Reset form
+      setReconcileDate("");
+      setPlatformId("");
+      setPlatformAccountId("");
+      setCnySpent(0);
+      setVndEquivalent(0);
+      setServiceFeeCollectedVnd(0);
+      setAlipayStatementUrl("");
+      setNotes("");
       dispatch(fetchReconciles());
+      setTimeout(() => setSuccessMessage(""), 4000);
     } catch (error: any) {
-      message.error(error || "Có lỗi xảy ra khi tạo đối soát");
+      setErrorMessage(error || "Có lỗi xảy ra khi tạo đối soát");
     }
   };
 
   const handleConfirm = async (id: string) => {
+    if (!window.confirm("Xác nhận khớp đối soát này?")) return;
     try {
+      setErrorMessage("");
+      setSuccessMessage("");
       await dispatch(confirmReconcile(id)).unwrap();
-      message.success("Đã xác nhận khớp đối soát!");
+      setSuccessMessage("Đã xác nhận khớp đối soát!");
+      setTimeout(() => setSuccessMessage(""), 4000);
     } catch (error: any) {
-      message.error(error || "Lỗi khi xác nhận đối soát");
+      setErrorMessage(error || "Lỗi khi xác nhận đối soát");
     }
   };
 
-  const columns = [
-    {
-      title: "Ngày đối soát",
-      dataIndex: "reconcileDate",
-      key: "reconcileDate",
-      render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
-    },
-    {
-      title: "Nền tảng",
-      dataIndex: "platformId",
-      key: "platformId",
-      render: (text: string) => <Text strong>{text}</Text>,
-    },
-    {
-      title: "Tài khoản",
-      dataIndex: "platformAccountId",
-      key: "platformAccountId",
-    },
-    {
-      title: "Chi tiêu CNY",
-      dataIndex: "cnySpent",
-      key: "cnySpent",
-      render: (val: number) => (val != null ? val.toLocaleString() + " ¥" : "-"),
-    },
-    {
-      title: "Tương đương VND",
-      dataIndex: "vndEquivalent",
-      key: "vndEquivalent",
-      render: (val: number) => (val != null ? val.toLocaleString() + " ₫" : "-"),
-    },
-    {
-      title: "Phí dịch vụ VND",
-      dataIndex: "serviceFeeCollectedVnd",
-      key: "serviceFeeCollectedVnd",
-      render: (val: number) => (val != null ? val.toLocaleString() + " ₫" : "-"),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status: ReconcileStatusEnum) => (
-        <Tag color={RECONCILE_STATUS_COLORS[status] || "default"}>
-          {RECONCILE_STATUS_LABELS[status] || status}
-        </Tag>
-      ),
-    },
-    {
-      title: "Hành động",
-      key: "action",
-      render: (_: any, record: PlatformReconcileDto) => (
-        <Space>
-          {record.status === ReconcileStatusEnum.Pending && (
-            <Popconfirm
-              title="Xác nhận khớp đối soát này?"
-              onConfirm={() => handleConfirm(record.id)}
-              okText="Đồng ý"
-              cancelText="Hủy"
-            >
-              <Button type="primary" size="small" icon={<CheckCircleOutlined />}>
-                Xác nhận khớp
-              </Button>
-            </Popconfirm>
-          )}
-          {record.alipayStatementUrl && (
-            <Button 
-              type="link" 
-              size="small" 
-              href={record.alipayStatementUrl} 
-              target="_blank"
-            >
-              Xem sao kê
-            </Button>
-          )}
-        </Space>
-      ),
-    },
-  ];
+  const totalItems = reconciles.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+
+  const paginatedReconciles = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return reconciles.slice(start, start + pageSize);
+  }, [reconciles, currentPage, pageSize]);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <Card 
-        title={<Title level={4} className="!mb-0">Quản lý đối soát nền tảng</Title>}
-        extra={
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            onClick={() => setIsModalVisible(true)}
-          >
-            Tạo đối soát mới
-          </Button>
-        }
-        className="shadow-sm"
-      >
-        <Table
-          columns={columns}
-          dataSource={reconciles}
-          rowKey="id"
-          loading={loading}
-          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
-          size="middle"
-        />
-      </Card>
-
-      <Modal
-        title="Tạo đối soát mới"
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        width={700}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleCreate}
+    <div className="p-6 max-w-7xl mx-auto font-sans">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-serif font-bold text-black mb-1">Quản lý đối soát nền tảng</h1>
+          <p className="text-sm text-gray-500">Đồng bộ hóa dữ liệu tài chính với các bên nền tảng trung gian</p>
+        </div>
+        <button
+          onClick={() => setIsModalVisible(true)}
+          className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4.5 py-2.5 rounded transition-colors"
         >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="reconcileDate"
-                label="Ngày đối soát"
-                rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
-              >
-                <DatePicker className="w-full" format="DD/MM/YYYY" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="platformId"
-                label="Mã nền tảng"
-                rules={[{ required: true, message: "Vui lòng nhập nền tảng" }]}
-              >
-                <Input placeholder="VD: 1688, Taobao..." />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="platformAccountId"
-                label="Tài khoản nền tảng"
-                rules={[{ required: true, message: "Vui lòng nhập tài khoản" }]}
-              >
-                <Input placeholder="Tài khoản mua hàng..." />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="alipayStatementUrl"
-                label="Đường dẫn sao kê"
-              >
-                <Input placeholder="URL file sao kê..." />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="cnySpent"
-                label="Chi tiêu CNY"
-                rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
-              >
-                <InputNumber<number>
-                  className="w-full" 
-                  min={0} 
-                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value ? Number(value.replace(/\$\s?|(,*)/g, '')) : 0}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="vndEquivalent"
-                label="Tương đương VND"
-                rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
-              >
-                <InputNumber<number>
-                  className="w-full" 
-                  min={0}
-                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value ? Number(value.replace(/\$\s?|(,*)/g, '')) : 0}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="serviceFeeCollectedVnd"
-                label="Phí dịch vụ VND"
-                rules={[{ required: true, message: "Vui lòng nhập phí dịch vụ" }]}
-              >
-                <InputNumber<number>
-                  className="w-full" 
-                  min={0}
-                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value ? Number(value.replace(/\$\s?|(,*)/g, '')) : 0}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item
-                name="notes"
-                label="Ghi chú"
-              >
-                <Input.TextArea rows={3} placeholder="Ghi chú thêm nếu có..." />
-              </Form.Item>
-            </Col>
-          </Row>
+          <PiPlusBold />
+          Tạo đối soát mới
+        </button>
+      </div>
 
-          <Form.Item className="text-right mb-0 mt-4">
-            <Space>
-              <Button onClick={() => setIsModalVisible(false)}>
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                Tạo đối soát
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* Alert Messages */}
+      {successMessage && (
+        <div className="mb-6 p-4 text-sm rounded-lg bg-green-50 border border-green-200 text-green-700">
+          {successMessage}
+        </div>
+      )}
+      {errorMessage && (
+        <div className="mb-6 p-4 text-sm rounded-lg bg-rose-50 border border-rose-200 text-rose-700">
+          {errorMessage}
+        </div>
+      )}
+
+      {/* Reconcile Table Card */}
+      <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm overflow-hidden">
+        {loading && reconciles.length === 0 ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-[#EAEAEA]">
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Ngày đối soát</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Nền tảng</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Tài khoản</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Chi tiêu CNY</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Tương đương VND</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Phí dịch vụ VND</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Trạng thái</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6 text-right">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EAEAEA]">
+                  {paginatedReconciles.map((record) => (
+                    <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="py-3.5 px-6">
+                        {dayjs(record.reconcileDate).format("DD/MM/YYYY")}
+                      </td>
+                      <td className="py-3.5 px-6 font-semibold text-black">
+                        {record.platformId}
+                      </td>
+                      <td className="py-3.5 px-6">
+                        {record.platformAccountId}
+                      </td>
+                      <td className="py-3.5 px-6 font-mono">
+                        {record.cnySpent != null ? `${record.cnySpent.toLocaleString()} ¥` : "-"}
+                      </td>
+                      <td className="py-3.5 px-6 font-mono text-black font-medium">
+                        {record.vndEquivalent != null ? `${record.vndEquivalent.toLocaleString()} ₫` : "-"}
+                      </td>
+                      <td className="py-3.5 px-6 font-mono text-gray-500">
+                        {record.serviceFeeCollectedVnd != null ? `${record.serviceFeeCollectedVnd.toLocaleString()} ₫` : "-"}
+                      </td>
+                      <td className="py-3.5 px-6">
+                        <StatusBadge status={record.status} />
+                      </td>
+                      <td className="py-3.5 px-6 text-right">
+                        <div className="inline-flex gap-3 justify-end items-center">
+                          {record.status === ReconcileStatusEnum.Pending && (
+                            <button
+                              onClick={() => handleConfirm(record.id)}
+                              className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded transition-colors"
+                            >
+                              <PiCheckCircleBold />
+                              Khớp
+                            </button>
+                          )}
+                          {record.alipayStatementUrl && (
+                            <a
+                              href={record.alipayStatementUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-blue-600 hover:underline font-semibold"
+                            >
+                              Xem sao kê
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {reconciles.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="text-center py-12 text-gray-400">
+                        Không có dữ liệu đối soát.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Custom Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
+                <span className="text-gray-500 font-medium">
+                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} đối soát
+                </span>
+                <div className="inline-flex gap-2">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => prev - 1)}
+                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                  >
+                    Trước
+                  </button>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Modal Tạo đối soát */}
+      {isModalVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-2xl w-full p-6 shadow-2xl flex flex-col font-sans">
+            <div className="flex items-center justify-between pb-3 border-b border-[#EAEAEA] mb-5">
+              <h3 className="text-base font-serif font-bold text-black">Tạo đối soát mới</h3>
+              <button
+                onClick={() => setIsModalVisible(false)}
+                className="text-gray-400 hover:text-black transition-colors"
+              >
+                <PiXBold className="text-lg" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Ngày đối soát *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={reconcileDate}
+                    onChange={(e) => setReconcileDate(e.target.value)}
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Mã nền tảng *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={platformId}
+                    onChange={(e) => setPlatformId(e.target.value)}
+                    placeholder="VD: 1688, Taobao..."
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Tài khoản nền tảng *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={platformAccountId}
+                    onChange={(e) => setPlatformAccountId(e.target.value)}
+                    placeholder="Tài khoản mua hàng..."
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Đường dẫn sao kê
+                  </label>
+                  <input
+                    type="text"
+                    value={alipayStatementUrl}
+                    onChange={(e) => setAlipayStatementUrl(e.target.value)}
+                    placeholder="URL file sao kê..."
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Chi tiêu CNY *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={cnySpent}
+                    onChange={(e) => setCnySpent(Number(e.target.value))}
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Tương đương VND *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={vndEquivalent}
+                    onChange={(e) => setVndEquivalent(Number(e.target.value))}
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Phí dịch vụ VND *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={serviceFeeCollectedVnd}
+                    onChange={(e) => setServiceFeeCollectedVnd(Number(e.target.value))}
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                  Ghi chú
+                </label>
+                <textarea
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Ghi chú thêm nếu có..."
+                  className="w-full rounded border border-[#EAEAEA] p-3 text-sm text-black focus:border-black focus:outline-none"
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
+                <button
+                  type="button"
+                  onClick={() => setIsModalVisible(false)}
+                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                >
+                  {loading ? "Đang xử lý..." : "Tạo đối soát"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,8 +1,5 @@
-import React, { useEffect, useState } from "react";
-import {
-  Card, Table, Typography, Button, Modal, Form, Input, Space, message, Popconfirm, InputNumber, Switch
-} from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined } from "@ant-design/icons";
+import React, { useEffect, useState, useMemo } from "react";
+import { PiPlusBold, PiPencilSimpleBold, PiTrashBold, PiStarBold, PiXBold } from "react-icons/pi";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import {
   fetchVipTiers,
@@ -12,12 +9,9 @@ import {
 } from "~/lib/feature/adminFinance/adminFinanceThunk";
 import { selectVipTiers, selectAdminFinanceStatus } from "~/lib/feature/adminFinance/adminFinanceSelector";
 import { ReduxStatus } from "~/lib/feature/const";
-import { VIP_TIER_RULES } from "~/lib/validations/finance";
 import type { VipTierDto, CreateVipTierDto } from "~/lib/types/adminFinance";
 
-const { Title, Text } = Typography;
-
-const AdminVipTiersPage: React.FC = () => {
+export default function AdminVipTiersPage() {
   const dispatch = useAppDispatch();
   const vipTiers = useAppSelector(selectVipTiers);
   const status = useAppSelector(selectAdminFinanceStatus);
@@ -25,7 +19,24 @@ const AdminVipTiersPage: React.FC = () => {
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingTier, setEditingTier] = useState<VipTierDto | null>(null);
-  const [form] = Form.useForm();
+
+  // Form State
+  const [name, setName] = useState("");
+  const [level, setLevel] = useState(0);
+  const [minSpendVnd, setMinSpendVnd] = useState(0);
+  const [colorHex, setColorHex] = useState("");
+  const [serviceFeeDiscountPct, setServiceFeeDiscountPct] = useState(0);
+  const [cashbackPct, setCashbackPct] = useState(0);
+  const [depositPctOverride, setDepositPctOverride] = useState<number | undefined>(undefined);
+  const [freeInspection, setFreeInspection] = useState(false);
+  const [prioritySupport, setPrioritySupport] = useState(false);
+  const [freeStorageDays, setFreeStorageDays] = useState(0);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     dispatch(fetchVipTiers());
@@ -33,199 +44,420 @@ const AdminVipTiersPage: React.FC = () => {
 
   const handleCreate = () => {
     setEditingTier(null);
-    form.resetFields();
+    setName("");
+    setLevel(0);
+    setMinSpendVnd(0);
+    setColorHex("");
+    setServiceFeeDiscountPct(0);
+    setCashbackPct(0);
+    setDepositPctOverride(undefined);
+    setFreeInspection(false);
+    setPrioritySupport(false);
+    setFreeStorageDays(0);
+    setErrorMessage("");
+    setSuccessMessage("");
     setIsModalVisible(true);
   };
 
   const handleEdit = (record: VipTierDto) => {
     setEditingTier(record);
-    form.setFieldsValue(record);
+    setName(record.name);
+    setLevel(record.level);
+    setMinSpendVnd(record.minSpendVnd);
+    setColorHex(record.colorHex || "");
+    setServiceFeeDiscountPct(record.serviceFeeDiscountPct);
+    setCashbackPct(record.cashbackPct);
+    setDepositPctOverride(record.depositPctOverride ?? undefined);
+    setFreeInspection(record.freeInspection);
+    setPrioritySupport(record.prioritySupport);
+    setFreeStorageDays(record.freeStorageDays);
+    setErrorMessage("");
+    setSuccessMessage("");
     setIsModalVisible(true);
   };
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm("Xác nhận xóa hạng VIP này?")) return;
     try {
+      setErrorMessage("");
+      setSuccessMessage("");
       await dispatch(deleteVipTier(id)).unwrap();
-      message.success("Xóa hạng VIP thành công!");
+      setSuccessMessage("Xóa hạng VIP thành công!");
+      dispatch(fetchVipTiers());
+      setTimeout(() => setSuccessMessage(""), 4000);
     } catch (err: any) {
-      message.error(err || "Không thể xóa hạng VIP");
+      setErrorMessage(err || "Không thể xóa hạng VIP");
     }
   };
 
-  const handleModalSubmit = async (values: CreateVipTierDto) => {
+  const handleModalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setErrorMessage("Vui lòng nhập tên hạng VIP");
+      return;
+    }
     try {
+      setErrorMessage("");
+      setSuccessMessage("");
+      const payload: CreateVipTierDto = {
+        name: name.trim(),
+        level,
+        minSpendVnd,
+        colorHex: colorHex.trim() ? colorHex.trim() : undefined,
+        serviceFeeDiscountPct,
+        cashbackPct,
+        depositPctOverride: depositPctOverride !== undefined ? depositPctOverride : undefined,
+        freeInspection,
+        prioritySupport,
+        freeStorageDays,
+      };
+
       if (editingTier) {
-        await dispatch(updateVipTier({ id: editingTier.id, data: values })).unwrap();
-        message.success("Cập nhật hạng VIP thành công!");
+        await dispatch(updateVipTier({ id: editingTier.id, data: payload })).unwrap();
+        setSuccessMessage("Cập nhật hạng VIP thành công!");
       } else {
-        await dispatch(createVipTier(values)).unwrap();
-        message.success("Tạo hạng VIP mới thành công!");
+        await dispatch(createVipTier(payload)).unwrap();
+        setSuccessMessage("Tạo hạng VIP mới thành công!");
       }
       setIsModalVisible(false);
+      dispatch(fetchVipTiers());
+      setTimeout(() => setSuccessMessage(""), 4000);
     } catch (err: any) {
-      message.error(err || "Có lỗi xảy ra");
+      setErrorMessage(err || "Có lỗi xảy ra");
     }
   };
 
-  const columns = [
-    {
-      title: "Hạng VIP",
-      dataIndex: "name",
-      key: "name",
-      render: (name: string, record: VipTierDto) => (
-        <Space>
-          {record.colorHex && (
-            <div
-              className="w-4 h-4 rounded-full border border-gray-200"
-              style={{ backgroundColor: record.colorHex.startsWith('#') ? record.colorHex : `#${record.colorHex}` }}
-            />
-          )}
-          <Text strong>{name}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: "Cấp độ",
-      dataIndex: "level",
-      key: "level",
-    },
-    {
-      title: "Chi tiêu tối thiểu (VND)",
-      dataIndex: "minSpendVnd",
-      key: "minSpendVnd",
-      render: (val: number) => val.toLocaleString() + "₫",
-    },
-    {
-      title: "Giảm phí DV (%)",
-      dataIndex: "serviceFeeDiscountPct",
-      key: "serviceFeeDiscountPct",
-      render: (val: number) => `${val}%`,
-    },
-    {
-      title: "Ưu đãi",
-      key: "perks",
-      render: (_: any, record: VipTierDto) => (
-        <Space size="small" direction="vertical">
-          {record.freeInspection && <Text type="success" className="text-xs">• Miễn phí kiểm đếm</Text>}
-          {record.prioritySupport && <Text type="success" className="text-xs">• CSKH Ưu tiên</Text>}
-          {record.freeStorageDays > 0 && <Text type="success" className="text-xs">• Lưu kho miễn phí {record.freeStorageDays} ngày</Text>}
-        </Space>
-      ),
-    },
-    {
-      title: "Hoàn tiền (%)",
-      dataIndex: "cashbackPct",
-      key: "cashbackPct",
-      render: (val: number) => `${val}%`,
-    },
-    {
-      title: "Thao tác",
-      key: "action",
-      render: (_: any, record: VipTierDto) => (
-        <Space>
-          <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm
-            title="Xóa hạng VIP này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+  const totalItems = vipTiers.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+
+  const paginatedTiers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return vipTiers.slice(start, start + pageSize);
+  }, [vipTiers, currentPage, pageSize]);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <Space className="mb-6 w-full justify-between">
-        <Title level={2} className="!mb-0">
-          <StarOutlined className="mr-2 text-yellow-500" />
-          Quản lý Hạng VIP
-        </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          Thêm hạng VIP
-        </Button>
-      </Space>
-
-      <Card className="shadow-sm">
-        <Table
-          dataSource={vipTiers}
-          columns={columns}
-          rowKey="id"
-          size="middle"
-          loading={loading}
-          pagination={{ defaultPageSize: 10, showSizeChanger: true }}
-        />
-      </Card>
-
-      <Modal
-        title={editingTier ? "Chỉnh sửa hạng VIP" : "Thêm hạng VIP mới"}
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        onOk={() => form.submit()}
-        confirmLoading={loading}
-        width={600}
-      >
-        <Form form={form} layout="vertical" onFinish={handleModalSubmit} className="mt-4">
-          <Space size="large" className="w-full flex" align="start">
-            <Form.Item name="name" label="Tên hạng VIP" rules={VIP_TIER_RULES.name} className="flex-1">
-              <Input placeholder="VD: Bạc, Vàng, Kim Cương" />
-            </Form.Item>
-            <Form.Item name="level" label="Cấp độ (1, 2, 3...)" rules={VIP_TIER_RULES.level}>
-              <InputNumber min={0} className="w-full" />
-            </Form.Item>
-          </Space>
-
-          <Space size="large" className="w-full flex" align="start">
-            <Form.Item name="minSpendVnd" label="Mức chi tiêu tối thiểu (VND)" rules={VIP_TIER_RULES.minSpendVnd} className="flex-1">
-              <InputNumber
-                min={0}
-                className="w-full"
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                parser={(value) => value?.replace(/\$\s?|(,*)/g, "") as any}
-                addonAfter="₫"
-              />
-            </Form.Item>
-            <Form.Item name="colorHex" label="Mã màu (Hex)" rules={VIP_TIER_RULES.colorHex}>
-              <Input placeholder="#FFD700" />
-            </Form.Item>
-          </Space>
-
-          <div className="bg-gray-50 p-4 rounded-md mb-4 border border-gray-100">
-            <Text strong className="block mb-4">Các ưu đãi</Text>
-
-            <Space size="large" className="w-full flex" align="start">
-              <Form.Item name="serviceFeeDiscountPct" label="Giảm phí dịch vụ (%)" className="flex-1">
-                <InputNumber min={0} max={100} className="w-full" addonAfter="%" />
-              </Form.Item>
-              <Form.Item name="cashbackPct" label="Tỷ lệ hoàn tiền (%)" className="flex-1">
-                <InputNumber min={0} max={100} className="w-full" addonAfter="%" />
-              </Form.Item>
-            </Space>
-
-            <Form.Item name="depositPctOverride" label="Tỷ lệ đặt cọc riêng (%)">
-              <InputNumber min={0} max={100} className="w-full" addonAfter="%" placeholder="Để trống nếu theo mặc định" />
-            </Form.Item>
-
-            <Space size="large" className="w-full flex flex-wrap" align="start">
-              <Form.Item name="freeInspection" valuePropName="checked" label="Miễn phí kiểm đếm">
-                <Switch />
-              </Form.Item>
-              <Form.Item name="prioritySupport" valuePropName="checked" label="CSKH Ưu tiên">
-                <Switch />
-              </Form.Item>
-              <Form.Item name="freeStorageDays" label="Lưu kho miễn phí (ngày)">
-                <InputNumber min={0} />
-              </Form.Item>
-            </Space>
+    <div className="p-6 max-w-7xl mx-auto font-sans">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex items-center gap-2.5">
+          <PiStarBold className="text-2xl text-yellow-500 animate-none" />
+          <div>
+            <h1 className="text-2xl font-serif font-bold text-black mb-1">Quản lý Hạng VIP</h1>
+            <p className="text-sm text-gray-500">Cấu hình cấp độ, hạn mức chi tiêu và đặc quyền của khách hàng</p>
           </div>
-        </Form>
-      </Modal>
+        </div>
+        <button
+          onClick={handleCreate}
+          className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4.5 py-2.5 rounded transition-colors"
+        >
+          <PiPlusBold />
+          Thêm hạng VIP
+        </button>
+      </div>
+
+      {/* Alert Messages */}
+      {successMessage && (
+        <div className="mb-6 p-4 text-sm rounded-lg bg-green-50 border border-green-200 text-green-700">
+          {successMessage}
+        </div>
+      )}
+      {errorMessage && (
+        <div className="mb-6 p-4 text-sm rounded-lg bg-rose-50 border border-rose-200 text-rose-700">
+          {errorMessage}
+        </div>
+      )}
+
+      {/* VIP Tiers Table Card */}
+      <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm overflow-hidden">
+        {loading && vipTiers.length === 0 ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-[#EAEAEA]">
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Hạng VIP</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Cấp độ</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Chi tiêu tối thiểu (VND)</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Giảm phí DV (%)</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Ưu đãi đặc quyền</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Hoàn tiền (%)</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6 text-center">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EAEAEA]">
+                  {paginatedTiers.map((record) => (
+                    <tr key={record.id} className="hover:bg-gray-50/50 transition-colors text-black">
+                      <td className="py-3.5 px-6">
+                        <div className="flex items-center gap-2">
+                          {record.colorHex && (
+                            <div
+                              className="w-3.5 h-3.5 rounded-full border border-gray-200"
+                              style={{ backgroundColor: record.colorHex.startsWith('#') ? record.colorHex : `#${record.colorHex}` }}
+                            />
+                          )}
+                          <span className="font-semibold">{record.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-6 font-semibold">
+                        VIP {record.level}
+                      </td>
+                      <td className="py-3.5 px-6 font-mono font-medium">
+                        {record.minSpendVnd.toLocaleString()} ₫
+                      </td>
+                      <td className="py-3.5 px-6 font-mono font-medium text-green-700">
+                        {record.serviceFeeDiscountPct}%
+                      </td>
+                      <td className="py-3.5 px-6">
+                        <div className="flex flex-col gap-0.5 text-xs text-green-700 font-medium">
+                          {record.freeInspection && <span>• Miễn phí kiểm đếm</span>}
+                          {record.prioritySupport && <span>• CSKH Ưu tiên</span>}
+                          {record.freeStorageDays > 0 && <span>• Lưu kho miễn phí {record.freeStorageDays} ngày</span>}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-6 font-mono">
+                        {record.cashbackPct}%
+                      </td>
+                      <td className="py-3.5 px-6 text-center">
+                        <div className="inline-flex gap-2.5 justify-center">
+                          <button
+                            onClick={() => handleEdit(record)}
+                            className="p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded transition-colors"
+                            title="Sửa"
+                          >
+                            <PiPencilSimpleBold className="text-sm" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(record.id)}
+                            className="p-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                            title="Xóa"
+                          >
+                            <PiTrashBold className="text-sm" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {vipTiers.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="text-center py-12 text-gray-400">
+                        Chưa cấu hình hạng VIP nào.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Custom Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
+                <span className="text-gray-500 font-medium">
+                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} thứ hạng
+                </span>
+                <div className="inline-flex gap-2">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => prev - 1)}
+                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                  >
+                    Trước
+                  </button>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Modal Chỉnh Sửa / Thêm Mới Hạng VIP */}
+      {isModalVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-xl w-full p-6 shadow-2xl flex flex-col font-sans my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-[#EAEAEA] mb-5">
+              <h3 className="text-base font-serif font-bold text-black">
+                {editingTier ? "Chỉnh sửa hạng VIP" : "Thêm hạng VIP mới"}
+              </h3>
+              <button
+                onClick={() => setIsModalVisible(false)}
+                className="text-gray-400 hover:text-black transition-colors"
+              >
+                <PiXBold className="text-lg" />
+              </button>
+            </div>
+
+            <form onSubmit={handleModalSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Tên hạng VIP *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="VD: Bạc, Vàng, Kim Cương..."
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Cấp độ (1, 2, 3...) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={level}
+                    onChange={(e) => setLevel(Number(e.target.value))}
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Chi tiêu tối thiểu (VND) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={minSpendVnd}
+                    onChange={(e) => setMinSpendVnd(Number(e.target.value))}
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Mã màu (Hex)
+                  </label>
+                  <input
+                    type="text"
+                    value={colorHex}
+                    onChange={(e) => setColorHex(e.target.value)}
+                    placeholder="VD: #FFD700"
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded border border-[#EAEAEA] space-y-4">
+                <span className="block text-xs font-mono uppercase tracking-wider text-gray-500 border-b border-[#EAEAEA] pb-1.5">
+                  Đặc quyền & Ưu đãi
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                      Giảm phí dịch vụ (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={serviceFeeDiscountPct}
+                      onChange={(e) => setServiceFeeDiscountPct(Number(e.target.value))}
+                      className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                      Tỷ lệ hoàn tiền (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={cashbackPct}
+                      onChange={(e) => setCashbackPct(Number(e.target.value))}
+                      className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                    Tỷ lệ đặt cọc riêng (%)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={depositPctOverride ?? ""}
+                    onChange={(e) => setDepositPctOverride(e.target.value ? Number(e.target.value) : undefined)}
+                    placeholder="Để trống nếu theo mặc định"
+                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-6 items-center">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-black">
+                    <input
+                      type="checkbox"
+                      checked={freeInspection}
+                      onChange={(e) => setFreeInspection(e.target.checked)}
+                      className="rounded border-[#EAEAEA] text-black focus:ring-black h-4 w-4"
+                    />
+                    <span>Miễn phí kiểm đếm</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-black">
+                    <input
+                      type="checkbox"
+                      checked={prioritySupport}
+                      onChange={(e) => setPrioritySupport(e.target.checked)}
+                      className="rounded border-[#EAEAEA] text-black focus:ring-black h-4 w-4"
+                    />
+                    <span>CSKH Ưu tiên</span>
+                  </label>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-black">Lưu kho miễn phí:</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={freeStorageDays}
+                      onChange={(e) => setFreeStorageDays(Number(e.target.value))}
+                      className="w-16 rounded border border-[#EAEAEA] px-2 py-1 text-sm text-black focus:border-black focus:outline-none"
+                    />
+                    <span className="text-xs text-gray-500">ngày</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
+                <button
+                  type="button"
+                  onClick={() => setIsModalVisible(false)}
+                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                >
+                  {editingTier ? "Lưu Thay Đổi" : "Tạo Mới"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default AdminVipTiersPage;
+}
