@@ -80,5 +80,16 @@ namespace LG.Core.API.Controllers.Finance
             var results = await _transactionService.GetMyWithdrawsAsync(userId);
             return Ok(results);
         }
+
+        /// <summary>
+        /// Lấy lịch sử giao dịch ví của tôi
+        /// </summary>
+        [HttpGet("my-history")]
+        public async Task<IActionResult> GetMyHistory()
+        {
+            var userId = CurrentUserId;
+            var results = await _transactionService.GetMyTransactionsAsync(userId);
+            return Ok(results);
+        }
     }
 }

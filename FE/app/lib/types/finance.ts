@@ -68,3 +68,17 @@ export interface PaymentLockDto {
 export interface ReleasePaymentLockDto {
   releaseReason: ReleaseReasonEnum;
 }
+
+export interface WalletTransactionDto {
+  id: string;
+  walletId: string;
+  typeId: string;
+  typeName?: string;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  referenceType: string;
+  referenceId: string;
+  note?: string;
+  createdDate?: string;
+}

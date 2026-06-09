@@ -12,8 +12,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using LG.ApplicationBase.Exceptions;
 using LG.Shared.Constants.ErrorCodes;
+using LG.Core.Domain.Exceptions;
 
 namespace LG.Core.ApplicationServices.Finance.Services
 {

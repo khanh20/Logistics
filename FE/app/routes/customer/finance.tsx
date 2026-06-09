@@ -1,6 +1,6 @@
-﻿import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router";
-import { message } from "antd";
+import { toast } from "react-toastify";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import {
   fetchMyWallet,
@@ -117,10 +117,10 @@ const FinancePage: React.FC = () => {
       if (res && res.payUrl) {
         window.open(res.payUrl, "_blank");
       } else {
-        message.error("Không nhận được URL thanh toán");
+        toast.error("Không nhận được URL thanh toán");
       }
     } catch (err: any) {
-      message.error(err || "Lỗi tạo thanh toán ZaloPay");
+      toast.error(err || "Lỗi tạo thanh toán ZaloPay");
     }
   };
 
@@ -147,11 +147,11 @@ const FinancePage: React.FC = () => {
           bankAccountId: topupSystemBankId
         })
       ).unwrap();
-      message.success("Yêu cầu nạp tiền đã được gửi!");
+      toast.success("Yêu cầu nạp tiền đã được gửi!");
       setTopupAmount("");
       setTopupSystemBankId("");
     } catch (err: any) {
-      message.error(err || "Không thể gửi yêu cầu nạp tiền");
+      toast.error(err || "Không thể gửi yêu cầu nạp tiền");
     }
   };
 
@@ -182,11 +182,11 @@ const FinancePage: React.FC = () => {
           bankAccountId: withdrawUserBankId
         })
       ).unwrap();
-      message.success("Yêu cầu rút tiền đã được gửi!");
+      toast.success("Yêu cầu rút tiền đã được gửi!");
       setWithdrawAmount("");
       setWithdrawUserBankId("");
     } catch (err: any) {
-      message.error(err || "Không thể gửi yêu cầu rút tiền");
+      toast.error(err || "Không thể gửi yêu cầu rút tiền");
     }
   };
 
@@ -232,6 +232,8 @@ const FinancePage: React.FC = () => {
     withdrawPage * ITEMS_PER_PAGE
   );
   const totalWithdrawPages = Math.ceil(withdraws.length / ITEMS_PER_PAGE);
+
+
 
   return (
     <div
@@ -586,31 +588,39 @@ const FinancePage: React.FC = () => {
           >
             {/* Header and inner Sub-tabs */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <h2 className="text-base font-semibold text-black flex items-center gap-2">
-                <PiClockBold className="text-lg text-gray-400" />
-                Lịch sử giao dịch
-              </h2>
-
-              <div className="flex border-b border-gray-100 text-sm font-medium">
-                <button
-                  onClick={() => setActiveHistoryTab("topup")}
-                  className={`pb-2 px-3 border-b-2 transition-all ${activeHistoryTab === "topup"
-                      ? "border-black text-black font-semibold"
-                      : "border-transparent text-gray-400 hover:text-black"
-                    }`}
+              <div className="flex items-center justify-between w-full">
+                <h2 className="text-base font-semibold text-black flex items-center gap-2">
+                  <PiClockBold className="text-lg text-gray-400" />
+                  Lịch sử giao dịch
+                </h2>
+                <Link
+                  to="/finance/history"
+                  className="inline-flex items-center text-xs font-mono uppercase tracking-widest text-neutral-500 hover:text-neutral-900 border-b border-transparent hover:border-neutral-950 pb-0.5 transition-all"
                 >
-                  Yêu cầu Nạp
-                </button>
-                <button
-                  onClick={() => setActiveHistoryTab("withdraw")}
-                  className={`pb-2 px-3 border-b-2 transition-all ${activeHistoryTab === "withdraw"
-                      ? "border-black text-black font-semibold"
-                      : "border-transparent text-gray-400 hover:text-black"
-                    }`}
-                >
-                  Yêu cầu Rút
-                </button>
+                  Biến động số dư →
+                </Link>
               </div>
+            </div>
+
+            <div className="flex border-b border-gray-100 text-sm font-medium mb-6">
+              <button
+                onClick={() => setActiveHistoryTab("topup")}
+                className={`pb-2 px-3 border-b-2 transition-all ${activeHistoryTab === "topup"
+                    ? "border-black text-black font-semibold"
+                    : "border-transparent text-gray-400 hover:text-black"
+                  }`}
+              >
+                Yêu cầu Nạp
+              </button>
+              <button
+                onClick={() => setActiveHistoryTab("withdraw")}
+                className={`pb-2 px-3 border-b-2 transition-all ${activeHistoryTab === "withdraw"
+                    ? "border-black text-black font-semibold"
+                    : "border-transparent text-gray-400 hover:text-black"
+                  }`}
+              >
+                Yêu cầu Rút
+              </button>
             </div>
 
             {/* TAB HISTORY CONTENT: TOPUP */}

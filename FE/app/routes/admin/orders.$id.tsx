@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 import { manageOrdersApi, staffAssignmentsApi } from "~/lib/api/orders";
+import { PiWarningCircleBold } from "react-icons/pi";
 import { StatusBadge } from "~/components/shared/StatusBadge";
 import { OrderTimeline } from "~/components/customer/OrderTimeline";
 import { SlaCountdown } from "~/components/admin/SlaCountdown";
@@ -53,8 +55,6 @@ export default function AdminOrderDetailPage({
   const [order, setOrder] = useState(loaderData.order);
   const [assignment, setAssignment] = useState(loaderData.assignment);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   // Form states
   const [assignStaffId, setAssignStaffId] = useState("");
@@ -70,19 +70,19 @@ export default function AdminOrderDetailPage({
   const [weightKg, setWeightKg] = useState("");
   const [volumeCm3, setVolumeCm3] = useState("");
   const [storageDays, setStorageDays] = useState("0");
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
 
   const actions = availableActions(order.status);
 
   async function callAction<T>(fn: () => Promise<{ data: T }>, successMsg: string) {
     setLoading(true);
-    setError(null);
-    setSuccess(null);
     try {
       const res = await fn();
       setOrder(res.data as OrderDetailResponse);
-      setSuccess(successMsg);
+      toast.success(successMsg);
     } catch (err: unknown) {
-      setError((err as { message?: string })?.message ?? t("common.error"));
+      const errMsg = (err as { message?: string })?.message ?? t("common.error");
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -118,18 +118,6 @@ export default function AdminOrderDetailPage({
           )}
         </div>
       </div>
-
-      {error && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
-          ✓ {success}
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Left — Order details */}
         <div className="lg:col-span-2 space-y-5">
@@ -586,17 +574,17 @@ export default function AdminOrderDetailPage({
                 onClick={async () => {
                   if (!reassignStaffId.trim()) return;
                   setLoading(true);
-                  setError(null);
                   try {
                     const res = await staffAssignmentsApi.reassign(
                       order.id,
                       reassignStaffId.trim()
                     );
                     setAssignment(res.data as StaffAssignmentDto);
-                    setSuccess("Đã chuyển nhân viên thành công.");
+                    toast.success("Đã chuyển nhân viên thành công.");
                     setReassignStaffId("");
                   } catch (err: unknown) {
-                    setError((err as { message?: string })?.message ?? t("common.error"));
+                    const errMsg = (err as { message?: string })?.message ?? t("common.error");
+                    toast.error(errMsg);
                   } finally {
                     setLoading(false);
                   }
@@ -622,13 +610,7 @@ export default function AdminOrderDetailPage({
                 size="sm"
                 className="w-full mt-2"
                 loading={loading}
-                onClick={() => {
-                  if (!confirm(t("order.cancel_staff_confirm"))) return;
-                  callAction(
-                    () => manageOrdersApi.cancelByStaff(order.id, { reason: cancelReason.trim() }),
-                    t("order.cancel_success")
-                  );
-                }}
+                onClick={() => setIsCancelConfirmOpen(true)}
                 disabled={!cancelReason.trim()}
               >
                 {t("order.cancel_btn")}
@@ -637,6 +619,43 @@ export default function AdminOrderDetailPage({
           )}
         </div>
       </div>
+      {isCancelConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-sm w-full p-6 shadow-2xl flex flex-col font-sans">
+            <div className="space-y-3">
+              <h4 className="text-base font-serif font-bold text-red-600 flex items-center gap-1.5">
+                <PiWarningCircleBold className="text-red-600 text-lg" />
+                Xác nhận hủy đơn hàng
+              </h4>
+              <p className="text-xs text-gray-600 leading-normal">
+                {t("order.cancel_staff_confirm", "Bạn có chắc chắn muốn hủy đơn hàng này không? Lý do hủy sẽ được gửi cho khách hàng.")}
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA] mt-5">
+              <button
+                type="button"
+                onClick={() => setIsCancelConfirmOpen(false)}
+                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
+              >
+                Quay lại
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCancelConfirmOpen(false);
+                  callAction(
+                    () => manageOrdersApi.cancelByStaff(order.id, { reason: cancelReason.trim() }),
+                    t("order.cancel_success")
+                  );
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors"
+              >
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

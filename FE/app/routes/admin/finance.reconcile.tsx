@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { PiPlusBold, PiCheckCircleBold, PiXBold } from "react-icons/pi";
+import { toast } from "react-toastify";
+import { PiPlusBold, PiCheckCircleBold, PiXBold, PiWarningCircleBold } from "react-icons/pi";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { 
   fetchReconciles, 
@@ -45,6 +46,7 @@ export default function ReconcilePage() {
   const loading = status === ReduxStatus.LOADING;
 
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [confirmingReconcileId, setConfirmingReconcileId] = useState<string | null>(null);
 
   // Form State
   const [reconcileDate, setReconcileDate] = useState("");
@@ -59,9 +61,6 @@ export default function ReconcilePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
   useEffect(() => {
     dispatch(fetchReconciles());
   }, [dispatch]);
@@ -69,12 +68,10 @@ export default function ReconcilePage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reconcileDate || !platformId.trim() || !platformAccountId.trim()) {
-      setErrorMessage("Vui lòng điền đầy đủ các thông tin bắt buộc");
+      toast.error("Vui lòng điền đầy đủ các thông tin bắt buộc");
       return;
     }
     try {
-      setErrorMessage("");
-      setSuccessMessage("");
       const payload = {
         reconcileDate: new Date(reconcileDate).toISOString(),
         platformId: platformId.trim(),
@@ -87,7 +84,7 @@ export default function ReconcilePage() {
       };
 
       await dispatch(createReconcile(payload)).unwrap();
-      setSuccessMessage("Tạo đối soát thành công!");
+      toast.success("Tạo đối soát thành công!");
       setIsModalVisible(false);
       // Reset form
       setReconcileDate("");
@@ -99,23 +96,23 @@ export default function ReconcilePage() {
       setAlipayStatementUrl("");
       setNotes("");
       dispatch(fetchReconciles());
-      setTimeout(() => setSuccessMessage(""), 4000);
     } catch (error: any) {
-      setErrorMessage(error || "Có lỗi xảy ra khi tạo đối soát");
+      toast.error(error || "Có lỗi xảy ra khi tạo đối soát");
     }
   };
 
-  const handleConfirm = async (id: string) => {
-    if (!window.confirm("Xác nhận khớp đối soát này?")) return;
+  const executeConfirmReconcile = async (id: string) => {
+    setConfirmingReconcileId(null);
     try {
-      setErrorMessage("");
-      setSuccessMessage("");
       await dispatch(confirmReconcile(id)).unwrap();
-      setSuccessMessage("Đã xác nhận khớp đối soát!");
-      setTimeout(() => setSuccessMessage(""), 4000);
+      toast.success("Đã xác nhận khớp đối soát!");
     } catch (error: any) {
-      setErrorMessage(error || "Lỗi khi xác nhận đối soát");
+      toast.error(error || "Lỗi khi xác nhận đối soát");
     }
+  };
+
+  const handleConfirm = (id: string) => {
+    setConfirmingReconcileId(id);
   };
 
   const totalItems = reconciles.length;
@@ -143,17 +140,6 @@ export default function ReconcilePage() {
         </button>
       </div>
 
-      {/* Alert Messages */}
-      {successMessage && (
-        <div className="mb-6 p-4 text-sm rounded-lg bg-green-50 border border-green-200 text-green-700">
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-6 p-4 text-sm rounded-lg bg-rose-50 border border-rose-200 text-rose-700">
-          {errorMessage}
-        </div>
-      )}
 
       {/* Reconcile Table Card */}
       <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm overflow-hidden">
@@ -408,6 +394,39 @@ export default function ReconcilePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONFIRM RECONCILE */}
+      {confirmingReconcileId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-sm w-full p-6 shadow-2xl flex flex-col font-sans">
+            <div className="space-y-3">
+              <h4 className="text-base font-serif font-bold text-black flex items-center gap-1.5">
+                <PiWarningCircleBold className="text-primary text-lg" />
+                Xác nhận đối soát
+              </h4>
+              <p className="text-xs text-gray-600 leading-normal">
+                Bạn có chắc chắn muốn xác nhận khớp đối soát này không? Thao tác này sẽ cập nhật trạng thái đối soát thành công.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA] mt-5">
+              <button
+                type="button"
+                onClick={() => setConfirmingReconcileId(null)}
+                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => executeConfirmReconcile(confirmingReconcileId)}
+                className="bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-4 py-2 rounded transition-colors"
+              >
+                Xác nhận
+              </button>
+            </div>
           </div>
         </div>
       )}

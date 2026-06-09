@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { redirect, Link } from "react-router";
+import { toast } from "react-toastify";
 import { store } from "~/lib/feature/store";
 import { customerOrdersApi } from "~/lib/api/orders";
-import { financeApi } from "~/lib/api/finance";
 import { StatusBadge } from "~/components/shared/StatusBadge";
 import { OrderTimeline } from "~/components/customer/OrderTimeline";
 import { Button } from "~/components/ui/Button";
@@ -11,8 +11,8 @@ import { CUSTOMER_CANCELLABLE_STATUSES } from "~/lib/constants/orderStatus";
 import type { OrderDetailResponse } from "~/lib/types/order";
 import type { Route } from "./+types/orders.$id";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
-import { fetchMyWallet, fetchSystemBankAccounts, submitTopup, createZaloPayPayment } from "~/lib/feature/finance/financeThunk";
-import { selectWallet, selectSystemBankAccounts } from "~/lib/feature/finance/financeSelector";
+import { fetchMyWallet } from "~/lib/feature/finance/financeThunk";
+import { selectWallet } from "~/lib/feature/finance/financeSelector";
 
 export function meta(_: Route.MetaArgs) {
   return [{ title: "Chi tiết đơn hàng — MuaHo" }];
@@ -57,13 +57,14 @@ export default function CustomerOrderDetailPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentType, setPaymentType] = useState<"deposit" | "final" | null>(null);
+
   // Redux hooks & selectors
   const dispatch = useAppDispatch();
   const wallet = useAppSelector(selectWallet);
-  const systemBankAccounts = useAppSelector(selectSystemBankAccounts) || [];
 
   // Custom visual state
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -76,18 +77,8 @@ export default function CustomerOrderDetailPage({
     isOpen: false,
     title: "",
     message: "",
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
-
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentType, setPaymentType] = useState<"deposit" | "final" | null>(null);
-  const [selectedMethod, setSelectedMethod] = useState<"wallet" | "zalopay">("wallet");
-  const [topupLoading, setTopupLoading] = useState(false);
-
-  const [pollingTopupId, setPollingTopupId] = useState<string | null>(null);
-  const [pollingStatus, setPollingStatus] = useState<"idle" | "polling" | "success" | "error" | "timeout">("idle");
-  const pollingIntervalRef = useRef<any>(null);
-  const pollCountRef = useRef<number>(0);
 
   // Helper trigger for custom confirm
   const requestConfirm = (options: {
@@ -114,23 +105,20 @@ export default function CustomerOrderDetailPage({
 
   // Helper for gorgeous animated toast
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
+    if (type === "success") {
+      toast.success(message);
+    } else if (type === "error") {
+      toast.error(message);
+    } else {
+      toast.info(message);
+    }
   };
 
   useEffect(() => {
     dispatch(fetchMyWallet());
-    dispatch(fetchSystemBankAccounts());
   }, [dispatch]);
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-    };
-  }, []);  // Deposit deadline: 30 min from createdAt if still PendingPayment and unpaid
+  // Deposit deadline: 30 min from createdAt if still PendingPayment and unpaid
   const depositDeadlineIso =
     order.status === "PendingPayment" && !order.isDepositPaid
       ? new Date(new Date(order.createdAt).getTime() + 30 * 60 * 1000).toISOString()
@@ -149,13 +137,11 @@ export default function CustomerOrderDetailPage({
 
   async function handlePayDeposit() {
     setPaymentType("deposit");
-    setSelectedMethod("wallet");
     setShowPaymentModal(true);
   }
 
   async function handlePayFinal() {
     setPaymentType("final");
-    setSelectedMethod("wallet");
     setShowPaymentModal(true);
   }
 
@@ -177,140 +163,6 @@ export default function CustomerOrderDetailPage({
       showToast(errMsg, "error");
     } finally {
       setLoading(false);
-    }
-  }
-
-
-
-  // Trình tự hủy bỏ và dọn dẹp polling
-  function cancelPolling() {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-    setPollingTopupId(null);
-    setPollingStatus("idle");
-  }
-
-  // Hàm thực hiện kiểm tra trạng thái topup và thanh toán đơn hàng tương ứng
-  async function checkTopupStatusManual() {
-    if (!pollingTopupId) return;
-    await performPollCheck(pollingTopupId);
-  }
-
-  async function performPollCheck(topupId: string) {
-    try {
-      const response = await financeApi.getMyTopups();
-      if (response && response.success && Array.isArray(response.data)) {
-        const targetTopup = response.data.find((t: any) => t.id === topupId);
-        if (targetTopup) {
-          // status = 2 (Matched) nghĩa là nạp tiền thành công
-          if (targetTopup.status === 2) {
-            // Dừng polling ngay lập tức
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-            
-            // Chuyển status sang success
-            setPollingStatus("success");
-
-            // Tự động gọi API trừ tiền ví để thanh toán đơn hàng
-            try {
-              let res;
-              if (paymentType === "deposit") {
-                res = await customerOrdersApi.payDeposit(order.id);
-              } else {
-                res = await customerOrdersApi.payFinal(order.id);
-              }
-
-              if (res && res.success) {
-                showToast(
-                  paymentType === "deposit"
-                    ? "Đã tự động xác nhận đặt cọc 65% đơn hàng thành công!"
-                    : "Đã tự động xác nhận thanh toán phần còn lại thành công!",
-                  "success"
-                );
-                // Cập nhật lại thông tin đơn hàng
-                if (res.data) {
-                  setOrder(res.data);
-                }
-                // Đồng bộ lại ví
-                dispatch(fetchMyWallet());
-              } else {
-                showToast("Nạp tiền thành công nhưng thanh toán đơn hàng gặp lỗi. Bạn có thể thanh toán bằng ví thủ công.", "error");
-                setPollingStatus("error");
-              }
-            } catch (payErr: any) {
-              showToast(payErr || "Nạp tiền thành công nhưng thanh toán đơn hàng gặp lỗi. Vui lòng thanh toán bằng số dư ví.", "error");
-              setPollingStatus("error");
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Lỗi khi kiểm tra trạng thái thanh toán ZaloPay:", err);
-    }
-  }
-
-  function startPolling(topupId: string) {
-    // Dọn dẹp polling cũ nếu có
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
-
-    setPollingTopupId(topupId);
-    setPollingStatus("polling");
-    pollCountRef.current = 0;
-
-    pollingIntervalRef.current = setInterval(async () => {
-      pollCountRef.current += 1;
-      // Giới hạn 150 lần check (tương đương 5 phút)
-      if (pollCountRef.current > 150) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-        setPollingStatus("timeout");
-        showToast("Hết thời gian chờ thanh toán ZaloPay.", "error");
-        return;
-      }
-      await performPollCheck(topupId);
-    }, 2000);
-  }
-
-  async function handleZaloPayCheckout() {
-    setTopupLoading(true);
-    try {
-      const activeAccounts = systemBankAccounts.filter((b) => b.isActive);
-      const selectedAccount = activeAccounts[0] || { id: "" };
-
-      const noteStr = paymentType === "deposit"
-        ? `Dong coc 65% don hang ${order.orderCode}`
-        : `Thanh toan 35% con lai don hang ${order.orderCode}`;
-
-      // 1. Tạo TopupRequest với note mô tả thanh toán đơn hàng cụ thể
-      const topupRes = await dispatch(
-        submitTopup({
-          amount: paymentAmount,
-          bankAccountId: selectedAccount.id || "",
-          note: noteStr,
-        })
-      ).unwrap();
-
-      // 2. Gọi API khởi tạo cổng thanh toán ZaloPay
-      const payRes = await dispatch(createZaloPayPayment(topupRes.id)).unwrap();
-
-      if (payRes && payRes.payUrl) {
-        window.open(payRes.payUrl, "_blank");
-        showToast("Đã mở trang thanh toán ZaloPay Sandbox. Vui lòng thanh toán!", "success");
-        // Bắt đầu tự động kiểm tra trạng thái thanh toán
-        startPolling(topupRes.id);
-      } else {
-        showToast("Không nhận được phản hồi URL từ ZaloPay.", "error");
-      }
-    } catch (err: any) {
-      showToast(err || "Lỗi khởi tạo cổng ZaloPay. Vui lòng thử lại.", "error");
-    } finally {
-      setTopupLoading(false);
     }
   }
 
@@ -349,35 +201,38 @@ export default function CustomerOrderDetailPage({
   const remainingPayment = order.finalAmountVnd - order.depositVnd;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-4 py-24 bg-white min-h-screen text-neutral-900">
       {/* Back */}
       <Link
         to="/orders"
-        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-5"
+        className="inline-flex items-center text-[10px] font-mono uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors mb-12"
       >
-        ← Quay lại danh sách đơn
+        <span className="mr-2">←</span> Danh sách đơn hàng
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6 border-b border-[#EAEAEA] pb-8">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{order.orderCode}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{order.shopName}</p>
+          <p className="text-xs font-mono uppercase tracking-widest text-neutral-400 mb-2">{order.shopName}</p>
+          <h1 className="text-2xl md:text-3xl font-serif text-neutral-900 tracking-tight leading-none mb-4">{order.orderCode}</h1>
+          <div className="inline-flex">
+            <StatusBadge status={order.status} />
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <StatusBadge status={order.status} />
+        
+        <div className="flex flex-wrap items-center gap-3">
           {canPayDeposit && (
-            <Button variant="primary" size="sm" loading={loading} onClick={handlePayDeposit}>
-              💳 Đóng cọc
+            <Button variant="primary" className="rounded bg-neutral-900 text-white hover:bg-neutral-800 border-none px-6" loading={loading} onClick={handlePayDeposit}>
+              Đóng cọc
             </Button>
           )}
           {canPayFinal && (
-            <Button variant="primary" size="sm" loading={loading} onClick={handlePayFinal}>
-              ✅ Thanh toán cuối kỳ
+            <Button variant="primary" className="rounded bg-neutral-900 text-white hover:bg-neutral-800 border-none px-6" loading={loading} onClick={handlePayFinal}>
+              Thanh toán cuối
             </Button>
           )}
           {canCancel && (
-            <Button variant="danger" size="sm" onClick={() => setShowCancelForm((v) => !v)}>
+            <Button variant="secondary" className="rounded border border-[#EAEAEA] bg-white text-neutral-600 hover:text-red-700 px-6" onClick={() => setShowCancelForm((v) => !v)}>
               Hủy đơn
             </Button>
           )}
@@ -394,8 +249,8 @@ export default function CustomerOrderDetailPage({
       {order.status === "PendingPayment" && !order.isDepositPaid && (
         <div
           className={`mb-5 rounded-2xl border px-5 py-4 flex items-center justify-between gap-4 ${cdRemaining > 0
-              ? "bg-amber-50 border-amber-200"
-              : "bg-red-50 border-red-200"
+            ? "bg-amber-50 border-amber-200"
+            : "bg-red-50 border-red-200"
             }`}
         >
           <div>
@@ -460,105 +315,107 @@ export default function CustomerOrderDetailPage({
       )}
 
       {/* Payment summary */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-5">
-        <h2 className="text-sm font-semibold text-gray-800 mb-4">💰 Thông tin thanh toán</h2>
+      <div className="bg-white rounded-lg border border-[#EAEAEA] p-8 md:p-10 mb-8">
+        <h2 className="text-xs font-mono uppercase tracking-widest text-neutral-400 mb-8 pb-4 border-b border-[#EAEAEA]">Thông tin thanh toán</h2>
 
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-4">
-          <div className="text-gray-500">Giá trị hàng (CNY)</div>
-          <div className="font-medium text-right">{formatCNY(order.totalCny)}</div>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm mb-6">
+          <div className="text-neutral-500">Giá trị hàng (CNY)</div>
+          <div className="font-mono font-medium text-right text-neutral-900">{formatCNY(order.totalCny)}</div>
 
-          <div className="text-gray-500">Tỷ giá khoá</div>
-          <div className="font-medium text-right">
+          <div className="text-neutral-500">Tỷ giá khoá</div>
+          <div className="font-mono text-right text-neutral-900">
             {order.rateVndPerCny.toLocaleString("vi-VN")} ₫/¥
           </div>
 
-          <div className="text-gray-500 col-span-2 border-t border-gray-100 pt-2 mt-1 font-medium text-gray-700">
+          <div className="text-xs font-mono uppercase tracking-widest text-neutral-400 col-span-2 border-t border-[#EAEAEA] pt-6 mt-2">
             Các khoản phí
           </div>
 
           {order.fees.map((fee) => (
             <div key={fee.feeType} className="contents">
-              <div className="text-gray-500 pl-2">· {feeLabel(fee.feeType)}</div>
-              <div className="text-right text-gray-700">{formatVND(fee.amountVnd)}</div>
+              <div className="text-neutral-500">· {feeLabel(fee.feeType)}</div>
+              <div className="text-right font-mono text-neutral-900">{formatVND(fee.amountVnd)}</div>
             </div>
           ))}
 
           {order.shippingFeeVnd > 0 && (
-            <>
-              <div className="text-gray-500 pl-2">· Phí ship quốc tế</div>
-              <div className="text-right text-gray-700">{formatVND(order.shippingFeeVnd)}</div>
-            </>
+            <div className="contents">
+              <div className="text-neutral-500">· Phí ship quốc tế</div>
+              <div className="text-right font-mono text-neutral-900">{formatVND(order.shippingFeeVnd)}</div>
+            </div>
           )}
 
-          <div className="text-gray-800 font-semibold border-t border-gray-100 pt-2 mt-1">
+          <div className="text-neutral-900 font-serif text-lg border-t border-[#EAEAEA] pt-6 mt-2">
             Tổng giá trị đơn
           </div>
-          <div className="font-bold text-right border-t border-gray-100 pt-2 mt-1">
+          <div className="font-mono text-lg font-semibold text-right border-t border-[#EAEAEA] pt-6 mt-2 text-neutral-900">
             {formatVND(order.finalAmountVnd)}
           </div>
 
-          <div className="text-gray-500">
+          <div className="text-neutral-500">
             Tiền cọc ({(order.depositPct * 100).toFixed(0)}%)
           </div>
-          <div
-            className={`font-semibold text-right ${order.isDepositPaid ? "text-green-700" : "text-amber-600"
-              }`}
-          >
+          <div className="font-mono text-right text-neutral-900">
             {formatVND(order.depositVnd)}
-            {order.isDepositPaid ? " ✓" : " (chưa đóng)"}
+            <span className="text-[10px] uppercase ml-2 text-neutral-400">
+              {order.isDepositPaid ? "Đã đóng" : "Chưa đóng"}
+            </span>
           </div>
 
           {order.isDepositPaid && (
-            <>
-              <div className="text-gray-500">Còn lại</div>
-              <div
-                className={`font-semibold text-right ${order.isFinalPaid ? "text-green-700" : "text-primary"
-                  }`}
-              >
+            <div className="contents">
+              <div className="text-neutral-500">Còn lại</div>
+              <div className="font-mono text-right text-neutral-900 font-medium">
                 {formatVND(remainingPayment)}
-                {order.isFinalPaid ? " ✓" : " (chưa thanh toán)"}
+                <span className="text-[10px] uppercase ml-2 text-neutral-400">
+                  {order.isFinalPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+                </span>
               </div>
-            </>
+            </div>
           )}
         </div>
 
         {/* Shipping info if available */}
         {order.actualWeightKg != null && (
-          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mt-3 text-xs text-blue-800 space-y-1">
-            <p className="font-semibold text-blue-900 mb-1">📦 Thông tin vận chuyển thực tế</p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              <span className="text-blue-600">Cân nặng:</span>
-              <span className="font-medium">{order.actualWeightKg} kg</span>
+          <div className="border border-[#EAEAEA] bg-[#FBFBFA] rounded-lg p-6 mt-8">
+            <h4 className="text-xs font-mono uppercase tracking-widest text-neutral-900 mb-4">Thông tin vận chuyển thực tế</h4>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+              <span className="text-neutral-500">Cân nặng:</span>
+              <span className="font-mono text-right text-neutral-900">{order.actualWeightKg} kg</span>
               {order.volumeCm3 != null && (
                 <>
-                  <span className="text-blue-600">Thể tích:</span>
-                  <span className="font-medium">{order.volumeCm3?.toLocaleString()} cm³</span>
+                  <span className="text-neutral-500">Thể tích:</span>
+                  <span className="font-mono text-right text-neutral-900">{order.volumeCm3?.toLocaleString()} cm³</span>
                 </>
               )}
               {order.storageDaysOverFree > 0 && (
                 <>
-                  <span className="text-blue-600">Ngày lưu kho vượt:</span>
-                  <span className="font-medium">{order.storageDaysOverFree} ngày</span>
+                  <span className="text-neutral-500">Ngày lưu kho vượt:</span>
+                  <span className="font-mono text-right text-neutral-900">{order.storageDaysOverFree} ngày</span>
                 </>
               )}
             </div>
           </div>
         )}
 
-        {order.deliveryAddressNote && (
-          <div className="mt-3 pt-3 border-t border-gray-100 text-sm">
-            <span className="text-gray-500">Địa chỉ giao: </span>
-            <span className="text-gray-700">{order.deliveryAddressNote}</span>
-          </div>
-        )}
-        {order.customerNote && (
-          <div className="mt-1 text-sm">
-            <span className="text-gray-500">Ghi chú: </span>
-            <span className="text-gray-700">{order.customerNote}</span>
+        {(order.deliveryAddressNote || order.customerNote) && (
+          <div className="mt-8 pt-6 border-t border-[#EAEAEA] text-xs font-sans space-y-2 text-neutral-500">
+            {order.deliveryAddressNote && (
+              <p>
+                <span className="font-mono uppercase tracking-wider text-neutral-400">Địa chỉ giao:</span>{" "}
+                <span className="text-neutral-700">{order.deliveryAddressNote}</span>
+              </p>
+            )}
+            {order.customerNote && (
+              <p>
+                <span className="font-mono uppercase tracking-wider text-neutral-400">Ghi chú:</span>{" "}
+                <span className="text-neutral-700">{order.customerNote}</span>
+              </p>
+            )}
           </div>
         )}
         {order.cancelReason && (
-          <div className="mt-3 pt-3 border-t border-gray-100 text-sm text-red-600">
+          <div className="mt-6 border border-[#EAEAEA] bg-[#FDEBEC] rounded px-4 py-3 text-xs text-[#9F2F2D] font-mono">
             Lý do hủy: {order.cancelReason}
           </div>
         )}
@@ -566,21 +423,21 @@ export default function CustomerOrderDetailPage({
 
       {/* Tracking */}
       {order.platformOrder && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-5">
-          <h2 className="text-sm font-semibold text-gray-800 mb-3">🚚 Thông tin vận đơn</h2>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <div className="bg-white rounded-lg border border-[#EAEAEA] p-8 md:p-10 mb-8">
+          <h2 className="text-xs font-mono uppercase tracking-widest text-neutral-400 mb-8 pb-4 border-b border-[#EAEAEA]">Thông tin vận đơn</h2>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm mb-4">
             {order.platformOrder.platformOrderId && (
               <>
-                <div className="text-gray-500">Mã đơn sàn</div>
-                <div className="font-mono text-right">{order.platformOrder.platformOrderId}</div>
+                <div className="text-neutral-500">Mã đơn sàn</div>
+                <div className="font-mono text-right text-neutral-900">{order.platformOrder.platformOrderId}</div>
               </>
             )}
             {order.platformOrder.trackingNumber && (
               <>
-                <div className="text-gray-500">Mã vận đơn</div>
-                <div className="font-mono text-right">
+                <div className="text-neutral-500">Mã vận đơn</div>
+                <div className="font-mono text-right text-neutral-900">
                   {order.platformOrder.trackingCarrier && (
-                    <span className="text-gray-400 mr-1">{order.platformOrder.trackingCarrier}:</span>
+                    <span className="text-neutral-400 mr-1.5">{order.platformOrder.trackingCarrier}</span>
                   )}
                   {order.platformOrder.trackingNumber}
                 </div>
@@ -588,43 +445,39 @@ export default function CustomerOrderDetailPage({
             )}
           </div>
           {order.platformOrder.hasIssue && order.platformOrder.issueNote && (
-            <div className="mt-3 pt-3 border-t border-gray-100 text-sm text-orange-600 bg-orange-50 rounded-lg px-3 py-2">
-              ⚠️ {order.platformOrder.issueNote}
+            <div className="mt-6 border border-[#EAEAEA] bg-[#FDEBEC] rounded px-4 py-3 text-xs text-[#9F2F2D] font-mono">
+              Lưu ý sự cố: {order.platformOrder.issueNote}
             </div>
           )}
         </div>
       )}
 
       {/* Items */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-5">
-        <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-800">
-            Sản phẩm ({order.items.length})
-          </h2>
-        </div>
-        <div className="divide-y divide-gray-50">
+      <div className="bg-white rounded-lg border border-[#EAEAEA] p-8 md:p-10 mb-8">
+        <h2 className="text-xs font-mono uppercase tracking-widest text-neutral-400 mb-8 pb-4 border-b border-[#EAEAEA]">
+          Sản phẩm ({order.items.length})
+        </h2>
+        <div className="divide-y divide-[#EAEAEA] -mx-8 md:-mx-10">
           {order.items.map((item) => (
-            <div key={item.id} className="flex items-center gap-4 px-5 py-3">
-              <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
+            <div key={item.id} className="flex items-center gap-5 px-8 md:px-10 py-5">
+              <div className="w-16 h-16 rounded border border-[#EAEAEA] overflow-hidden bg-[#FBFBFA] shrink-0 flex items-center justify-center">
                 {item.imageUrl ? (
                   <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300 text-lg">
-                    📦
-                  </div>
+                  <span className="text-xl font-mono text-neutral-400">📦</span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{item.productTitle}</p>
+                <p className="text-sm font-serif text-neutral-900 truncate">{item.productTitle}</p>
                 {item.variantName && (
-                  <p className="text-xs text-gray-400">{item.variantName}</p>
+                  <p className="text-xs font-mono text-neutral-400 mt-1">{item.variantName}</p>
                 )}
-                <p className="text-xs text-gray-400">
+                <p className="text-xs font-mono text-neutral-400 mt-0.5">
                   {formatCNY(item.unitPriceCny)} × {item.quantity}
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-sm font-semibold text-gray-900">{formatCNY(item.totalCny)}</p>
+                <p className="text-sm font-mono font-semibold text-neutral-900">{formatCNY(item.totalCny)}</p>
               </div>
             </div>
           ))}
@@ -632,310 +485,111 @@ export default function CustomerOrderDetailPage({
       </div>
 
       {/* Dates */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-5 text-sm">
-        <h2 className="font-semibold text-gray-800 mb-3">🗓 Mốc thời gian</h2>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-          <span className="text-gray-500">Ngày tạo đơn</span>
-          <span className="text-right">{formatDate(order.createdAt)}</span>
+      <div className="bg-white rounded-lg border border-[#EAEAEA] p-8 md:p-10 mb-8 text-sm">
+        <h2 className="text-xs font-mono uppercase tracking-widest text-neutral-400 mb-8 pb-4 border-b border-[#EAEAEA]">Mốc thời gian</h2>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <span className="text-neutral-500">Ngày tạo đơn</span>
+          <span className="text-right font-mono text-neutral-900">{formatDate(order.createdAt)}</span>
           {order.paidAt && (
             <>
-              <span className="text-gray-500">Ngày đóng cọc</span>
-              <span className="text-right">{formatDate(order.paidAt)}</span>
+              <span className="text-neutral-500">Ngày đóng cọc</span>
+              <span className="text-right font-mono text-neutral-900">{formatDate(order.paidAt)}</span>
             </>
           )}
           {order.completedAt && (
             <>
-              <span className="text-gray-500">Ngày hoàn thành</span>
-              <span className="text-right">{formatDate(order.completedAt)}</span>
+              <span className="text-neutral-500">Ngày hoàn thành</span>
+              <span className="text-right font-mono text-neutral-900">{formatDate(order.completedAt)}</span>
             </>
           )}
           {order.cancelledAt && (
             <>
-              <span className="text-gray-500 text-red-500">Ngày hủy</span>
-              <span className="text-right text-red-600">{formatDate(order.cancelledAt)}</span>
+              <span className="text-[#9F2F2D]">Ngày hủy</span>
+              <span className="text-right font-mono text-[#9F2F2D]">{formatDate(order.cancelledAt)}</span>
             </>
           )}
         </div>
       </div>
 
       {/* Timeline */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-        <h2 className="text-sm font-semibold text-gray-800 mb-4">📋 Lịch sử trạng thái</h2>
+      <div className="bg-white rounded-lg border border-[#EAEAEA] p-8 md:p-10 mb-8">
+        <h2 className="text-xs font-mono uppercase tracking-widest text-neutral-400 mb-8 pb-4 border-b border-[#EAEAEA]">Lịch sử trạng thái</h2>
         <OrderTimeline history={order.history} />
       </div>
 
       {/* Payment Selection Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full border border-gray-100 overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg border border-[#EAEAEA] max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <span>💰 {pollingStatus === "polling" ? "Đang chờ thanh toán ZaloPay" : pollingStatus === "success" ? "Thanh toán thành công" : "Thanh toán đơn hàng"}</span>
+            <div className="px-8 py-6 border-b border-[#EAEAEA] flex items-center justify-between">
+              <h3 className="text-xs font-mono uppercase tracking-widest text-neutral-900">
+                THANH TOÁN ĐƠN HÀNG
               </h3>
               <button
-                onClick={() => { cancelPolling(); setShowPaymentModal(false); }}
-                className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+                onClick={() => setShowPaymentModal(false)}
+                className="text-neutral-400 hover:text-neutral-900 transition-colors font-mono text-xs uppercase tracking-wider"
               >
-                ✕
+                Đóng
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-6 overflow-y-auto">
-              {pollingStatus === "polling" ? (
-                <div className="text-center py-8 space-y-6 flex flex-col items-center">
-                  <div className="relative w-20 h-20">
-                    <div className="absolute inset-0 rounded-full border-4 border-emerald-100 animate-pulse"></div>
-                    <div className="absolute inset-0 rounded-full border-4 border-emerald-600 border-t-transparent animate-spin"></div>
-                    <div className="absolute inset-0 flex items-center justify-center text-emerald-600 text-3xl">🌀</div>
-                  </div>
+            <div className="p-8 space-y-6 overflow-y-auto">
+              {/* Order Info */}
+              <div className="border border-[#EAEAEA] bg-[#FBFBFA] rounded p-4 space-y-2">
+                <div className="flex justify-between text-xs font-mono">
+                  <span className="text-neutral-400">MÃ ĐƠN HÀNG:</span>
+                  <span className="font-semibold text-neutral-900">{order.orderCode}</span>
+                </div>
+                <div className="flex justify-between text-xs font-mono">
+                  <span className="text-neutral-400">NỘI DUNG:</span>
+                  <span className="font-semibold text-neutral-900">
+                    {paymentType === "deposit" ? "Đóng cọc đơn hàng (65%)" : "Thanh toán cuối kỳ (Còn lại)"}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm pt-2 border-t border-[#EAEAEA]">
+                  <span className="font-mono text-xs uppercase tracking-wider text-neutral-500">SỐ TIỀN CẦN THANH TOÁN:</span>
+                  <span className="font-mono font-bold text-neutral-900">{formatVND(paymentAmount)}</span>
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <h4 className="font-bold text-gray-900 text-sm">Vui lòng hoàn tất thanh toán ở tab mới mở</h4>
-                    <p className="text-xs text-gray-500 leading-relaxed max-w-sm">
-                      Hệ thống đang kiểm tra tự động trạng thái thanh toán từ ZaloPay.
-                      Vui lòng không đóng cửa sổ này cho đến khi nhận được thông báo thành công.
+              {/* Wallet Detail */}
+              <div className="space-y-4 pt-2">
+                <div className="border border-[#EAEAEA] bg-[#FBFBFA] rounded p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">Số dư khả dụng trong ví:</p>
+                    <p className="text-base font-mono font-semibold text-neutral-900 mt-1">
+                      {formatVND(wallet?.availableBalance || 0)}
                     </p>
-                  </div>
-
-                  <div className="bg-emerald-50 text-emerald-800 rounded-2xl p-4 text-xs font-medium w-full text-left">
-                    📌 <strong>Nội dung:</strong> {paymentType === "deposit" ? `Đóng cọc 65% đơn hàng ${order.orderCode}` : `Thanh toán 35% còn lại đơn hàng ${order.orderCode}`}
-                    <br />
-                    💵 <strong>Số tiền:</strong> {formatVND(paymentAmount)}
-                  </div>
-
-                  <div className="flex gap-3 w-full">
-                    <button
-                      type="button"
-                      onClick={cancelPolling}
-                      className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl text-xs font-semibold transition-colors"
-                    >
-                      Đóng / Hủy bỏ
-                    </button>
-                    <button
-                      type="button"
-                      onClick={checkTopupStatusManual}
-                      className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold shadow-lg shadow-emerald-600/10 transition-colors"
-                    >
-                      Kiểm tra ngay 🔄
-                    </button>
                   </div>
                 </div>
-              ) : pollingStatus === "success" ? (
-                <div className="text-center py-8 space-y-6 flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-3xl animate-bounce">
-                    ✓
-                  </div>
 
-                  <div className="space-y-2">
-                    <h4 className="font-bold text-gray-900 text-sm">🎉 Thanh toán đơn hàng thành công!</h4>
-                    <p className="text-xs text-gray-500 max-w-sm">
-                      Đơn hàng {order.orderCode} đã được ghi nhận thanh toán hoàn tất thông qua ZaloPay.
-                    </p>
+                {(wallet?.availableBalance || 0) < paymentAmount ? (
+                  <div className="space-y-3">
+                    <div className="border border-[#EAEAEA] bg-[#FDEBEC] rounded p-4 text-xs text-[#9F2F2D] font-mono">
+                      Số dư khả dụng không đủ! Bạn cần nạp thêm ít nhất{" "}
+                      <span className="font-bold">{formatVND(paymentAmount - (wallet?.availableBalance || 0))}</span>.
+                    </div>
+                    <Link
+                      to="/finance"
+                      target="_blank"
+                      className="block w-full py-3 bg-neutral-900 hover:bg-neutral-800 text-white rounded text-center text-xs font-mono uppercase tracking-wider transition-colors"
+                    >
+                      Nạp tiền vào ví ngay ↗
+                    </Link>
                   </div>
-
+                ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowPaymentModal(false);
-                      setPollingStatus("idle");
-                      setPollingTopupId(null);
-                    }}
-                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-bold transition-colors"
+                    onClick={executeWalletPayment}
+                    disabled={loading}
+                    className="w-full py-3 bg-neutral-900 hover:bg-neutral-800 text-white rounded text-center text-xs font-mono uppercase tracking-wider transition-colors"
                   >
-                    Xác nhận và đóng
+                    {loading ? "Đang xử lý..." : "Xác nhận thanh toán từ Ví"}
                   </button>
-                </div>
-              ) : pollingStatus === "error" || pollingStatus === "timeout" ? (
-                <div className="text-center py-8 space-y-6 flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-3xl">
-                    ⚠️
-                  </div>
-
-                  <div className="space-y-2">
-                    <h4 className="font-bold text-gray-900 text-sm">Chưa nhận được xác nhận từ ZaloPay</h4>
-                    <p className="text-xs text-gray-500 max-w-sm">
-                      Nếu bạn đã thanh toán thành công qua ZaloPay, tiền có thể cần 1-2 phút để cộng vào ví. 
-                      Bạn có thể thử kiểm tra lại thủ công hoặc đóng cửa sổ này.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3 w-full">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowPaymentModal(false);
-                        setPollingStatus("idle");
-                        setPollingTopupId(null);
-                      }}
-                      className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl text-xs font-semibold transition-colors"
-                    >
-                      Đóng
-                    </button>
-                    <button
-                      type="button"
-                      onClick={checkTopupStatusManual}
-                      className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-bold transition-colors"
-                    >
-                      Thử lại 🔄
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Order Info */}
-                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-2">
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>Mã đơn hàng:</span>
-                      <span className="font-semibold text-gray-700">{order.orderCode}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>Nội dung thanh toán:</span>
-                      <span className="font-semibold text-gray-700">
-                        {paymentType === "deposit" ? "Đóng cọc đơn hàng (65%)" : "Thanh toán cuối kỳ (Còn lại)"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm pt-2 border-t border-gray-200/60">
-                      <span className="font-medium text-gray-900">Số tiền cần thanh:</span>
-                      <span className="text-lg font-bold text-blue-600">{formatVND(paymentAmount)}</span>
-                    </div>
-                  </div>
-
-                  {/* Method Selector */}
-                  <div className="space-y-3">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">
-                      Chọn phương thức thanh toán
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* Wallet Option */}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMethod("wallet")}
-                        className={`p-4 rounded-2xl border text-left flex flex-col justify-between h-28 transition-all ${
-                          selectedMethod === "wallet"
-                            ? "border-blue-500 bg-blue-50/40 ring-2 ring-blue-500/20"
-                            : "border-gray-200 bg-white hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-xl">💳</span>
-                          {selectedMethod === "wallet" && (
-                            <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
-                              ✓
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-gray-900">Ví điện tử</p>
-                          <p className="text-[10px] text-gray-500 mt-0.5">Số dư khả dụng</p>
-                        </div>
-                      </button>
-
-                      {/* ZaloPay Option */}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMethod("zalopay")}
-                        className={`p-4 rounded-2xl border text-left flex flex-col justify-between h-28 transition-all ${
-                          selectedMethod === "zalopay"
-                            ? "border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20"
-                            : "border-gray-200 bg-white hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-xl">🌀</span>
-                          {selectedMethod === "zalopay" && (
-                            <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">
-                              ✓
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-gray-900">Cổng ZaloPay</p>
-                          <p className="text-[10px] text-gray-500 mt-0.5">App, Thẻ, QR Pay</p>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Method Detail View */}
-                  {selectedMethod === "wallet" && (
-                    /* WALLET DETAIL */
-                    <div className="space-y-4 pt-2">
-                      <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-blue-700">Số dư khả dụng trong ví:</p>
-                          <p className="text-base font-extrabold text-blue-900 mt-0.5">
-                            {formatVND(wallet?.availableBalance || 0)}
-                          </p>
-                        </div>
-                        <span className="text-2xl">💰</span>
-                      </div>
-
-                      {(wallet?.availableBalance || 0) < paymentAmount ? (
-                        <div className="space-y-3">
-                          <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-xs text-red-700">
-                            ⚠️ <strong>Số dư khả dụng không đủ!</strong> Bạn cần nạp thêm ít nhất{" "}
-                            <span className="font-bold">{formatVND(paymentAmount - (wallet?.availableBalance || 0))}</span> để thực hiện giao dịch này.
-                          </div>
-                          <Link
-                            to="/finance"
-                            target="_blank"
-                            className="block w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-center text-xs font-semibold shadow-lg shadow-red-600/10 transition-colors"
-                          >
-                            Nạp tiền vào ví ngay ↗
-                          </Link>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={executeWalletPayment}
-                          disabled={loading}
-                          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-center text-xs font-bold shadow-lg shadow-blue-600/10 transition-all active:scale-[0.98]"
-                        >
-                          {loading ? "Đang xử lý..." : "Xác nhận thanh toán từ Ví"}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {selectedMethod === "zalopay" && (
-                    /* ZALOPAY DETAIL */
-                    <div className="space-y-4 pt-2 text-center flex flex-col items-center">
-                      <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-5 w-full text-left space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-emerald-800 font-semibold">⚡ Cổng thanh toán ZaloPay</span>
-                          <span className="text-lg">🌀</span>
-                        </div>
-                        <p className="text-[11px] text-gray-500 leading-relaxed">
-                          Hệ thống sẽ mở trang thanh toán của **ZaloPay**. Bạn có thể dùng ứng dụng **ZaloPay** để quét mã QR thanh toán hoặc sử dụng thẻ ATM, thẻ quốc tế ngay trên trình duyệt.
-                        </p>
-                      </div>
-                      
-                      <div className="bg-gray-50 border border-gray-150 rounded-2xl p-4 w-full text-xs space-y-1.5 text-left">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Số tiền:</span>
-                          <span className="font-bold text-gray-800">{formatVND(paymentAmount)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Trạng thái cổng:</span>
-                          <span className="font-medium text-emerald-600">Sẵn sàng kết nối 🟢</span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleZaloPayCheckout}
-                        disabled={topupLoading}
-                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-center text-xs font-bold shadow-lg shadow-emerald-600/10 transition-all active:scale-[0.98]"
-                      >
-                        {topupLoading ? "Đang kết nối ZaloPay..." : "🚀 Tiến hành thanh toán qua ZaloPay"}
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -943,57 +597,33 @@ export default function CustomerOrderDetailPage({
 
       {/* Custom Confirm Dialog Modal */}
       {confirmDialog.isOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[999] p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 border border-gray-100 space-y-5 transform transition-all animate-scale-up">
-            <div className="space-y-2.5">
-              <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                {confirmDialog.type === "danger" ? "⚠️ Hủy đơn hàng" : "❓ Xác nhận hành động"}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[999] p-4">
+          <div className="bg-white rounded-lg border border-[#EAEAEA] max-w-sm w-full p-8 space-y-6">
+            <div className="space-y-2">
+              <h4 className="text-sm font-mono uppercase tracking-widest text-neutral-900">
+                {confirmDialog.type === "danger" ? "Hủy đơn hàng" : "Xác nhận hành động"}
               </h4>
-              <p className="text-xs text-gray-500 leading-relaxed">{confirmDialog.message}</p>
+              <p className="text-xs text-neutral-500 leading-relaxed font-sans">{confirmDialog.message}</p>
             </div>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
-                className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-semibold rounded-xl border border-gray-200 transition-colors"
+                className="flex-1 py-2.5 bg-white hover:bg-[#FBFBFA] text-neutral-600 text-xs font-mono uppercase tracking-wider rounded border border-[#EAEAEA] transition-colors"
               >
                 {confirmDialog.cancelText || "Quay lại"}
               </button>
               <button
                 type="button"
                 onClick={() => confirmDialog.onConfirm()}
-                className={`flex-1 py-2.5 text-white text-xs font-semibold rounded-xl shadow-lg transition-colors ${
-                  confirmDialog.type === "danger"
-                    ? "bg-red-600 hover:bg-red-700 shadow-red-600/10"
-                    : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/10"
-                }`}
+                className={`flex-1 py-2.5 text-white text-xs font-mono uppercase tracking-wider rounded transition-colors ${confirmDialog.type === "danger"
+                    ? "bg-[#9F2F2D] hover:bg-[#852725]"
+                    : "bg-neutral-900 hover:bg-neutral-800"
+                  }`}
               >
                 {confirmDialog.confirmText || "Đồng ý"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Gorgeous Success/Error Toast notification */}
-      {toast && (
-        <div className="fixed top-6 right-6 z-[9999] max-w-sm w-full bg-white border border-gray-100 rounded-2xl shadow-2xl p-4 flex items-start gap-3 animate-slide-in-right">
-          <span
-            className={`text-sm w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-              toast.type === "success"
-                ? "bg-green-50 text-green-600"
-                : toast.type === "error"
-                ? "bg-red-50 text-red-600"
-                : "bg-blue-50 text-blue-600"
-            }`}
-          >
-            {toast.type === "success" ? "✓" : toast.type === "error" ? "✕" : "ℹ"}
-          </span>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-gray-900">
-              {toast.type === "success" ? "Thành công" : toast.type === "error" ? "Lỗi" : "Thông báo"}
-            </p>
-            <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{toast.message}</p>
           </div>
         </div>
       )}

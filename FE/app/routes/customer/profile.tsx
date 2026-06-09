@@ -1,6 +1,6 @@
-﻿import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router";
-import { message } from "antd";
+import { toast } from "react-toastify";
 import dayjs from "dayjs";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import {
@@ -230,7 +230,7 @@ export default function CustomerProfilePage() {
           dispatch(updateUserLocal({ phone: payload.phone, email: payload.email }));
         }
         dispatch(fetchMyProfile());
-        message.success("Cập nhật thông tin thành công");
+        toast.success("Cập nhật thông tin thành công");
       } else {
         await dispatch(
           createMyProfile({ ...payload, customerCode: `CUST-${Date.now()}` })
@@ -239,10 +239,10 @@ export default function CustomerProfilePage() {
           dispatch(updateUserLocal({ phone: payload.phone, email: payload.email }));
         }
         dispatch(fetchMyProfile());
-        message.success("Tạo thông tin thành công");
+        toast.success("Tạo thông tin thành công");
       }
     } catch (error: any) {
-      message.error(error || "Lỗi cập nhật thông tin");
+      toast.error(error || "Lỗi cập nhật thông tin");
     } finally {
       setIsUpdatingPersonal(false);
     }
@@ -292,9 +292,9 @@ export default function CustomerProfilePage() {
       const name = fullName || profile?.fullName || user?.fullName || "Khách hàng";
       await authApi.updateMe({ fullName: name, phone });
       dispatch(updateUserLocal({ phone }));
-      message.success("Cập nhật thông tin liên hệ thành công");
+      toast.success("Cập nhật thông tin liên hệ thành công");
     } catch (error: any) {
-      message.error(error?.message || "Lỗi cập nhật thông tin liên hệ");
+      toast.error(error?.message || "Lỗi cập nhật thông tin liên hệ");
     } finally {
       setIsUpdatingContact(false);
     }
@@ -340,7 +340,7 @@ export default function CustomerProfilePage() {
         accountNumber,
         branch: branch || undefined
       });
-      message.success("Thêm tài khoản ngân hàng thành công");
+      toast.success("Thêm tài khoản ngân hàng thành công");
       // Reset bank form
       setBankCode("");
       setBankName("");
@@ -350,7 +350,7 @@ export default function CustomerProfilePage() {
       setShowBankForm(false);
       fetchBanks();
     } catch (err: any) {
-      message.error(err?.message || "Lỗi khi thêm ngân hàng");
+      toast.error(err?.message || "Lỗi khi thêm ngân hàng");
     } finally {
       setIsAddingBank(false);
     }
@@ -362,10 +362,10 @@ export default function CustomerProfilePage() {
     }
     try {
       await financeApi.deleteBankAccount(id);
-      message.success("Đã xóa tài khoản ngân hàng");
+      toast.success("Đã xóa tài khoản ngân hàng");
       fetchBanks();
     } catch (err: any) {
-      message.error(err?.message || "Lỗi khi xóa ngân hàng");
+      toast.error(err?.message || "Lỗi khi xóa ngân hàng");
     }
   };
 
@@ -388,7 +388,7 @@ export default function CustomerProfilePage() {
 
   const handleScan = async () => {
     if (!frontFile) {
-      message.error("Vui lòng tải lên ảnh mặt trước CCCD");
+      toast.error("Vui lòng tải lên ảnh mặt trước CCCD");
       return;
     }
     setScanning(true);
@@ -406,10 +406,10 @@ export default function CustomerProfilePage() {
         setOcrOrigin(parsed.placeOfOrigin || "");
         setOcrResidence(parsed.placeOfResidence || "");
 
-        message.success("Quét CCCD thành công. Vui lòng kiểm tra lại thông tin!");
+        toast.success("Quét CCCD thành công. Vui lòng kiểm tra lại thông tin!");
       }
     } catch (err: any) {
-      message.error(err?.message || "Lỗi quét CCCD");
+      toast.error(err?.message || "Lỗi quét CCCD");
     } finally {
       setScanning(false);
     }
@@ -446,7 +446,7 @@ export default function CustomerProfilePage() {
     try {
       setIsSubmittingKyc(true);
       await dispatch(submitKyc(payload)).unwrap();
-      message.success("Gửi hồ sơ KYC thành công");
+      toast.success("Gửi hồ sơ KYC thành công");
       dispatch(fetchKyc());
       setOcrData(null);
       setFrontFile(null);
@@ -454,7 +454,7 @@ export default function CustomerProfilePage() {
       setFrontPreviewUrl(null);
       setBackPreviewUrl(null);
     } catch (err: any) {
-      message.error(err || "Lỗi gửi hồ sơ KYC");
+      toast.error(err || "Lỗi gửi hồ sơ KYC");
     } finally {
       setIsSubmittingKyc(false);
     }
@@ -559,26 +559,24 @@ export default function CustomerProfilePage() {
                 <div className="px-1 max-w-[190px] mx-auto">
                   <Link
                     to="/vip-tier"
-                    className="relative flex items-center justify-between rounded-full pl-1 pr-3 py-1 overflow-hidden transition-all duration-200 group hover:scale-[1.01] active:scale-[0.99] w-full border"
+                    className="relative flex items-center rounded-full pl-1 pr-3 py-1 overflow-hidden transition-all duration-200 group hover:scale-[1.01] active:scale-[0.99] w-full border"
                     style={{
                       background: `${tierColor}08`,
                       borderColor: `${tierColor}30`
                     }}
                   >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm shrink-0"
-                        style={{
-                          background: `linear-gradient(135deg, ${tierColor}, ${tierColor}cc)`
-                        }}
-                      >
-                        <span className="text-sm flex items-center justify-center">{tierIcon}</span>
-                      </div>
-                      <span className="text-base font-semibold text-gray-800 tracking-wide">
-                        {currentTierName}
-                      </span>
+                    <div
+                      className="flex h-6 w-6 items-center justify-center rounded-full text-white shadow-sm shrink-0"
+                      style={{
+                        background: `linear-gradient(135deg, ${tierColor}, ${tierColor}cc)`
+                      }}
+                    >
+                      <span className="text-sm flex items-center justify-center">{tierIcon}</span>
                     </div>
-                    <PiCaretRightBold className="text-sm transition-transform duration-200 group-hover:translate-x-0.5" style={{ color: tierColor }} />
+                    <span className="flex-1 text-center text-base font-semibold text-gray-800 tracking-wide pr-1">
+                      {currentTierName}
+                    </span>
+                    <PiCaretRightBold className="shrink-0 text-sm transition-transform duration-200 group-hover:translate-x-0.5" style={{ color: tierColor }} />
                   </Link>
                 </div>
               )}

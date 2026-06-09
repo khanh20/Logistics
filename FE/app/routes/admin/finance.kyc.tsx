@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 import dayjs from "dayjs";
 import {
   PiEyeBold,
@@ -6,7 +7,8 @@ import {
   PiXCircleBold,
   PiXBold,
   PiCheckBold,
-  PiCopyBold
+  PiCopyBold,
+  PiWarningCircleBold
 } from "react-icons/pi";
 
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
@@ -60,46 +62,43 @@ export default function AdminFinanceKycPage() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [approvingKycId, setApprovingKycId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     dispatch(fetchAdminKycs());
   }, [dispatch]);
 
-  const handleApprove = async (id: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn phê duyệt hồ sơ KYC này?")) return;
+  const executeApproveKyc = async (id: string) => {
+    setApprovingKycId(null);
     setActionLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
     try {
       await dispatch(approveAdminKyc(id)).unwrap();
-      setSuccessMessage("Phê duyệt KYC thành công");
+      toast.success("Phê duyệt KYC thành công");
       setIsReviewModalOpen(false);
-      setTimeout(() => setSuccessMessage(""), 4000);
     } catch (error: any) {
-      setErrorMessage(error || "Lỗi phê duyệt");
+      toast.error(error || "Lỗi phê duyệt");
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleApprove = (id: string) => {
+    setApprovingKycId(id);
   };
 
   const handleReject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedKyc || !rejectReason.trim()) return;
     setActionLoading(true);
-    setErrorMessage("");
-    setSuccessMessage("");
     try {
       await dispatch(rejectAdminKyc({ id: selectedKyc.id, reason: rejectReason })).unwrap();
-      setSuccessMessage("Từ chối KYC thành công");
+      toast.success("Từ chối KYC thành công");
       setIsRejectModalOpen(false);
       setIsReviewModalOpen(false);
       setRejectReason("");
-      setTimeout(() => setSuccessMessage(""), 4000);
     } catch (error: any) {
-      setErrorMessage(error || "Lỗi từ chối");
+      toast.error(error || "Lỗi từ chối");
     } finally {
       setActionLoading(false);
     }
@@ -115,17 +114,6 @@ export default function AdminFinanceKycPage() {
         <p className="text-sm text-gray-500">Quản lý hồ sơ định danh và xác thực thông tin khách hàng</p>
       </div>
 
-      {/* Success/Error Alerts */}
-      {successMessage && (
-        <div className="mb-4 p-4 text-sm rounded-lg bg-green-50 border border-green-200 text-green-700">
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-4 p-4 text-sm rounded-lg bg-rose-50 border border-rose-200 text-rose-700">
-          {errorMessage}
-        </div>
-      )}
 
       {/* Table List Card */}
       <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm overflow-hidden">
@@ -370,6 +358,39 @@ export default function AdminFinanceKycPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: APPROVE KYC CONFIRM */}
+      {approvingKycId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-sm w-full p-6 shadow-2xl flex flex-col font-sans">
+            <div className="space-y-3">
+              <h4 className="text-base font-serif font-bold text-black flex items-center gap-1.5">
+                <PiWarningCircleBold className="text-primary text-lg" />
+                Xác nhận phê duyệt KYC
+              </h4>
+              <p className="text-xs text-gray-600 leading-normal">
+                Bạn có chắc chắn muốn phê duyệt hồ sơ KYC này không? Thao tác này sẽ nâng cấp trạng thái xác thực của khách hàng.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA] mt-5">
+              <button
+                type="button"
+                onClick={() => setApprovingKycId(null)}
+                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => executeApproveKyc(approvingKycId)}
+                className="bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-4 py-2 rounded transition-colors"
+              >
+                Xác nhận duyệt
+              </button>
+            </div>
           </div>
         </div>
       )}

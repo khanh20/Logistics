@@ -11,6 +11,7 @@ export default [
   layout("layouts/customer-layout.tsx", [
     index("routes/customer/_index.tsx"),
     route("finance", "routes/customer/finance.tsx"),
+    route("finance/history", "routes/customer/finance-history.tsx"),
     route("profile", "routes/customer/profile.tsx"),
     route("vip-tier", "routes/customer/vip-tier.tsx"),
     route("bank-accounts", "routes/customer/bank-accounts.tsx"),

@@ -1,7 +1,9 @@
 import dayjs from "dayjs";
 import React, { useEffect, useState, useMemo } from "react";
+import { toast } from "react-toastify";
 import { FiCheck, FiPlus, FiX, FiCopy } from "react-icons/fi";
 import { adminFinanceApi } from "~/lib/api/adminFinance";
+import { PiWarningCircleBold, PiCheckCircleBold } from "react-icons/pi";
 import {
   REFUND_REASON_LABELS,
   REFUND_STATUS_COLORS,
@@ -66,6 +68,7 @@ export default function AdminRefundsPage() {
 
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectingRefundId, setRejectingRefundId] = useState<string | null>(null);
+  const [approvingRefundId, setApprovingRefundId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
   // Create form local state
@@ -76,9 +79,6 @@ export default function AdminRefundsPage() {
   const [penaltyPct, setPenaltyPct] = useState(0);
   const [reason, setReason] = useState<RefundReasonEnum>(RefundReasonEnum.Other);
 
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
   const fetchRefunds = async () => {
     try {
       setLoading(true);
@@ -86,11 +86,11 @@ export default function AdminRefundsPage() {
       if (res.success) {
         setRefunds(res.data || []);
       } else {
-        setErrorMessage(res.message || "Lỗi khi tải danh sách hoàn tiền");
+        toast.error(res.message || "Lỗi khi tải danh sách hoàn tiền");
       }
     } catch (error) {
       console.error(error);
-      setErrorMessage("Đã xảy ra lỗi khi tải danh sách hoàn tiền");
+      toast.error("Đã xảy ra lỗi khi tải danh sách hoàn tiền");
     } finally {
       setLoading(false);
     }
@@ -103,13 +103,11 @@ export default function AdminRefundsPage() {
   const handleCreateRefund = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!walletId.trim() || !referenceId.trim()) {
-      setErrorMessage("Vui lòng điền đầy đủ thông tin bắt buộc");
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       return;
     }
     try {
       setSubmitting(true);
-      setErrorMessage("");
-      setSuccessMessage("");
       const dto: CreateRefundDto = {
         walletId: walletId.trim(),
         referenceType: referenceType.trim(),
@@ -120,7 +118,7 @@ export default function AdminRefundsPage() {
       };
       const res = await adminFinanceApi.createRefund(dto);
       if (res.success) {
-        setSuccessMessage("Tạo yêu cầu hoàn tiền thành công");
+        toast.success("Tạo yêu cầu hoàn tiền thành công");
         setIsModalVisible(false);
         // Reset form
         setWalletId("");
@@ -130,65 +128,62 @@ export default function AdminRefundsPage() {
         setPenaltyPct(0);
         setReason(RefundReasonEnum.Other);
         fetchRefunds();
-        setTimeout(() => setSuccessMessage(""), 4000);
       } else {
-        setErrorMessage(res.message || "Lỗi khi tạo hoàn tiền");
+        toast.error(res.message || "Lỗi khi tạo hoàn tiền");
       }
     } catch (error) {
       console.error(error);
-      setErrorMessage("Đã xảy ra lỗi khi tạo hoàn tiền");
+      toast.error("Đã xảy ra lỗi khi tạo hoàn tiền");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleApprove = async (id: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn duyệt yêu cầu hoàn tiền này?")) return;
+  const executeApproveRefund = async (id: string) => {
+    setApprovingRefundId(null);
     try {
       setSubmitting(true);
-      setErrorMessage("");
-      setSuccessMessage("");
       const res = await adminFinanceApi.approveRefund(id);
       if (res.success) {
-        setSuccessMessage("Duyệt hoàn tiền thành công");
+        toast.success("Duyệt hoàn tiền thành công");
         fetchRefunds();
-        setTimeout(() => setSuccessMessage(""), 4000);
       } else {
-        setErrorMessage(res.message || "Lỗi khi duyệt hoàn tiền");
+        toast.error(res.message || "Lỗi khi duyệt hoàn tiền");
       }
     } catch (error) {
       console.error(error);
-      setErrorMessage("Đã xảy ra lỗi khi duyệt hoàn tiền");
+      toast.error("Đã xảy ra lỗi khi duyệt hoàn tiền");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleApprove = (id: string) => {
+    setApprovingRefundId(id);
   };
 
   const handleReject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingRefundId) return;
     if (!rejectReason.trim()) {
-      setErrorMessage("Vui lòng nhập lý do từ chối");
+      toast.error("Vui lòng nhập lý do từ chối");
       return;
     }
     try {
       setSubmitting(true);
-      setErrorMessage("");
-      setSuccessMessage("");
       const res = await adminFinanceApi.rejectRefund(rejectingRefundId, rejectReason.trim());
       if (res.success) {
-        setSuccessMessage("Đã từ chối hoàn tiền");
+        toast.success("Đã từ chối hoàn tiền");
         setRejectModalVisible(false);
         setRejectingRefundId(null);
         setRejectReason("");
         fetchRefunds();
-        setTimeout(() => setSuccessMessage(""), 4000);
       } else {
-        setErrorMessage(res.message || "Lỗi khi từ chối hoàn tiền");
+        toast.error(res.message || "Lỗi khi từ chối hoàn tiền");
       }
     } catch (error) {
       console.error(error);
-      setErrorMessage("Đã xảy ra lỗi khi từ chối hoàn tiền");
+      toast.error("Đã xảy ra lỗi khi từ chối hoàn tiền");
     } finally {
       setSubmitting(false);
     }
@@ -221,17 +216,6 @@ export default function AdminRefundsPage() {
         </button>
       </div>
 
-      {/* Alert Messages */}
-      {successMessage && (
-        <div className="mb-6 p-4 text-sm rounded-lg bg-green-50 border border-green-200 text-green-700">
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="mb-6 p-4 text-sm rounded-lg bg-rose-50 border border-rose-200 text-rose-700">
-          {errorMessage}
-        </div>
-      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
@@ -244,6 +228,7 @@ export default function AdminRefundsPage() {
           <h3 className="text-2xl font-serif font-bold text-green-600">{totalRefundAmount.toLocaleString()} ₫</h3>
         </div>
       </div>
+
 
       {/* Refunds Table Card */}
       <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm overflow-hidden">
@@ -521,6 +506,39 @@ export default function AdminRefundsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: APPROVE REFUND CONFIRM */}
+      {approvingRefundId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-sm w-full p-6 shadow-2xl flex flex-col font-sans">
+            <div className="space-y-3">
+              <h4 className="text-base font-serif font-bold text-black flex items-center gap-1.5">
+                <PiWarningCircleBold className="text-primary text-lg" />
+                Xác nhận duyệt hoàn tiền
+              </h4>
+              <p className="text-xs text-gray-600 leading-normal">
+                Bạn có chắc chắn muốn phê duyệt yêu cầu hoàn tiền này không? Số tiền sẽ được hoàn trả vào ví của khách hàng.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA] mt-5">
+              <button
+                type="button"
+                onClick={() => setApprovingRefundId(null)}
+                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => executeApproveRefund(approvingRefundId)}
+                className="bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-4 py-2 rounded transition-colors"
+              >
+                Xác nhận duyệt
+              </button>
+            </div>
           </div>
         </div>
       )}
