@@ -10,6 +10,109 @@
     document.dispatchEvent(new CustomEvent("MUAHO_PAGE_DATA", { detail: detail }));
   }
 
+  // ── ICE / SSR (Taobao + Tmall layout) ──────────────────────────────────
+  function deepFindSeller(obj, depth) {
+    if (!obj || typeof obj !== "object" || depth > 6) return null;
+    if (obj.shopName && (obj.sellerId || obj.shopId || obj.userId)) return obj;
+    for (var k in obj) {
+      if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+      var v = obj[k];
+      if (v && typeof v === "object") {
+        var found = deepFindSeller(v, depth + 1);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  function readIceContext() {
+    try {
+      var ctx = window.__ICE_APP_CONTEXT__;
+      var ld = ctx && ctx.loaderData;
+      if (!ld) return null;
+
+      // Tìm node .data.res chứa seller/titleVO (route id "home" có thể đổi).
+      var res = null;
+      for (var key in ld) {
+        if (!Object.prototype.hasOwnProperty.call(ld, key)) continue;
+        var node = ld[key];
+        var r = node && node.data && node.data.res;
+        if (r && (r.seller || r.titleVO)) { res = r; break; }
+      }
+      if (!res) return null;
+
+      var seller = res.seller || {};
+      // titleVO.title có thể là string hoặc object {title:"..."}
+      var titleVO = res.titleVO || {};
+      var title =
+        (titleVO.title && (titleVO.title.title || titleVO.title)) ||
+        (res.item && res.item.title) ||
+        null;
+
+      var out = {
+        sellerId: seller.sellerId || seller.userId || seller.shopId || null,
+        shopId: seller.shopId || null,
+        shopName: seller.shopName || seller.shopTitle || seller.nick || null,
+        title: typeof title === "string" ? title : null,
+      };
+
+      // Ảnh (nếu có trong res.skuBase / res.componentsVO mainPic)
+      var pics =
+        (res.mainPicVO && res.mainPicVO.list) ||
+        (res.componentsVO && res.componentsVO.mainPicVO && res.componentsVO.mainPicVO.picList) ||
+        null;
+      if (pics && pics.length) {
+        out.imageList = pics
+          .map(function (p) { return p && (p.url || p.picUrl || p.imgUrl); })
+          .filter(Boolean);
+        out.image = out.imageList[0];
+      }
+
+      // Nếu thiếu seller theo path, thử deep-search toàn bộ ICE context.
+      if (!out.shopName || !out.sellerId) {
+        var ds = deepFindSeller(res, 0) || deepFindSeller(ld, 0);
+        if (ds) {
+          out.shopName = out.shopName || ds.shopName || null;
+          out.sellerId = out.sellerId || ds.sellerId || ds.userId || ds.shopId || null;
+          out.shopId = out.shopId || ds.shopId || null;
+        }
+      }
+      return out;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Fallback cuối: regex trên text inline script (data SSR tĩnh, bền nhất).
+  function readShopFromScripts() {
+    try {
+      var html = document.documentElement.innerHTML;
+      var out = {};
+      var m;
+      m = html.match(/"shopName"\s*:\s*"([^"]{1,80})"/);
+      if (m) out.shopName = m[1];
+      m = html.match(/"sellerId"\s*:\s*"?(\d{3,20})"?/);
+      if (m) out.sellerId = m[1];
+      m = html.match(/"shopId"\s*:\s*"?(\d{3,20})"?/);
+      if (m) out.shopId = m[1];
+      m = html.match(/"titleVO"\s*:\s*\{[^}]*?"title"\s*:\s*\{?\s*"title"\s*:\s*"([^"]{4,200})"/);
+      if (m) out.title = decodeUnicode(m[1]);
+      return out;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function decodeUnicode(s) {
+    try {
+      return s.replace(/\\u([\dA-Fa-f]{4})/g, function (_, g) {
+        return String.fromCharCode(parseInt(g, 16));
+      });
+    } catch (e) {
+      return s;
+    }
+  }
+
   // ── 1688 ──────────────────────────────────────────────────────────────────
   function read1688() {
     try {
@@ -89,11 +192,22 @@
   function readTaobao() {
     try {
       var out = { site: "TAOBAO" };
-      // g_config: global của trang item.taobao.com legacy
+      // Ưu tiên cao nhất: ICE context (layout SSR mới) — seller/title gốc, có ngay.
+      var ice = readIceContext();
+      if (ice) {
+        out.sellerId = ice.sellerId || out.sellerId;
+        out.shopName = ice.shopName || out.shopName;
+        out.title = ice.title || out.title;
+        if (ice.imageList && ice.imageList.length) {
+          out.imageList = ice.imageList;
+          out.image = ice.image;
+        }
+      }
+      // g_config: global của trang item.taobao.com legacy (chỉ điền nếu ICE chưa có)
       if (window.g_config) {
-        out.sellerId = window.g_config.sellerId || window.g_config.shopId;
-        out.shopName = window.g_config.shopName;
-        out.title = window.g_config.itemTitle || window.g_config.title;
+        out.sellerId = out.sellerId || window.g_config.sellerId || window.g_config.shopId;
+        out.shopName = out.shopName || window.g_config.shopName;
+        out.title = out.title || window.g_config.itemTitle || window.g_config.title;
       }
       // Hub.config.get('sku'/'item') — skuId/title (modern Taobao)
       try {
@@ -132,6 +246,13 @@
           out.sellerId = out.sellerId || sellerDO.userId || sellerDO.shopId || sellerDO.sellerId;
           out.shopName = out.shopName || sellerDO.shopName || sellerDO.nick || sellerDO.title;
         }
+      }
+      // Fallback cuối: regex text inline script.
+      if (!out.shopName || !out.sellerId) {
+        var s = readShopFromScripts();
+        out.shopName = out.shopName || s.shopName;
+        out.sellerId = out.sellerId || s.sellerId || s.shopId;
+        out.title = out.title || s.title;
       }
       return out;
     } catch (e) {
@@ -188,18 +309,29 @@
   function readTmall() {
     try {
       var out = { site: "TMALL" };
+      // Ưu tiên cao nhất: ICE context (Tmall chia sẻ UI ICE với Taobao).
+      var ice = readIceContext();
+      if (ice) {
+        out.sellerId = ice.sellerId || out.sellerId;
+        out.companyName = ice.shopName || out.companyName; // adapter Tmall đọc companyName trước
+        out.title = ice.title || out.title;
+        if (ice.imageList && ice.imageList.length) {
+          out.imageList = ice.imageList;
+          out.image = ice.image;
+        }
+      }
       // Hub.config (Tmall cũng dùng Hub trên một số version)
       try {
         if (window.Hub && window.Hub.config && window.Hub.config.get) {
           var hItem = window.Hub.config.get("item");
           if (hItem) {
-            out.title = hItem.title;
-            out.image = hItem.images && hItem.images[0];
+            out.title = out.title || hItem.title;
+            out.image = out.image || (hItem.images && hItem.images[0]);
           }
           var hSeller = window.Hub.config.get("seller");
           if (hSeller) {
-            out.sellerId = hSeller.userId || hSeller.shopId;
-            out.companyName = hSeller.shopName || hSeller.nick;
+            out.sellerId = out.sellerId || hSeller.userId || hSeller.shopId;
+            out.companyName = out.companyName || hSeller.shopName || hSeller.nick;
           }
         }
       } catch (e) {}
@@ -217,6 +349,13 @@
         out.sellerId = out.sellerId || seller.userId || seller.shopId || seller.sellerId;
         out.companyName =
           out.companyName || seller.shopName || seller.title || seller.nick;
+      }
+      // Fallback cuối: regex text inline script.
+      if (!out.companyName || !out.sellerId) {
+        var s = readShopFromScripts();
+        out.companyName = out.companyName || s.shopName;
+        out.sellerId = out.sellerId || s.sellerId || s.shopId;
+        out.title = out.title || s.title;
       }
       return out;
     } catch (e) {

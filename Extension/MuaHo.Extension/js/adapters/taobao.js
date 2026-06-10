@@ -168,40 +168,17 @@
             } catch (e) {}
           }
         }
-        // React shopName class-hash 
+        // React shopName class-hash
         if (!shop_name) {
-          try {
-            var s1 = document.querySelector(".ShopHeader--shopName--zZ3913d");
-            if (s1 != null) shop_name = s1.innerHTML;
-            else {
-              s1 = document.querySelector(".shopName--mTDZGIPO");
-              if (s1 != null) shop_name = s1.innerHTML;
-              else {
-                s1 = document.querySelector('[class*="shopName--ccf81bdd"]');
-                if (s1 != null) shop_name = s1.innerHTML;
-                else {
-                  s1 = document.querySelector(".shopName--cSjM9uKk");
-                  if (s1 != null) shop_name = s1.innerHTML;
-                  else {
-                    // mở rộng: bất kỳ class shopName-- nào (layout mới hash khác)
-                    s1 = document.querySelector('[class*="shopName--"]');
-                    if (s1 != null) shop_name = s1.innerHTML;
-                  }
-                }
-              }
-            }
-          } catch (e) {}
-        }
-        // mở rộng: ShopHeader title/link (layout mới)
-        if (!shop_name) {
-          var sh = document.querySelector(
-            '[class*="ShopHeader--shopName"], [class*="ShopHeader--title"]'
+          var s1 = document.querySelector(
+            '[class*="shopName--"], [class*="ShopHeader--shopName"], [class*="ShopHeader--title"]'
           );
-          if (sh) shop_name = sh.textContent;
-          if (!shop_name) {
-            var shl = document.querySelector('[class*="ShopHeader--"] a[title]');
-            if (shl) shop_name = shl.getAttribute("title") || shl.textContent;
-          }
+          if (s1) shop_name = s1.getAttribute("title") || s1.textContent;
+        }
+        // mở rộng: ShopHeader link 
+        if (!shop_name) {
+          var shl = document.querySelector('[class*="ShopHeader--"] a[title]');
+          if (shl) shop_name = shl.getAttribute("title") || shl.textContent;
         }
         return (shop_name || "").replace(/<[^>]*>/g, "").trim();
       } catch (ex) {
@@ -265,6 +242,15 @@
         var api = bv.getAttribute("data-api") || "";
         var m = api.match(/seller_num_id=(\d+)/);
         if (m) return m[1];
+      }
+      // 4. Layout ICE: link shop chứa shopId=/user_id=/userId=
+      var link = document.querySelector(
+        '[class*="shopName"] a[href*="shopId="], [class*="ShopHeader--"] a[href*="shopId="], a[href*="shop"][href*="user_id="], a[href*="userId="]'
+      );
+      if (link) {
+        var href = link.getAttribute("href") || "";
+        var mm = href.match(/[?&](?:shopId|user_id|userId|sellerId)=(\d{3,20})/);
+        if (mm) return mm[1];
       }
       return "";
     },
