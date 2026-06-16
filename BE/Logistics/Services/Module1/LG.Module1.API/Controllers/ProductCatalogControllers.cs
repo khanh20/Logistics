@@ -18,7 +18,7 @@ public abstract class Module1BaseController : ControllerBase
         ?? Request.Headers["X-Forwarded-For"].FirstOrDefault();
 
     protected Guid CurrentUserId =>
-        Guid.Parse(HttpContext.User.FindFirst("userId")?.Value
+        Guid.Parse(HttpContext.User.FindFirst(UserClaimTypes.UserId)?.Value
             ?? throw new UnauthorizedAccessException("UserId claim not found."));
 }
 

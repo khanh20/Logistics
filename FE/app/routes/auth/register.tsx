@@ -4,15 +4,16 @@ import { useTranslation } from "react-i18next";
 import type { Route } from "./+types/register";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
-import { authApi } from "~/lib/api/auth";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
+import { register as registerThunk } from "~/lib/feature/auth/authThunk";
+import { store } from "~/lib/feature/store";
 
 export function meta(_: Route.MetaArgs) {
   return [{ title: "Đăng ký — MuaHo Logistics" }];
 }
 
 export async function clientLoader(_: Route.ClientLoaderArgs) {
-  const { token } = useAuthStore.getState();
+  const { token } = store.getState().authState;
   if (token) throw redirect("/");
   return null;
 }
@@ -34,7 +35,7 @@ interface FormErrors {
 
 export default function RegisterPage() {
   const { t } = useTranslation();
-  const login = useAuthStore((s) => s.login);
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
   const [form, setForm] = useState<FormState>({
@@ -94,13 +95,12 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const res = await authApi.register({
+      await dispatch(registerThunk({
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
         phone: form.phone.trim() || undefined,
-      });
-      login(res.data.accessToken, res.data.refreshToken, res.data.user);
+      })).unwrap();
       navigate("/", { replace: true });
     } catch (err: unknown) {
       const msg =

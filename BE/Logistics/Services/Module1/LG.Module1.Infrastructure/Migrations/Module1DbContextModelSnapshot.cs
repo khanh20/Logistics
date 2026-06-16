@@ -219,6 +219,9 @@ namespace LG.Module1.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("ActualWeightKg")
+                        .HasColumnType("numeric");
+
                     b.Property<Guid?>("AssignedStaffId")
                         .HasColumnType("uuid");
 
@@ -284,6 +287,9 @@ namespace LG.Module1.Infrastructure.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
+                    b.Property<decimal>("ShippingFeeVnd")
+                        .HasColumnType("numeric");
+
                     b.Property<Guid>("ShopId")
                         .HasColumnType("uuid");
 
@@ -301,12 +307,18 @@ namespace LG.Module1.Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<int>("StorageDaysOverFree")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("TotalCny")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("VolumeCm3")
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 

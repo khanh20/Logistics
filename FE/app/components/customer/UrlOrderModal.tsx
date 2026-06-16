@@ -9,7 +9,8 @@ import { ingestionApi, exchangeRatesApi } from "~/lib/api/categories";
 import { cartApi } from "~/lib/api/cart";
 import { pingExtension, scrapeViaExtension } from "~/lib/extension/bridge";
 import { toScrapedPayload } from "~/lib/types/category";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { useAppSelector } from "~/lib/feature/hooks";
+import { selectAuth } from "~/lib/feature/auth/authSelector";
 import type { ProductDetail } from "~/lib/types/product";
 
 // Sàn TQ cần extension scrape (không có API backend).
@@ -29,7 +30,7 @@ interface UrlOrderModalProps {
 export function UrlOrderModal({ open, onClose }: UrlOrderModalProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { token } = useAuthStore.getState();
+  const { token } = useAppSelector(selectAuth);
 
   const [url, setUrl] = useState("");
   const [step, setStep] = useState<Step>("input");

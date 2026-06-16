@@ -1,6 +1,7 @@
 export interface UserAuthInfo {
   id: string;
   email: string;
+  phone?: string;
   fullName: string;
   avatarUrl: string | null;
   roles: string[];

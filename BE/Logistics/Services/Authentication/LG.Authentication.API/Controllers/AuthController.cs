@@ -89,6 +89,7 @@ public class AuthController(
 
     /// Logout current device (revoke refresh token)
     [HttpPost("logout")]
+    [AllowAnonymous]
     [ProducesResponseType(200)]
     public async Task<IActionResult> Logout(
         [FromBody] RefreshTokenRequest req, CancellationToken ct)

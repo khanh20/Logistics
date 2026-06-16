@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Library\Infrastructure\LG.EntitiesBase\LG.EntitiesBase.csproj" />
+    <ProjectReference Include="..\..\..\Library\LG.Untils\LG.Untils.csproj" />
+    <ProjectReference Include="..\..\..\Shared\LG.Shared.Constants\LG.Shared.Constants.csproj" />
+  </ItemGroup>
+
 </Project>

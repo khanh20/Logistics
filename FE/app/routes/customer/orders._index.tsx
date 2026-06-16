@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, redirect } from "react-router";
 import { useTranslation } from "react-i18next";
-import { useAuthStore } from "~/lib/stores/authStore";
+import { store } from "~/lib/feature/store";
 import { customerOrdersApi } from "~/lib/api/orders";
 import { StatusBadge } from "~/components/shared/StatusBadge";
 import { Button } from "~/components/ui/Button";
@@ -17,7 +17,7 @@ export function meta(_: Route.MetaArgs) {
 const PAGE_SIZE = 10;
 
 export async function clientLoader() {
-  const { token } = useAuthStore.getState();
+  const { token } = store.getState().authState;
   if (!token) throw redirect("/login");
 
   const res = await customerOrdersApi.list({ page: 1, pageSize: PAGE_SIZE });
@@ -85,30 +85,28 @@ export default function CustomerOrdersPage({
       <div className="flex flex-wrap gap-2 mb-5">
         <button
           onClick={() => handleStatusChange("")}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            statusFilter === ""
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${statusFilter === ""
               ? "bg-primary text-white"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
+            }`}
         >
           {t("order.all_statuses")}
         </button>
         {(["PendingPayment", "Paid", "AwaitingManualPlace", "OrderedOnPlatform",
-           "ShippedFromShop", "ArrivedChinaWh", "ShippingToVN", "ArrivedVietnam",
-           "Delivering", "Completed", "CancelledByCustomer", "CancelledByTimeout",
-           "Returned"] as OrderStatus[]).map((s) => (
-          <button
-            key={s}
-            onClick={() => handleStatusChange(s)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              statusFilter === s
-                ? "bg-primary text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            <StatusBadge status={s} />
-          </button>
-        ))}
+          "ShippedFromShop", "ArrivedChinaWh", "ShippingToVN", "ArrivedVietnam",
+          "Delivering", "Completed", "CancelledByCustomer", "CancelledByTimeout",
+          "Returned"] as OrderStatus[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => handleStatusChange(s)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${statusFilter === s
+                  ? "bg-primary text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+            >
+              <StatusBadge status={s} />
+            </button>
+          ))}
       </div>
 
       {/* Orders list */}

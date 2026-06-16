@@ -1,194 +1,159 @@
-import { useState, useEffect, useCallback } from "react";
-import { NavLink } from "react-router";
+import { useState } from "react";
+import { NavLink, useLocation } from "react-router";
 import { useTranslation } from "react-i18next";
+import { DownOutlined, RightOutlined } from "@ant-design/icons";
 import { cn } from "~/lib/utils/cn";
 import type { UserAuthInfo } from "~/lib/types/auth";
+
+import {
+  FaBox,
+  FaBagShopping,
+  FaTags,
+  FaFolder,
+  FaGlobe,
+  FaFileImport,
+  FaMoneyBillTransfer,
+  FaUsers,
+  FaMoneyBillWave,
+  FaChartPie,
+  FaIdCard,
+  FaBuildingColumns,
+  FaReceipt,
+  FaHandHoldingDollar,
+  FaScaleBalanced,
+  FaTriangleExclamation,
+  FaLock,
+  FaPercent,
+  FaStar,
+  FaGear,
+  FaCreditCard,
+  FaSatelliteDish
+} from "react-icons/fa6";
 
 interface AdminSidebarProps {
   user: UserAuthInfo;
 }
 
-interface MenuItem {
-  to: string;
+type MenuItem = {
+  to?: string;
   label: string;
-  icon: string;
-}
-
-interface MenuGroup {
-  id: string;
-  label: string;
-  icon: string;
-  items: MenuItem[];
-}
-
-const STORAGE_KEY = "admin-sidebar-open";
-
-function loadOpenGroups(groupIds: string[]): Set<string> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as string[];
-      return new Set(parsed);
-    }
-  } catch {
-    // ignore parse errors
-  }
-  // Default: all groups open
-  return new Set(groupIds);
-}
-
-function saveOpenGroups(open: Set<string>) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...open]));
-  } catch {
-    // ignore storage errors
-  }
-}
+  icon: React.ReactNode;
+  end?: boolean;
+  children?: MenuItem[];
+};
 
 export function AdminSidebar({ user }: AdminSidebarProps) {
   const { t } = useTranslation();
+  const location = useLocation();
 
-  const GROUPS: MenuGroup[] = [
+  const MENU_ITEMS: MenuItem[] = [
+    { to: "/admin/orders", label: t("nav.orders"), icon: <FaBox className="text-base text-blue-400" /> },
+    { to: "/admin/platform-orders", label: t("nav.platform_orders"), icon: <FaBagShopping className="text-base text-purple-400" /> },
+    { to: "/admin/products", label: t("nav.products"), icon: <FaTags className="text-base text-green-400" /> },
+    { to: "/admin/categories", label: t("nav.categories"), icon: <FaFolder className="text-base text-yellow-400" /> },
+    { to: "/admin/platforms", label: t("nav.platforms"), icon: <FaGlobe className="text-base text-cyan-400" /> },
+    { to: "/admin/ingestion", label: t("nav.ingestion"), icon: <FaFileImport className="text-base text-orange-400" /> },
+    { to: "/admin/exchange-rates", label: t("nav.exchange_rates"), icon: <FaMoneyBillTransfer className="text-base text-emerald-400" /> },
+    { to: "/admin/staff", label: t("nav.staff"), icon: <FaUsers className="text-base text-pink-400" /> },
     {
-      id: "orders",
-      label: t("nav.group_orders"),
-      icon: "📦",
-      items: [
-        { to: "/admin/orders",          label: t("nav.orders"),          icon: "📋" },
-        { to: "/admin/platform-orders", label: t("nav.platform_orders"), icon: "🛍️" },
-      ],
-    },
-    {
-      id: "staff",
-      label: t("nav.group_staff"),
-      icon: "👥",
-      items: [
-        { to: "/admin/staff-dashboard",     label: t("nav.staff_dashboard"), icon: "📊" },
-        { to: "/admin/assignments/overdue", label: t("nav.overdue_sla"),     icon: "⚠️" },
-        { to: "/admin/staff",              label: t("nav.staff"),           icon: "👤" },
-      ],
-    },
-    {
-      id: "products",
-      label: t("nav.group_products"),
-      icon: "🏷️",
-      items: [
-        { to: "/admin/products",    label: t("nav.products"),    icon: "📦" },
-        { to: "/admin/categories",  label: t("nav.categories"),  icon: "📂" },
-        { to: "/admin/platforms",   label: t("nav.platforms"),   icon: "🌐" },
-        { to: "/admin/ingestion",   label: t("nav.ingestion"),   icon: "⬇️" },
-      ],
-    },
-    {
-      id: "system",
-      label: t("nav.group_system"),
-      icon: "⚙️",
-      items: [
-        { to: "/admin/exchange-rates", label: t("nav.exchange_rates"), icon: "💱" },
-        { to: "/admin/roles",          label: t("nav.roles"),          icon: "🔐" },
-        { to: "/admin/permissions",    label: t("nav.permissions"),    icon: "🗝️" },
-      ],
-    },
+      label: t("nav.finance"),
+      icon: <FaMoneyBillWave className="text-base text-emerald-400" />,
+      children: [
+        { to: "/admin/finance", label: t("nav.finance_overview"), icon: <FaChartPie className="text-base text-indigo-400" />, end: true },
+        { to: "/admin/finance/kyc", label: t("nav.finance_kyc"), icon: <FaIdCard className="text-base text-rose-400" /> },
+        { to: "/admin/finance/withdraws", label: t("nav.finance_withdraws"), icon: <FaBuildingColumns className="text-base text-amber-400" /> },
+        { to: "/admin/finance/transactions", label: t("nav.finance_transactions"), icon: <FaReceipt className="text-base text-lime-400" /> },
+        { to: "/admin/finance/refunds", label: t("nav.finance_refunds"), icon: <FaHandHoldingDollar className="text-base text-sky-400" /> },
+        { to: "/admin/finance/reconcile", label: t("nav.finance_reconcile"), icon: <FaScaleBalanced className="text-base text-fuchsia-400" /> },
+        { to: "/admin/finance/fraud", label: t("nav.finance_fraud"), icon: <FaTriangleExclamation className="text-base text-red-500" /> },
+        { to: "/admin/finance/payment-locks", label: t("nav.finance_payment_locks"), icon: <FaLock className="text-base text-slate-400" /> },
+        { to: "/admin/finance/fee-rules", label: t("nav.finance_fee_rules"), icon: <FaPercent className="text-base text-violet-400" /> },
+        { to: "/admin/finance/vip-tiers", label: t("nav.finance_vip_tiers"), icon: <FaStar className="text-base text-yellow-400" /> },
+        { to: "/admin/finance/transaction-types", label: t("nav.finance_transaction_types"), icon: <FaGear className="text-base text-gray-400" /> },
+        { to: "/admin/finance/bank-accounts", label: t("nav.finance_bank_accounts"), icon: <FaCreditCard className="text-base text-blue-300" /> },
+        { to: "/admin/finance/webhook-logs", label: t("nav.finance_webhook_logs"), icon: <FaSatelliteDish className="text-base text-emerald-300" /> },
+      ]
+    }
   ];
 
-  const allGroupIds = GROUPS.map((g) => g.id);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
+    return {
+      [t("nav.finance")]: location.pathname.startsWith("/admin/finance")
+    };
+  });
 
-  const [openGroups, setOpenGroups] = useState<Set<string>>(() =>
-    loadOpenGroups(allGroupIds)
-  );
+  const toggleMenu = (label: string) => {
+    setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
+  };
 
-  // Keep localStorage in sync whenever openGroups changes
-  useEffect(() => {
-    saveOpenGroups(openGroups);
-  }, [openGroups]);
+  const renderMenuItem = (item: MenuItem, depth = 0) => {
+    const paddingLeft = `${0.75 + depth * 1.25}rem`;
 
-  const toggleGroup = useCallback((id: string) => {
-    setOpenGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
+    if (item.children) {
+      const isOpen = openMenus[item.label];
+      return (
+        <div key={item.label} className="flex flex-col space-y-1">
+          <button
+            onClick={() => toggleMenu(item.label)}
+            className="flex items-center justify-between w-full py-2 pr-3 rounded-md text-sm transition-colors text-slate-400 hover:bg-slate-800/60 hover:text-white"
+            style={{ paddingLeft }}
+          >
+            <div className="flex items-center gap-3 overflow-hidden flex-1">
+              <span className="shrink-0">{item.icon}</span>
+              <span className="truncate">{item.label}</span>
+            </div>
+            {isOpen ? <DownOutlined className="text-xs shrink-0 ml-2" /> : <RightOutlined className="text-xs shrink-0 ml-2" />}
+          </button>
+
+          {isOpen && (
+            <div className="flex flex-col space-y-1 mt-1">
+              {item.children.map(child => renderMenuItem(child, depth + 1))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <NavLink
+        key={item.to}
+        to={item.to!}
+        end={item.end}
+        className={({ isActive }) =>
+          cn(
+            "flex items-center gap-3 py-2 pr-3 rounded-md text-sm transition-colors",
+            isActive
+              ? "bg-white text-gray-900 font-medium"
+              : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
+          )
+        }
+        style={{ paddingLeft }}
+      >
+        <span className="shrink-0">{item.icon}</span>
+        <span className="truncate flex-1">{item.label}</span>
+      </NavLink>
+    );
+  };
 
   return (
-    <aside className="w-60 shrink-0 bg-gray-900 flex flex-col">
-      {/* Brand */}
-      <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-700">
+    <aside className="w-64 shrink-0 bg-slate-950 border-r border-slate-800 flex flex-col">
+      <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-800">
         <span className="text-lg font-bold text-white">MuaHo</span>
         <span className="text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-medium">
           Admin
         </span>
       </div>
 
-      {/* Nav groups */}
-      <nav className="flex-1 py-3 px-2 overflow-y-auto space-y-1">
-        {GROUPS.map((group) => {
-          const isOpen = openGroups.has(group.id);
-          return (
-            <div key={group.id}>
-              {/* Group header — click to collapse / expand */}
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.id)}
-                className="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-md
-                           text-xs font-semibold uppercase tracking-wider
-                           text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors"
-              >
-                <span className="flex items-center gap-1.5">
-                  <span>{group.icon}</span>
-                  {group.label}
-                </span>
-                <span
-                  className={cn(
-                    "transition-transform duration-200 text-gray-600",
-                    isOpen ? "rotate-90" : "rotate-0"
-                  )}
-                >
-                  ›
-                </span>
-              </button>
-
-              {/* Group items */}
-              {isOpen && (
-                <div className="mt-0.5 mb-1 space-y-0.5 pl-2">
-                  {group.items.map(({ to, label, icon }) => (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      className={({ isActive }) =>
-                        cn(
-                          "flex items-center gap-2.5 px-3 py-1.5 rounded-md text-sm transition-colors",
-                          isActive
-                            ? "bg-primary text-white font-medium"
-                            : "text-gray-400 hover:bg-gray-800 hover:text-white"
-                        )
-                      }
-                    >
-                      <span className="text-base leading-none">{icon}</span>
-                      {label}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <nav className="flex-1 min-h-0 overflow-y-auto py-4 px-2 space-y-1 custom-scrollbar">
+        {MENU_ITEMS.map(item => renderMenuItem(item))}
       </nav>
 
-      {/* User info footer */}
-      <div className="px-4 py-4 border-t border-gray-700">
-        <p className="text-xs text-gray-400 truncate">{user.email}</p>
-        <p className="text-sm text-gray-200 font-medium truncate">{user.fullName}</p>
+      <div className="px-4 py-4 border-t border-slate-800">
+        <p className="text-xs text-slate-400 truncate">{user.email}</p>
+        <p className="text-sm text-slate-200 font-medium truncate">{user.fullName}</p>
         <div className="mt-1 flex flex-wrap gap-1">
           {user.roles.map((r) => (
-            <span
-              key={r}
-              className="text-xs bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded"
-            >
+            <span key={r} className="text-xs bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">
               {r}
             </span>
           ))}

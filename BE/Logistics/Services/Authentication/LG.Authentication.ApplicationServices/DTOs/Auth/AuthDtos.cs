@@ -46,6 +46,7 @@ public record AuthResponse(
 public record UserAuthInfo(
     Guid         Id,
     string       Email,
+    string?      Phone,
     string       FullName,
     string?      AvatarUrl,
     List<string> Roles,

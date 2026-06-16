@@ -1,0 +1,61 @@
+using LG.EntitiesBase;
+using LG.Shared.Constants.Common.Database;
+using LG.Untils.EnumFinance;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace LG.Core.Domain.Finance
+{
+
+    [Table(nameof(CustomerProfile), Schema = DbSchemas.LGFinance)]
+    public class CustomerProfile : ICreatedBy, IModifiedBy, ISoftDelted
+    {
+        [Key]
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        [Required]
+        public Guid UserId { get; set; }
+
+        [Required]
+        [MaxLength(30)]
+        public string CustomerCode { get; set; }
+
+        public Guid? VipTierId { get; set; }
+
+        [Required]
+        [MaxLength(255)]
+        public string? FullName { get; set; }
+
+        public DateTime? DateOfBirth { get; set; }
+
+        public Gender? Gender { get; set; }
+
+        public PreferredChannel PreferredChannel { get; set; } = PreferredChannel.Email;
+
+        [MaxLength(100)]
+        public string? ZaloUserId { get; set; }
+
+        [MaxLength(20)]
+        public string? ReferralCode { get; set; }
+
+        public Guid? ReferredById { get; set; } 
+
+        public decimal LifetimeValueVnd { get; set; } = 0;
+
+        public int TotalOrders { get; set; } = 0;
+
+        public DateTime? DeletedDate { get; set; }
+        public bool Deleted { get; set; }
+        public Guid? DeletedBy { get; set; }
+        public DateTime? CreatedDate { get; set; }
+        public Guid? CreatedBy { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+        public Guid? ModifiedBy { get; set; }
+    }
+}

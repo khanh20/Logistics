@@ -56,6 +56,8 @@ export interface CheckoutPreviewResponse {
   groups: CheckoutPreviewGroupResponse[];
   subtotalVnd: number;
   serviceFeeVnd: number;
+  inspectionFeeVnd: number;
+  insuranceFeeVnd: number;
   estimatedShippingFeeVnd: number;
   totalVnd: number;
   depositVnd: number;
@@ -93,10 +95,12 @@ export interface UpdateCartItemQuantityRequest {
 export interface CheckoutPreviewRequest {
   shopIds: string[];
   deliveryAddressNote?: string;
+  insuranceOption?: string;
 }
 
 export interface ConfirmCheckoutRequest {
   shopIds: string[];
   deliveryAddressNote?: string;
   customerNote?: string;
+  insuranceOption?: string;
 }

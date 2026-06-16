@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\Library\Infrastructure\LG.EntitiesBase\LG.EntitiesBase.csproj" />
+  </ItemGroup>
+
 </Project>

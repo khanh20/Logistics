@@ -149,20 +149,20 @@ public class CurrentUserService(Microsoft.AspNetCore.Http.IHttpContextAccessor h
         httpContextAccessor.HttpContext?.User;
 
     public Guid? UserId =>
-        Guid.TryParse(Principal?.FindFirst("userId")?.Value, out var id) ? id : null;
+        Guid.TryParse(Principal?.FindFirst(LG.Shared.Constants.UserClaimTypes.UserId)?.Value, out var id) ? id : null;
 
-    public string? Email    => Principal?.FindFirst("email")?.Value;
-    public string? FullName => Principal?.FindFirst("fullName")?.Value;
+    public string? Email    => Principal?.FindFirst(LG.Shared.Constants.UserClaimTypes.Email)?.Value;
+    public string? FullName => Principal?.FindFirst(LG.Shared.Constants.UserClaimTypes.Fullname)?.Value;
 
     public List<string> Roles =>
         Principal?.Claims
-            .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role)
+            .Where(c => c.Type == LG.Shared.Constants.UserClaimTypes.Role)
             .Select(c => c.Value)
             .ToList() ?? [];
 
     public List<string> Permissions =>
         Principal?.Claims
-            .Where(c => c.Type == "permission")
+            .Where(c => c.Type == LG.Shared.Constants.UserClaimTypes.Permission)
             .Select(c => c.Value)
             .ToList() ?? [];
 

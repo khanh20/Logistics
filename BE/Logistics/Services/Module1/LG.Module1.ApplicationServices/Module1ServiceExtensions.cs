@@ -104,7 +104,18 @@ public static class Module1ServiceExtensions
         services.AddScoped<IExtensionCartService, ExtensionCartService>();
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
         services.AddScoped<IOrderManagementService, OrderManagementService>();
-        services.AddScoped<IWalletService, WalletServiceStub>();
+        services.AddHttpClient<IWalletService, WalletService>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var baseUrl = cfg["Core:BaseUrl"]
+                       ?? Environment.GetEnvironmentVariable("CORE__BASEURL")
+                       ?? "https://localhost:7215";
+
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout     = TimeSpan.FromSeconds(10);
+        })
+        .AddPolicyHandler(GetRetryPolicy("Core"));
+
         services.AddScoped<IStaffAssignmentService, StaffAssignmentService>();
         services.AddScoped<ILogisticsService, LogisticsServiceStub>();
 

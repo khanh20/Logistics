@@ -9,6 +9,7 @@ import type {
   UpdateTrackingRequest,
   RecordIssueRequest,
   OrderTransitionRequest,
+  ArrivedVietnamRequest,
   OrderStatus,
   StaffAssignmentDto,
   OverdueAssignmentDto,
@@ -37,6 +38,11 @@ export const customerOrdersApi = {
   payDeposit: (id: string) =>
     apiModule1Client.post<unknown, ApiResponse<OrderDetailResponse>>(
       `/api/orders/${id}/pay-deposit`
+    ),
+
+  payFinal: (id: string) =>
+    apiModule1Client.post<unknown, ApiResponse<OrderDetailResponse>>(
+      `/api/orders/${id}/pay-final`
     ),
 };
 
@@ -91,7 +97,7 @@ export const manageOrdersApi = {
       req
     ),
 
-  arrivedVietnam: (id: string, req: OrderTransitionRequest) =>
+  arrivedVietnam: (id: string, req: ArrivedVietnamRequest) =>
     apiModule1Client.post<unknown, ApiResponse<OrderDetailResponse>>(
       `/api/manage/orders/${id}/arrived-vietnam`,
       req
