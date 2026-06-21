@@ -39,6 +39,7 @@ public static class Permissions
     public const string OrderCreate     = "order.create";
     public const string OrderManage     = "order.manage";   // staff
     public const string OrderDeposit    = "order.deposit";
+    public const string StaffManage     = "staff.manage";   // admin: KPI đội, capacity/ca NV
     public const string ComplaintRead   = "complaint.read";
     public const string ComplaintManage = "complaint.manage";
     public const string PlatformRead    = "platform.read";
@@ -133,7 +134,7 @@ public static class Permissions
         ProductRead, ProductManage,
         CrawlSubmit,
         CartRead, CartManage,
-        OrderRead, OrderCreate, OrderDeposit, OrderManage,
+        OrderRead, OrderCreate, OrderDeposit, OrderManage, StaffManage,
         ComplaintRead, ComplaintManage,
         PlatformRead, PlatformManage,
         ExchangeRateRead, ExchangeRateManage,

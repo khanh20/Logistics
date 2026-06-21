@@ -53,3 +53,6 @@ public class EmptyCartCheckoutException()
 
 public class VariantUnavailableException(string variantName)
     : Module1DomainException($"Phân loại '{variantName}' hiện không còn hàng.", "VARIANT_UNAVAILABLE");
+
+public class ComplaintNotFoundException(object id)
+    : Module1DomainException($"Không tìm thấy khiếu nại: {id}.", "COMPLAINT_NOT_FOUND");

@@ -33,6 +33,13 @@ public class Module1DbContext(DbContextOptions<Module1DbContext> options) : DbCo
 
     public DbSet<ExtensionScrapeLog> ExtensionScrapeLogs => Set<ExtensionScrapeLog>();
 
+    // ── Staff Operations expansion ───────────────────────────────────────────
+    public DbSet<StaffWorkSetting>      StaffWorkSettings      => Set<StaffWorkSetting>();
+    public DbSet<StaffPerformanceDaily> StaffPerformanceDailies => Set<StaffPerformanceDaily>();
+    public DbSet<StaffNotification>     StaffNotifications     => Set<StaffNotification>();
+    public DbSet<OrderComplaint>        OrderComplaints        => Set<OrderComplaint>();
+    public DbSet<SupplierChatLog>       SupplierChatLogs       => Set<SupplierChatLog>();
+
     protected override void OnModelCreating(ModelBuilder mb)
     {
         mb.HasDefaultSchema("mod1");

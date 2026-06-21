@@ -639,6 +639,9 @@ public class Module1UnitOfWork(Module1DbContext db) : IModule1UnitOfWork
 // ── StaffAssignment ───────────────────────────────────────────────────────────
 public class StaffAssignmentRepository(Module1DbContext db) : IStaffAssignmentRepository
 {
+    public Task<StaffAssignment?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.StaffAssignments.Include(x => x.Order).FirstOrDefaultAsync(x => x.Id == id, ct);
+
     public Task<StaffAssignment?> GetActiveByOrderIdAsync(Guid orderId, CancellationToken ct = default) =>
         // Query trực tiếp trên FK column orderId — không qua navigation (tránh Bug 3)
         db.StaffAssignments
@@ -679,6 +682,22 @@ public class StaffAssignmentRepository(Module1DbContext db) : IStaffAssignmentRe
     public Task<int> GetOverdueCountAsync(Guid staffId, CancellationToken ct = default) =>
         db.StaffAssignments.CountAsync(x => x.StaffId == staffId && x.IsOverdue && x.CompletedAt == null, ct);
 
+    public Task<List<StaffAssignment>> GetQueueByStaffAsync(Guid staffId, bool includeClosed,
+                                                            CancellationToken ct = default)
+    {
+        var q = db.StaffAssignments.Include(x => x.Order).Where(x => x.StaffId == staffId);
+        if (!includeClosed) q = q.Where(x => x.CompletedAt == null);
+        return q.OrderBy(x => x.CompletedAt == null ? 0 : 1)
+                .ThenBy(x => x.SlaDeadline)
+                .ToListAsync(ct);
+    }
+
+    public Task<List<StaffAssignment>> GetAssignedBetweenAsync(DateTime fromUtc, DateTime toUtc,
+                                                               CancellationToken ct = default) =>
+        db.StaffAssignments
+          .Where(x => x.AssignedAt >= fromUtc && x.AssignedAt < toUtc)
+          .ToListAsync(ct);
+
     public async Task AddAsync(StaffAssignment assignment, CancellationToken ct = default)
     {
         // Tránh Bug 1 (EF snapshot): chỉ Add khi entry Detached
@@ -701,5 +720,151 @@ public class ExtensionScrapeLogRepository(Module1DbContext db) : IExtensionScrap
     {
         if (db.Entry(log).State == EntityState.Detached)
             await db.ExtensionScrapeLogs.AddAsync(log, ct);
+    }
+}
+
+// ── StaffWorkSetting ──────────────────────────────────────────────────────────
+public class StaffWorkSettingRepository(Module1DbContext db) : IStaffWorkSettingRepository
+{
+    public Task<StaffWorkSetting?> GetByStaffIdAsync(Guid staffId, CancellationToken ct = default) =>
+        db.StaffWorkSettings.FirstOrDefaultAsync(x => x.StaffId == staffId, ct);
+
+    public Task<List<StaffWorkSetting>> GetAllAsync(CancellationToken ct = default) =>
+        db.StaffWorkSettings.ToListAsync(ct);
+
+    public Task<List<StaffWorkSetting>> GetByStaffIdsAsync(IEnumerable<Guid> staffIds, CancellationToken ct = default)
+    {
+        var ids = staffIds.ToList();
+        return db.StaffWorkSettings.Where(x => ids.Contains(x.StaffId)).ToListAsync(ct);
+    }
+
+    public async Task AddAsync(StaffWorkSetting setting, CancellationToken ct = default)
+    {
+        if (db.Entry(setting).State == EntityState.Detached)
+            await db.StaffWorkSettings.AddAsync(setting, ct);
+    }
+
+    public Task UpdateAsync(StaffWorkSetting setting, CancellationToken ct = default)
+    {
+        if (db.Entry(setting).State == EntityState.Detached)
+            db.StaffWorkSettings.Update(setting);
+        return Task.CompletedTask;
+    }
+}
+
+// ── StaffPerformanceDaily ─────────────────────────────────────────────────────
+public class StaffPerformanceRepository(Module1DbContext db) : IStaffPerformanceRepository
+{
+    public Task<StaffPerformanceDaily?> GetAsync(Guid staffId, DateOnly date, CancellationToken ct = default) =>
+        db.StaffPerformanceDailies.FirstOrDefaultAsync(x => x.StaffId == staffId && x.Date == date, ct);
+
+    public Task<List<StaffPerformanceDaily>> GetRangeAsync(Guid? staffId, DateOnly from, DateOnly to,
+                                                           CancellationToken ct = default)
+    {
+        var q = db.StaffPerformanceDailies.Where(x => x.Date >= from && x.Date <= to);
+        if (staffId.HasValue) q = q.Where(x => x.StaffId == staffId.Value);
+        return q.OrderBy(x => x.Date).ToListAsync(ct);
+    }
+
+    public async Task AddAsync(StaffPerformanceDaily snapshot, CancellationToken ct = default)
+    {
+        if (db.Entry(snapshot).State == EntityState.Detached)
+            await db.StaffPerformanceDailies.AddAsync(snapshot, ct);
+    }
+
+    public Task UpdateAsync(StaffPerformanceDaily snapshot, CancellationToken ct = default)
+    {
+        if (db.Entry(snapshot).State == EntityState.Detached)
+            db.StaffPerformanceDailies.Update(snapshot);
+        return Task.CompletedTask;
+    }
+}
+
+// ── StaffNotification ─────────────────────────────────────────────────────────
+public class StaffNotificationRepository(Module1DbContext db) : IStaffNotificationRepository
+{
+    public Task<List<StaffNotification>> GetByStaffAsync(Guid staffId, bool unreadOnly, int take,
+                                                         CancellationToken ct = default)
+    {
+        var q = db.StaffNotifications.Where(x => x.StaffId == staffId);
+        if (unreadOnly) q = q.Where(x => !x.IsRead);
+        return q.OrderByDescending(x => x.CreatedAt).Take(take).ToListAsync(ct);
+    }
+
+    public Task<int> CountUnreadAsync(Guid staffId, CancellationToken ct = default) =>
+        db.StaffNotifications.CountAsync(x => x.StaffId == staffId && !x.IsRead, ct);
+
+    public Task<StaffNotification?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.StaffNotifications.FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public async Task MarkAllReadAsync(Guid staffId, CancellationToken ct = default) =>
+        await db.StaffNotifications
+            .Where(x => x.StaffId == staffId && !x.IsRead)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsRead, true), ct);
+
+    public async Task AddAsync(StaffNotification notification, CancellationToken ct = default)
+    {
+        if (db.Entry(notification).State == EntityState.Detached)
+            await db.StaffNotifications.AddAsync(notification, ct);
+    }
+
+    public Task UpdateAsync(StaffNotification notification, CancellationToken ct = default)
+    {
+        if (db.Entry(notification).State == EntityState.Detached)
+            db.StaffNotifications.Update(notification);
+        return Task.CompletedTask;
+    }
+}
+
+// ── OrderComplaint ────────────────────────────────────────────────────────────
+public class OrderComplaintRepository(Module1DbContext db) : IOrderComplaintRepository
+{
+    public Task<OrderComplaint?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.OrderComplaints.Include(x => x.Order).FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public Task<List<OrderComplaint>> GetByOrderAsync(Guid orderId, CancellationToken ct = default) =>
+        db.OrderComplaints.Where(x => x.OrderId == orderId)
+                          .OrderByDescending(x => x.CreatedAt).ToListAsync(ct);
+
+    public async Task<(List<OrderComplaint> Items, int TotalCount)> SearchAsync(
+        ComplaintStatus? status, Guid? assignedToStaffId, Guid? customerId,
+        int page, int pageSize, CancellationToken ct = default)
+    {
+        var q = db.OrderComplaints.Include(x => x.Order).AsQueryable();
+        if (status.HasValue)            q = q.Where(x => x.Status == status);
+        if (assignedToStaffId.HasValue) q = q.Where(x => x.AssignedToStaffId == assignedToStaffId);
+        if (customerId.HasValue)        q = q.Where(x => x.CustomerId == customerId);
+
+        var total = await q.CountAsync(ct);
+        var items = await q.OrderByDescending(x => x.CreatedAt)
+                           .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        return (items, total);
+    }
+
+    public async Task AddAsync(OrderComplaint complaint, CancellationToken ct = default)
+    {
+        if (db.Entry(complaint).State == EntityState.Detached)
+            await db.OrderComplaints.AddAsync(complaint, ct);
+    }
+
+    public Task UpdateAsync(OrderComplaint complaint, CancellationToken ct = default)
+    {
+        if (db.Entry(complaint).State == EntityState.Detached)
+            db.OrderComplaints.Update(complaint);
+        return Task.CompletedTask;
+    }
+}
+
+// ── SupplierChatLog ───────────────────────────────────────────────────────────
+public class SupplierChatLogRepository(Module1DbContext db) : ISupplierChatLogRepository
+{
+    public Task<List<SupplierChatLog>> GetByOrderAsync(Guid orderId, CancellationToken ct = default) =>
+        db.SupplierChatLogs.Where(x => x.OrderId == orderId)
+                           .OrderBy(x => x.SentAt).ToListAsync(ct);
+
+    public async Task AddAsync(SupplierChatLog log, CancellationToken ct = default)
+    {
+        if (db.Entry(log).State == EntityState.Detached)
+            await db.SupplierChatLogs.AddAsync(log, ct);
     }
 }

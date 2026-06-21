@@ -80,7 +80,7 @@ export const manageOrdersApi = {
     ),
 
   updateTracking: (id: string, req: UpdateTrackingRequest) =>
-    apiModule1Client.post<unknown, ApiResponse<OrderDetailResponse>>(
+    apiModule1Client.patch<unknown, ApiResponse<OrderDetailResponse>>(
       `/api/manage/orders/${id}/tracking`,
       req
     ),

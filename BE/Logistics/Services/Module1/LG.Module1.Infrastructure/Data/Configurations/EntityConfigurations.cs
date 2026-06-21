@@ -396,6 +396,7 @@ public class StaffAssignmentConfig : IEntityTypeConfiguration<StaffAssignment>
         b.ToTable("staff_assignments");
         b.HasKey(x => x.Id);
         b.Property(x => x.Note).HasMaxLength(500);
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
 
         // Index cho job query: tìm pending-expired, query by staff, query overdue
         b.HasIndex(x => x.OrderId);
@@ -404,6 +405,75 @@ public class StaffAssignmentConfig : IEntityTypeConfiguration<StaffAssignment>
 
         b.HasOne(x => x.Order).WithMany()
          .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+// ── Staff Operations expansion configs ───────────────────────────────────────
+public class StaffWorkSettingConfig : IEntityTypeConfiguration<StaffWorkSetting>
+{
+    public void Configure(EntityTypeBuilder<StaffWorkSetting> b)
+    {
+        b.ToTable("staff_work_settings");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => x.StaffId).IsUnique();
+    }
+}
+
+public class StaffPerformanceDailyConfig : IEntityTypeConfiguration<StaffPerformanceDaily>
+{
+    public void Configure(EntityTypeBuilder<StaffPerformanceDaily> b)
+    {
+        b.ToTable("staff_performance_dailies");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => new { x.StaffId, x.Date }).IsUnique();
+    }
+}
+
+public class StaffNotificationConfig : IEntityTypeConfiguration<StaffNotification>
+{
+    public void Configure(EntityTypeBuilder<StaffNotification> b)
+    {
+        b.ToTable("staff_notifications");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Type).HasConversion<string>().HasMaxLength(30);
+        b.Property(x => x.Title).HasMaxLength(255).IsRequired();
+        b.Property(x => x.Body).HasMaxLength(1000).IsRequired();
+        b.HasIndex(x => new { x.StaffId, x.IsRead, x.CreatedAt });
+    }
+}
+
+public class OrderComplaintConfig : IEntityTypeConfiguration<OrderComplaint>
+{
+    public void Configure(EntityTypeBuilder<OrderComplaint> b)
+    {
+        b.ToTable("order_complaints");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.Description).HasMaxLength(2000).IsRequired();
+        b.Property(x => x.EvidenceUrls).HasColumnType("jsonb");
+        b.Property(x => x.Resolution).HasMaxLength(2000);
+        b.Property(x => x.ResolvedAmountVnd).HasPrecision(14, 0);
+        b.HasIndex(x => x.OrderId);
+        b.HasIndex(x => x.CustomerId);
+        b.HasIndex(x => new { x.Status, x.AssignedToStaffId });
+
+        b.HasOne(x => x.Order).WithMany()
+         .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class SupplierChatLogConfig : IEntityTypeConfiguration<SupplierChatLog>
+{
+    public void Configure(EntityTypeBuilder<SupplierChatLog> b)
+    {
+        b.ToTable("supplier_chat_logs");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Direction).HasConversion<string>().HasMaxLength(10);
+        b.Property(x => x.Message).HasMaxLength(2000).IsRequired();
+        b.Property(x => x.ScreenshotUrl).HasMaxLength(500);
+        b.Property(x => x.PlatformChatTool).HasMaxLength(50);
+        b.HasIndex(x => new { x.OrderId, x.SentAt });
     }
 }
 

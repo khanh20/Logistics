@@ -2,6 +2,7 @@ using LG.Module1.ApplicationServices.Interfaces;
 using LG.Module1.ApplicationServices.Services;
 using LG.Module1.Domain.Adapters;
 using LG.Module1.Domain.Repositories;
+using LG.Module1.Infrastructure.Adapters;
 using LG.Module1.Infrastructure.Adapters.Ebay;
 using LG.Module1.Infrastructure.Adapters.Rakuten;
 using LG.Module1.Infrastructure.Data;
@@ -82,6 +83,12 @@ public static class Module1ServiceExtensions
         services.AddScoped<IPlatformOrderRepository, PlatformOrderRepository>();
         services.AddScoped<IStaffAssignmentRepository, StaffAssignmentRepository>();
         services.AddScoped<IExtensionScrapeLogRepository, ExtensionScrapeLogRepository>();
+        // Staff Operations expansion repos
+        services.AddScoped<IStaffWorkSettingRepository, StaffWorkSettingRepository>();
+        services.AddScoped<IStaffPerformanceRepository, StaffPerformanceRepository>();
+        services.AddScoped<IStaffNotificationRepository, StaffNotificationRepository>();
+        services.AddScoped<IOrderComplaintRepository, OrderComplaintRepository>();
+        services.AddScoped<ISupplierChatLogRepository, SupplierChatLogRepository>();
         services.AddScoped<IModule1UnitOfWork, Module1UnitOfWork>();
 
         services.AddDataProtection()
@@ -118,10 +125,35 @@ public static class Module1ServiceExtensions
 
         services.AddScoped<IStaffAssignmentService, StaffAssignmentService>();
         services.AddScoped<ILogisticsService, LogisticsServiceStub>();
+        // Staff Operations expansion services
+        services.AddScoped<IStaffNotifier, StaffNotifier>();
+        services.AddScoped<IStaffNotificationService, StaffNotificationService>();
+        services.AddScoped<IStaffWorkSettingService, StaffWorkSettingService>();
+        services.AddScoped<IStaffPerformanceService, StaffPerformanceService>();
+        services.AddScoped<IComplaintService, ComplaintService>();
+        services.AddScoped<ISupplierChatLogService, SupplierChatLogService>();
 
         // HttpClient cho StaffRosterHttpService — set BaseAddress + InternalKey header sẵn.
         // Đọc Auth:BaseUrl + Auth:InternalApiKey từ appsettings/env (env override).
         services.AddHttpClient<IStaffRosterService, StaffRosterHttpService>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var baseUrl = cfg["Auth:BaseUrl"]
+                       ?? Environment.GetEnvironmentVariable("AUTH__BASEURL")
+                       ?? "https://localhost:7237";
+            var key = cfg["Auth:InternalApiKey"]
+                   ?? Environment.GetEnvironmentVariable("AUTH__INTERNALAPIKEY")
+                   ?? throw new InvalidOperationException(
+                       "Auth:InternalApiKey is required for cross-service calls.");
+
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout     = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("X-Internal-Key", key);
+        })
+        .AddPolicyHandler(GetRetryPolicy("Auth"));
+
+        // HttpClient cho StaffDirectoryHttpService — cùng cấu hình Auth internal.
+        services.AddHttpClient<IStaffDirectoryService, StaffDirectoryHttpService>((sp, client) =>
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
             var baseUrl = cfg["Auth:BaseUrl"]

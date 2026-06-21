@@ -42,6 +42,25 @@ public class InternalController(
         return Ok(roster);
     }
 
+    // POST /api/internal/users/by-ids   body: ["guid1","guid2",...]
+    // Trả thông tin nhân thân (tên/email/status) cho Module1 resolve NV.
+    [HttpPost("users/by-ids")]
+    [ProducesResponseType(typeof(List<StaffDirectoryItemResponse>), 200)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> GetUsersByIds(
+        [FromBody] List<Guid> ids,
+        CancellationToken ct = default)
+    {
+        if (!IsValidInternalKey())
+            return Unauthorized(new { success = false, message = "Invalid internal key.", errorCode = "UNAUTHORIZED_INTERNAL" });
+
+        if (ids is null || ids.Count == 0)
+            return Ok(new List<StaffDirectoryItemResponse>());
+
+        var users = await userService.GetUsersByIdsAsync(ids, ct);
+        return Ok(users);
+    }
+
     // Constant-time compare để tránh timing attack.
     private bool IsValidInternalKey()
     {

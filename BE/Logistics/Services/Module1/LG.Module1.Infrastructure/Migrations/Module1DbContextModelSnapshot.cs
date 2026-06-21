@@ -576,6 +576,73 @@ namespace LG.Module1.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("LG.Module1.Domain.Entities.OrderComplaint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssignedToStaffId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("EvidenceUrls")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("HandledByStaffId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OrderItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<decimal?>("ResolvedAmountVnd")
+                        .HasPrecision(14)
+                        .HasColumnType("numeric(14,0)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("Status", "AssignedToStaffId");
+
+                    b.ToTable("order_complaints", "mod1");
+                });
+
             modelBuilder.Entity("LG.Module1.Domain.Entities.OrderFeeDetail", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1314,6 +1381,9 @@ namespace LG.Module1.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("AssignedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1339,6 +1409,14 @@ namespace LG.Module1.Infrastructure.Migrations
                     b.Property<Guid>("StaffId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId");
@@ -1348,6 +1426,168 @@ namespace LG.Module1.Infrastructure.Migrations
                     b.HasIndex("SlaDeadline", "CompletedAt");
 
                     b.ToTable("staff_assignments", "mod1");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.StaffNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("RefOrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StaffId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StaffId", "IsRead", "CreatedAt");
+
+                    b.ToTable("staff_notifications", "mod1");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.StaffPerformanceDaily", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CancelledCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int>("OnTimeCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrdersAssigned")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrdersCompleted")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OverdueCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StaffId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalHandlingMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StaffId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("staff_performance_dailies", "mod1");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.StaffWorkSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AutoAssignEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastActiveAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxConcurrentOrders")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeOnly?>("ShiftEndLocal")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<TimeOnly?>("ShiftStartLocal")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("StaffId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StaffId")
+                        .IsUnique();
+
+                    b.ToTable("staff_work_settings", "mod1");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.SupplierChatLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PlatformChatTool")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ScreenshotUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("StaffId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId", "SentAt");
+
+                    b.ToTable("supplier_chat_logs", "mod1");
                 });
 
             modelBuilder.Entity("LG.Module1.Domain.Entities.CartItem", b =>
@@ -1394,6 +1634,17 @@ namespace LG.Module1.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Shop");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.OrderComplaint", b =>
+                {
+                    b.HasOne("LG.Module1.Domain.Entities.CustomerOrder", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("LG.Module1.Domain.Entities.OrderFeeDetail", b =>

@@ -83,6 +83,13 @@ public class PlatformShop
             ShopUrl = shopUrl?.Trim(),
         };
 
+    public void UpdateInfo(string? shopName, string? shopUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(shopName)) ShopName = shopName.Trim();
+        if (!string.IsNullOrWhiteSpace(shopUrl))  ShopUrl  = shopUrl.Trim();
+        Touch();
+    }
+
     public void Blacklist(string reason)
     {
         IsBlacklisted = true;

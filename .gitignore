@@ -20,3 +20,5 @@ Thumbs.db
 
 .react-router
 .agents
+/BE/Logistics/Services/Core/LG.Core.Infrastructure/CoreDbContextFactory.cs
+/BE/Logistics/Services/Core/LG.Core.API/.env

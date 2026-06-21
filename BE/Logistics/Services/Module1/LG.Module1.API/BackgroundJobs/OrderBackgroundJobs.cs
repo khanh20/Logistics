@@ -174,6 +174,7 @@ public class SlaMonitorJob(
     {
         using var scope        = scopeFactory.CreateScope();
         var assignmentRepo     = scope.ServiceProvider.GetRequiredService<IStaffAssignmentRepository>();
+        var notifier           = scope.ServiceProvider.GetRequiredService<IStaffNotifier>();
         var uow                = scope.ServiceProvider.GetRequiredService<IModule1UnitOfWork>();
 
         var expired = await assignmentRepo.GetPendingExpiredAsync(ct);
@@ -188,6 +189,59 @@ public class SlaMonitorJob(
         }
 
         await uow.SaveChangesAsync(ct);
+
+        // Thông báo cho NV về đơn quá hạn (sau khi đã lưu trạng thái).
+        foreach (var a in expired)
+        {
+            try
+            {
+                await notifier.NotifyAsync(a.StaffId, StaffNotificationType.SlaOverdue,
+                    "Đơn quá hạn SLA",
+                    $"Đơn {a.Order?.OrderCode ?? a.OrderId.ToString()} đã quá hạn xử lý. Vui lòng xử lý gấp.",
+                    a.OrderId, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "SlaMonitorJob: notify overdue staff {StaffId} failed", a.StaffId);
+            }
+        }
+
         logger.LogInformation("SlaMonitorJob: marked {Count} assignments as overdue", expired.Count);
+    }
+}
+
+// ── StaffKpiAggregationJob ────────────────────────────────────────────────────
+/// Chạy mỗi 15 phút. Tổng hợp KPI per-NV cho hôm nay + hôm qua (bắt completion trễ).
+public class StaffKpiAggregationJob(
+    IServiceScopeFactory scopeFactory,
+    ILogger<StaffKpiAggregationJob> logger
+) : BackgroundService
+{
+    private const int IntervalSeconds = 900; // 15 phút
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        logger.LogInformation("StaffKpiAggregationJob started (interval: {Interval}s)", IntervalSeconds);
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try { await AggregateAsync(stoppingToken); }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            { logger.LogError(ex, "StaffKpiAggregationJob failed during execution"); }
+
+            await Task.Delay(TimeSpan.FromSeconds(IntervalSeconds), stoppingToken);
+        }
+    }
+
+    private async Task AggregateAsync(CancellationToken ct)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var perf = scope.ServiceProvider.GetRequiredService<IStaffPerformanceService>();
+
+        var today     = DateOnly.FromDateTime(DateTime.UtcNow);
+        var yesterday = today.AddDays(-1);
+
+        await perf.AggregateDayAsync(yesterday, ct);
+        await perf.AggregateDayAsync(today, ct);
     }
 }

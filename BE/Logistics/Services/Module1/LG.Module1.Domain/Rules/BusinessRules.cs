@@ -105,6 +105,16 @@ public static class ForbiddenChecker
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Cấu hình giờ làm việc để tính SLA (loại trừ ngoài giờ + cuối tuần).
+public sealed record WorkingHoursConfig(
+    int StartHour    = 8,    // 08:00
+    int EndHour      = 18,   // 18:00
+    int TimezoneOffsetHours = 7,  // Asia/Ho_Chi_Minh (UTC+7)
+    bool SkipWeekends = true)
+{
+    public static readonly WorkingHoursConfig Default = new();
+}
+
 /// Tính cửa sổ SLA cho một đơn hàng dựa trên giá trị và số lượng.
 public static class SlaCalculator
 {
@@ -114,6 +124,56 @@ public static class SlaCalculator
     {
         bool isHighPriority = finalAmountVnd >= 5_000_000 || itemCount >= 5;
         return isHighPriority ? TimeSpan.FromHours(12) : TimeSpan.FromHours(24);
+    }
+
+    /// Tính deadline cộng `window` GIỜ LÀM VIỆC kể từ startUtc.
+    /// Chỉ đếm thời gian trong khung giờ làm (StartHour–EndHour), bỏ cuối tuần.
+    /// Bước nhảy 15 phút cho đơn giản và đủ chính xác cho SLA.
+    public static DateTime CalcWorkingDeadline(DateTime startUtc, TimeSpan window, WorkingHoursConfig cfg)
+    {
+        var offset    = TimeSpan.FromHours(cfg.TimezoneOffsetHours);
+        var localNow  = startUtc + offset;
+        var remaining = window;
+        var step      = TimeSpan.FromMinutes(15);
+
+        // Giới hạn vòng lặp an toàn (~60 ngày làm việc).
+        var guard = 0;
+        while (remaining > TimeSpan.Zero && guard++ < 60 * 24 * 4)
+        {
+            if (IsWorkingMoment(localNow, cfg))
+            {
+                var stepUsed = step < remaining ? step : remaining;
+                localNow  += stepUsed;
+                remaining -= stepUsed;
+            }
+            else
+            {
+                localNow = NextWorkingStart(localNow, cfg);
+            }
+        }
+        return localNow - offset;  // về UTC
+    }
+
+    private static bool IsWorkingMoment(DateTime local, WorkingHoursConfig cfg)
+    {
+        if (cfg.SkipWeekends && local.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            return false;
+        var h = local.Hour;
+        return h >= cfg.StartHour && h < cfg.EndHour;
+    }
+
+    private static DateTime NextWorkingStart(DateTime local, WorkingHoursConfig cfg)
+    {
+        // Nếu trước giờ làm trong ngày → nhảy tới StartHour cùng ngày.
+        if (local.Hour < cfg.StartHour &&
+            !(cfg.SkipWeekends && local.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday))
+            return local.Date.AddHours(cfg.StartHour);
+
+        // Ngược lại nhảy tới StartHour ngày kế tiếp (lặp qua cuối tuần).
+        var next = local.Date.AddDays(1).AddHours(cfg.StartHour);
+        while (cfg.SkipWeekends && next.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            next = next.AddDays(1);
+        return next;
     }
 }
 

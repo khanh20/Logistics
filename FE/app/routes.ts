@@ -54,6 +54,8 @@ export default [
 
       // route("orders/:id",      "routes/admin/orders.$id.tsx"),
       // route("staff",           "routes/admin/staff._index.tsx"),
+      route("staff-kpi", "routes/admin/staff-kpi.tsx"),
+      route("staff-settings", "routes/admin/staff-settings.tsx"),
       // route("platform-orders", "routes/admin/platform-orders.tsx"),
       route("platform-orders", "routes/admin/platform-orders.tsx"),
       route("staff-dashboard", "routes/admin/staff-dashboard.tsx"),
@@ -62,6 +64,18 @@ export default [
       route("roles", "routes/admin/roles._index.tsx"),
       route("roles/:id", "routes/admin/roles.$id.tsx"),
       route("permissions", "routes/admin/permissions._index.tsx"),
+    ]),
+  ]),
+
+  // Staff portal — cổng thao tác của chính nhân viên
+  layout("layouts/staff-layout.tsx", [
+    ...prefix("staff", [
+      index("routes/staff/_index.tsx"),
+      route("assignments", "routes/staff/assignments.tsx"),
+      route("assignments/:id", "routes/staff/assignments.$id.tsx"),
+      route("kpi", "routes/staff/kpi.tsx"),
+      route("complaints", "routes/staff/complaints.tsx"),
+      route("notifications", "routes/staff/notifications.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig;

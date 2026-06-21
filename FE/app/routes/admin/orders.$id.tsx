@@ -481,7 +481,7 @@ export default function AdminOrderDetailPage({
                       )
                     }
                   >
-                    ✅ Xác nhận hàng về kho VN
+                    Xác nhận hàng về kho VN
                   </Button>
                 </div>
               )}

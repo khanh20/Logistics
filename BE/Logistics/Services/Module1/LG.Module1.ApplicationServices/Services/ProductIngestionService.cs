@@ -310,7 +310,17 @@ public class ProductIngestionService(
         Platform platform, RawProductResult raw, CancellationToken ct)
     {
         var shop = await shopRepo.GetByExternalIdAsync(platform.Id, raw.ShopIdOnPlatform, ct);
-        if (shop is not null) return shop;
+        if (shop is not null)
+        {
+            // Gỡ "đóng băng" tên shop: cập nhật khi tên mới hợp lệ và khác tên cũ.
+            if (ExtensionProductUpserter.ShouldUpdateShopName(shop.ShopName, raw.ShopName))
+            {
+                shop.UpdateInfo(raw.ShopName, raw.ShopUrl);
+                await shopRepo.UpdateAsync(shop, ct);
+                await uow.SaveChangesAsync(ct);
+            }
+            return shop;
+        }
 
         // Auto-create shop khi gặp lần đầu
         shop = PlatformShop.Create(platform.Id, raw.ShopIdOnPlatform, raw.ShopName, raw.ShopUrl);

@@ -3,6 +3,7 @@ using LG.Module1.ApplicationServices.DTOs.Category;
 using LG.Module1.ApplicationServices.DTOs.Order;
 using LG.Module1.ApplicationServices.DTOs.Platform;
 using LG.Module1.ApplicationServices.DTOs.Product;
+using LG.Module1.ApplicationServices.DTOs.Staff;
 using LG.Module1.Domain.Entities;
 
 namespace LG.Module1.ApplicationServices.Interfaces;
@@ -258,6 +259,18 @@ public interface IStaffAssignmentService
     /// Đánh dấu assignment đã hoàn thành (staff xử lý xong).
     Task MarkCompletedAsync(Guid assignmentId, CancellationToken ct = default);
 
+    /// NV nhận đơn (Accepted). staffId phải khớp assignment.
+    Task<StaffAssignmentDto> AcceptAsync(Guid assignmentId, Guid staffId, CancellationToken ct = default);
+
+    /// NV bắt đầu xử lý (InProgress).
+    Task<StaffAssignmentDto> StartAsync(Guid assignmentId, Guid staffId, CancellationToken ct = default);
+
+    /// NV hoàn thành phần việc của mình (Done).
+    Task<StaffAssignmentDto> CompleteAsync(Guid assignmentId, Guid staffId, CancellationToken ct = default);
+
+    /// Hàng đợi của 1 NV (cho portal). includeClosed = xem cả đơn đã đóng.
+    Task<List<StaffQueueItemDto>> GetMyQueueAsync(Guid staffId, bool includeClosed, CancellationToken ct = default);
+
     /// Danh sách assignment đang quá SLA.
     Task<List<OverdueAssignmentDto>> GetOverdueAsync(CancellationToken ct = default);
 
@@ -266,6 +279,68 @@ public interface IStaffAssignmentService
 
     /// Lấy assignment đang active của một đơn (nếu có).
     Task<StaffAssignmentDto?> GetActiveByOrderAsync(Guid orderId, CancellationToken ct = default);
+}
+
+// ── Staff Work Setting (ca làm + năng lực) ─────────────────────────────────────
+public interface IStaffWorkSettingService
+{
+    /// Lấy (tạo mặc định nếu chưa có) cấu hình của 1 NV.
+    Task<StaffWorkSettingDto> GetOrCreateAsync(Guid staffId, CancellationToken ct = default);
+
+    /// NV tự cập nhật cấu hình của mình.
+    Task<StaffWorkSettingDto> UpdateAsync(Guid staffId, UpdateWorkSettingRequest req, CancellationToken ct = default);
+
+    /// NV bật/tắt nhận đơn nhanh (toggle online/offline).
+    Task<StaffWorkSettingDto> SetAvailabilityAsync(Guid staffId, bool isAvailable, CancellationToken ct = default);
+
+    /// Admin: danh sách cấu hình toàn bộ NV (kèm tên + active load).
+    Task<List<StaffWorkSettingDto>> GetAllForAdminAsync(CancellationToken ct = default);
+
+    /// Admin override cấu hình của 1 NV.
+    Task<StaffWorkSettingDto> AdminUpdateAsync(Guid staffId, UpdateWorkSettingRequest req, CancellationToken ct = default);
+}
+
+// ── Staff KPI ──────────────────────────────────────────────────────────────────
+public interface IStaffPerformanceService
+{
+    Task<StaffKpiDto> GetStaffKpiAsync(Guid staffId, DateOnly from, DateOnly to, CancellationToken ct = default);
+    Task<List<StaffKpiDto>> GetTeamKpiAsync(DateOnly from, DateOnly to, CancellationToken ct = default);
+    /// Aggregate lại số liệu cho 1 ngày (job gọi). date theo UTC.
+    Task AggregateDayAsync(DateOnly date, CancellationToken ct = default);
+}
+
+// ── Staff Notification (read side) ─────────────────────────────────────────────
+public interface IStaffNotificationService
+{
+    Task<List<StaffNotificationDto>> GetMineAsync(Guid staffId, bool unreadOnly, CancellationToken ct = default);
+    Task<int>  CountUnreadAsync(Guid staffId, CancellationToken ct = default);
+    Task MarkReadAsync(Guid staffId, Guid notificationId, CancellationToken ct = default);
+    Task MarkAllReadAsync(Guid staffId, CancellationToken ct = default);
+}
+
+// ── Complaint ───────────────────────────────────────────────────────────────────
+public interface IComplaintService
+{
+    /// Khách gửi khiếu nại cho 1 đơn của mình.
+    Task<ComplaintResponse> SubmitAsync(Guid customerId, Guid orderId, SubmitComplaintRequest req, CancellationToken ct = default);
+
+    /// Khách xem khiếu nại của 1 đơn.
+    Task<List<ComplaintResponse>> GetByOrderForCustomerAsync(Guid customerId, Guid orderId, CancellationToken ct = default);
+
+    /// CSKH: hàng đợi khiếu nại (filter theo status / NV phụ trách).
+    Task<(List<ComplaintResponse> Items, int TotalCount)> GetQueueAsync(
+        ComplaintStatus? status, Guid? assignedToStaffId, int page, int pageSize, CancellationToken ct = default);
+
+    Task<ComplaintResponse> AssignAsync(Guid complaintId, Guid staffId, CancellationToken ct = default);
+    Task<ComplaintResponse> ResolveAsync(Guid complaintId, Guid staffId, ResolveComplaintRequest req, CancellationToken ct = default);
+    Task<ComplaintResponse> RejectAsync(Guid complaintId, Guid staffId, RejectComplaintRequest req, CancellationToken ct = default);
+}
+
+// ── Supplier chat log ──────────────────────────────────────────────────────────
+public interface ISupplierChatLogService
+{
+    Task<List<SupplierChatLogDto>> GetByOrderAsync(Guid orderId, CancellationToken ct = default);
+    Task<SupplierChatLogDto> AddAsync(Guid orderId, Guid staffId, AddSupplierChatRequest req, CancellationToken ct = default);
 }
 
 public interface IPlatformService

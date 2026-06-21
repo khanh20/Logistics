@@ -199,6 +199,9 @@ public interface IPlatformOrderRepository
 // ── StaffAssignment repos ─────────────────────────────────────────────────────
 public interface IStaffAssignmentRepository
 {
+    /// Lấy 1 assignment theo Id (kèm Order để map OrderCode).
+    Task<StaffAssignment?> GetByIdAsync(Guid id, CancellationToken ct = default);
+
     /// Lấy assignment đang active (chưa CompletedAt) của đơn.
     Task<StaffAssignment?> GetActiveByOrderIdAsync(Guid orderId, CancellationToken ct = default);
 
@@ -221,6 +224,14 @@ public interface IStaffAssignmentRepository
     /// Đếm số đơn overdue của staff (cho WorkloadBalancer tie-break).
     Task<int> GetOverdueCountAsync(Guid staffId, CancellationToken ct = default);
 
+    /// Hàng đợi của 1 NV — kèm Order, lọc trạng thái đóng/mở. Cho portal NV.
+    Task<List<StaffAssignment>> GetQueueByStaffAsync(Guid staffId, bool includeClosed,
+                                                     CancellationToken ct = default);
+
+    /// Lấy assignment được gán trong khoảng (theo AssignedAt) — cho KPI aggregation.
+    Task<List<StaffAssignment>> GetAssignedBetweenAsync(DateTime fromUtc, DateTime toUtc,
+                                                        CancellationToken ct = default);
+
     Task AddAsync(StaffAssignment assignment, CancellationToken ct = default);
     Task UpdateAsync(StaffAssignment assignment, CancellationToken ct = default);
 }
@@ -229,6 +240,54 @@ public interface IStaffAssignmentRepository
 public interface IExtensionScrapeLogRepository
 {
     Task AddAsync(ExtensionScrapeLog log, CancellationToken ct = default);
+}
+
+// ── Staff ops repos ───────────────────────────────────────────────────────────
+public interface IStaffWorkSettingRepository
+{
+    Task<StaffWorkSetting?> GetByStaffIdAsync(Guid staffId, CancellationToken ct = default);
+    Task<List<StaffWorkSetting>> GetAllAsync(CancellationToken ct = default);
+    /// Cấu hình của những NV trong danh sách Id (cho auto-assign filter).
+    Task<List<StaffWorkSetting>> GetByStaffIdsAsync(IEnumerable<Guid> staffIds, CancellationToken ct = default);
+    Task AddAsync(StaffWorkSetting setting, CancellationToken ct = default);
+    Task UpdateAsync(StaffWorkSetting setting, CancellationToken ct = default);
+}
+
+public interface IStaffPerformanceRepository
+{
+    Task<StaffPerformanceDaily?> GetAsync(Guid staffId, DateOnly date, CancellationToken ct = default);
+    Task<List<StaffPerformanceDaily>> GetRangeAsync(Guid? staffId, DateOnly from, DateOnly to,
+                                                    CancellationToken ct = default);
+    Task AddAsync(StaffPerformanceDaily snapshot, CancellationToken ct = default);
+    Task UpdateAsync(StaffPerformanceDaily snapshot, CancellationToken ct = default);
+}
+
+public interface IStaffNotificationRepository
+{
+    Task<List<StaffNotification>> GetByStaffAsync(Guid staffId, bool unreadOnly, int take,
+                                                  CancellationToken ct = default);
+    Task<int> CountUnreadAsync(Guid staffId, CancellationToken ct = default);
+    Task<StaffNotification?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task MarkAllReadAsync(Guid staffId, CancellationToken ct = default);
+    Task AddAsync(StaffNotification notification, CancellationToken ct = default);
+    Task UpdateAsync(StaffNotification notification, CancellationToken ct = default);
+}
+
+public interface IOrderComplaintRepository
+{
+    Task<OrderComplaint?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<OrderComplaint>> GetByOrderAsync(Guid orderId, CancellationToken ct = default);
+    Task<(List<OrderComplaint> Items, int TotalCount)> SearchAsync(
+        ComplaintStatus? status, Guid? assignedToStaffId, Guid? customerId,
+        int page, int pageSize, CancellationToken ct = default);
+    Task AddAsync(OrderComplaint complaint, CancellationToken ct = default);
+    Task UpdateAsync(OrderComplaint complaint, CancellationToken ct = default);
+}
+
+public interface ISupplierChatLogRepository
+{
+    Task<List<SupplierChatLog>> GetByOrderAsync(Guid orderId, CancellationToken ct = default);
+    Task AddAsync(SupplierChatLog log, CancellationToken ct = default);
 }
 
 // ── Unit of Work ──────────────────────────────────────────────────────────────
