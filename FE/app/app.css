@@ -1,8 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;0,6..72,700;1,6..72,400&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-sans: "Helvetica Neue", "Switzer", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Newsreader", "Lyon Text", "Playfair Display", serif;
+  --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
 
   /* Brand colors — MuaHo đỏ */
   --color-primary: #ef4444;
@@ -16,9 +18,42 @@
   --color-status-info: #3b82f6;
 }
 
+/* === Minimalist-UI: Warm monochrome palette === */
+:root {
+  --mu-canvas: #F7F6F3;
+  --mu-surface: #FFFFFF;
+  --mu-surface-alt: #F9F9F8;
+  --mu-border: #EAEAEA;
+  --mu-text: #2F3437;
+  --mu-text-secondary: #787774;
+  --mu-cta-bg: #111111;
+  --mu-cta-text: #FFFFFF;
+  --mu-pastel-red-bg: #FDEBEC;
+  --mu-pastel-red-text: #9F2F2D;
+  --mu-pastel-blue-bg: #E1F3FE;
+  --mu-pastel-blue-text: #1F6C9F;
+  --mu-pastel-green-bg: #EDF3EC;
+  --mu-pastel-green-text: #346538;
+  --mu-pastel-yellow-bg: #FBF3DB;
+  --mu-pastel-yellow-text: #956400;
+}
+
 html,
 body {
   @apply bg-white;
+}
+
+/* === Scroll Reveal Animation === */
+.reveal-hidden {
+  opacity: 0;
+  transform: translateY(28px);
+  will-change: opacity, transform;
+  transition: opacity 800ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* Custom Scrollbar for Sidebar */

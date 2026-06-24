@@ -1,0 +1,6 @@
+# Extension signing key — KEEP SECRET, do not commit
+muaho_extension_key.pem
+muaho_extension_pubkey.b64.txt
+*.pem
+*.crx
+*.zip

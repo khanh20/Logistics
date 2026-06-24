@@ -17,4 +17,11 @@ public interface IProductIngestionService
 
     /// Liệt kê platform mà hệ thống có adapter sẵn sàng.
     List<string> GetAvailablePlatforms();
+
+    /// Customer dán URL trên web → resolve thành ProductDetail để hiện popup chọn variant.
+    /// ScrapedData != null (1688/Taobao/Tmall): chỉ upsert từ data extension đã scrape.
+    /// ScrapedData == null: tự resolve qua adapter API (eBay/Rakuten); nếu không adapter nào
+    /// nhận URL → trả Status="NeedExtension".
+    Task<ResolveUrlResponse> ResolveUrlForCustomerAsync(
+        ResolveUrlRequest req, CancellationToken ct = default);
 }

@@ -55,6 +55,16 @@ public class CustomerOrderController(ICustomerOrderService orderService) : Modul
         var detail = await orderService.PayDepositAsync(CurrentUserId, id, ct);
         return Ok(ApiResponse<OrderDetailResponse>.Ok(detail, "Đặt cọc thành công."));
     }
+
+    // POST /api/orders/{id}/pay-final
+    [HttpPost("{id:guid}/pay-final")]
+    [Authorize(Policy = Permissions.OrderDeposit)]
+    [EnableRateLimiting("auth-sensitive")]
+    public async Task<IActionResult> PayFinal(Guid id, CancellationToken ct)
+    {
+        var detail = await orderService.PayFinalAsync(CurrentUserId, id, ct);
+        return Ok(ApiResponse<OrderDetailResponse>.Ok(detail, "Thanh toán cuối kỳ thành công."));
+    }
 }
 
 // ── Staff / Admin Order Controller ────────────────────────────────────────────
@@ -128,7 +138,7 @@ public class OrderManagementController(IOrderManagementService mgmtService) : Mo
     // POST /api/manage/orders/{id}/arrived-vietnam
     [HttpPost("{id:guid}/arrived-vietnam")]
     [Authorize(Policy = Permissions.OrderManage)]
-    public async Task<IActionResult> ArrivedVietnam(Guid id, [FromBody] OrderTransitionRequest req, CancellationToken ct)
+    public async Task<IActionResult> ArrivedVietnam(Guid id, [FromBody] ArrivedVietnamRequest req, CancellationToken ct)
     {
         var detail = await mgmtService.MarkArrivedVietnamAsync(id, CurrentUserId, req, ct);
         return Ok(ApiResponse<OrderDetailResponse>.Ok(detail, "Hàng đã về kho VN."));

@@ -1,20 +1,73 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Route } from "./+types/ingestion";
-import { ingestionApi } from "~/lib/api/categories";
+import { ingestionApi, categoriesApi } from "~/lib/api/categories";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { Badge } from "~/components/ui/Badge";
 import { cn } from "~/lib/utils/cn";
-import type { CrawlResultResponse, CrawlUrlResultResponse } from "~/lib/types/category";
+import type { CategoryTree, CrawlResultResponse, CrawlUrlResultResponse } from "~/lib/types/category";
 
 export function meta(_: Route.MetaArgs) {
   return [{ title: "Import sản phẩm — MuaHo Admin" }];
 }
 
 export async function clientLoader() {
-  const res = await ingestionApi.getAvailablePlatforms();
-  return { availablePlatforms: res.data };
+  const [platformsRes, categoriesRes] = await Promise.all([
+    ingestionApi.getAvailablePlatforms(),
+    categoriesApi.getTree(),
+  ]);
+  return {
+    availablePlatforms: platformsRes.data,
+    categories: categoriesRes.data,
+  };
+}
+
+interface FlatCategory {
+  id: string;
+  nameVn: string;
+  depth: number;
+}
+
+function flattenTree(nodes: CategoryTree[], depth = 0): FlatCategory[] {
+  return nodes.flatMap((node) => [
+    { id: node.id, nameVn: node.nameVn, depth },
+    ...flattenTree(node.children ?? [], depth + 1),
+  ]);
+}
+
+function CategorySelect({
+  categories,
+  value,
+  onChange,
+}: {
+  categories: CategoryTree[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const flat = flattenTree(categories);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-medium text-gray-700">
+        {t("ingestion.category_label")}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none
+                   focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white"
+      >
+        <option value="">{t("ingestion.category_placeholder")}</option>
+        {flat.map((cat) => (
+          <option key={cat.id} value={cat.id}>
+            {"—".repeat(cat.depth)} {cat.nameVn}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 }
 
 type TabMode = "keyword" | "url";
@@ -22,7 +75,7 @@ type TabMode = "keyword" | "url";
 export default function IngestionPage({
   loaderData,
 }: {
-  loaderData: { availablePlatforms: string[] };
+  loaderData: { availablePlatforms: string[]; categories: CategoryTree[] };
 }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabMode>("keyword");
@@ -50,23 +103,33 @@ export default function IngestionPage({
       </div>
 
       {tab === "keyword" ? (
-        <KeywordCrawlForm platforms={loaderData.availablePlatforms} />
+        <KeywordCrawlForm
+          platforms={loaderData.availablePlatforms}
+          categories={loaderData.categories}
+        />
       ) : (
-        <UrlCrawlForm />
+        <UrlCrawlForm categories={loaderData.categories} />
       )}
     </div>
   );
 }
 
 // ── Keyword Crawl ─────────────────────────────────────────────────────────────
-function KeywordCrawlForm({ platforms }: { platforms: string[] }) {
+function KeywordCrawlForm({
+  platforms,
+  categories,
+}: {
+  platforms: string[];
+  categories: CategoryTree[];
+}) {
   const { t } = useTranslation();
-  const [platform, setPlatform]   = useState(platforms[0] ?? "eBay");
-  const [keyword, setKeyword]     = useState("");
+  const [platform, setPlatform]     = useState(platforms[0] ?? "eBay");
+  const [keyword, setKeyword]       = useState("");
   const [maxResults, setMaxResults] = useState(20);
-  const [loading, setLoading]     = useState(false);
-  const [result, setResult]       = useState<CrawlResultResponse | null>(null);
-  const [error, setError]         = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [result, setResult]         = useState<CrawlResultResponse | null>(null);
+  const [error, setError]           = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,7 +137,12 @@ function KeywordCrawlForm({ platforms }: { platforms: string[] }) {
     setResult(null);
     setLoading(true);
     try {
-      const res = await ingestionApi.crawlByKeyword({ platformName: platform, keyword, maxResults });
+      const res = await ingestionApi.crawlByKeyword({
+        platformName: platform,
+        keyword,
+        maxResults,
+        categoryId: categoryId || undefined,
+      });
       setResult(res.data);
     } catch (err: unknown) {
       setError((err as { message?: string })?.message ?? t("common.error"));
@@ -120,6 +188,11 @@ function KeywordCrawlForm({ platforms }: { platforms: string[] }) {
               />
             </div>
           </div>
+          <CategorySelect
+            categories={categories}
+            value={categoryId}
+            onChange={setCategoryId}
+          />
 
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -139,12 +212,13 @@ function KeywordCrawlForm({ platforms }: { platforms: string[] }) {
 }
 
 // ── URL Crawl ─────────────────────────────────────────────────────────────────
-function UrlCrawlForm() {
+function UrlCrawlForm({ categories }: { categories: CategoryTree[] }) {
   const { t } = useTranslation();
-  const [url, setUrl]         = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult]   = useState<CrawlUrlResultResponse | null>(null);
-  const [error, setError]     = useState<string | null>(null);
+  const [url, setUrl]               = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [result, setResult]         = useState<CrawlUrlResultResponse | null>(null);
+  const [error, setError]           = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -152,7 +226,10 @@ function UrlCrawlForm() {
     setResult(null);
     setLoading(true);
     try {
-      const res = await ingestionApi.crawlByUrl({ url });
+      const res = await ingestionApi.crawlByUrl({
+        url,
+        categoryId: categoryId || undefined,
+      });
       setResult(res.data);
     } catch (err: unknown) {
       setError((err as { message?: string })?.message ?? t("common.error"));
@@ -172,6 +249,11 @@ function UrlCrawlForm() {
             onChange={(e) => setUrl(e.target.value)}
             placeholder={t("ingestion.url_placeholder")}
             required
+          />
+          <CategorySelect
+            categories={categories}
+            value={categoryId}
+            onChange={setCategoryId}
           />
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">

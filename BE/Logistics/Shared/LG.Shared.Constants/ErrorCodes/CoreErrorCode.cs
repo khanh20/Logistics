@@ -47,7 +47,9 @@ namespace LG.Shared.Constants.ErrorCodes
         public const int CoreTransactionTypeUsedInTransactions = 4052;
         public const int CoreTransactionTypeConfigMissing = 4053;
            
-
+        // Customer Address 406x
+        public const int CoreCustomerAddressNotFound = 4061;
+        public const int CoreCustomerAddressLimitExceeded = 4062;
 
     }
 }

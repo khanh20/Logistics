@@ -2,6 +2,7 @@ using LG.Core.ApplicationServices.Common;
 using LG.Core.ApplicationServices.Common.Interfaces;
 using LG.Core.ApplicationServices.Finance.DTOs.EmailNotification;
 using LG.Core.ApplicationServices.Finance.DTOs.Transaction;
+using LG.Core.ApplicationServices.Finance.DTOs.WalletTransaction;
 using LG.Core.ApplicationServices.Finance.Interfaces;
 using LG.Core.Domain.Finance;
 using LG.Core.Infrastructure;
@@ -119,9 +120,11 @@ namespace LG.Core.ApplicationServices.Finance.Services
             if (bankAccount == null)
                 throw new CoreException(CoreErrorCode.CoreTransactionBankNotFoundOrInactive);
 
-            // Sinh mã chuyển khoản ngẫu nhiên: NAP + 6 số
+            // Sinh mã chuyển khoản ngẫu nhiên: NAP + 6 số (hoặc lấy từ dto.Note nếu có)
             var random = new Random();
-            string transferContent = $"NAP{random.Next(100000, 999999)}";
+            string transferContent = !string.IsNullOrEmpty(dto.Note) 
+                ? dto.Note 
+                : $"NAP{random.Next(100000, 999999)}";
 
             var topup = new TopupRequest
             {
@@ -392,6 +395,25 @@ namespace LG.Core.ApplicationServices.Finance.Services
             {
                 _logger.LogError(ex, "Lỗi khi gọi EmailNotificationService.CreateAsync hoặc CreateWebNotificationAsync cho Withdraw");
             }
+        }
+
+        public async Task<List<WalletTransactionDto>> GetMyTransactionsAsync(Guid currentUserId)
+        {
+            var wallet = await GetOrCreateWalletAsync(currentUserId);
+            var transactions = await _db.WalletTransactions
+                .Where(x => x.WalletId == wallet.Id)
+                .OrderByDescending(x => x.CreatedDate)
+                .ToListAsync();
+
+            var dtos = _mapper.Map<List<WalletTransactionDto>>(transactions);
+
+            foreach (var dto in dtos)
+            {
+                var type = await _db.TransactionTypes.FindAsync(dto.TypeId);
+                dto.TypeName = type?.Name;
+            }
+
+            return dtos;
         }
     }
 }

@@ -85,30 +85,28 @@ export default function CustomerOrdersPage({
       <div className="flex flex-wrap gap-2 mb-5">
         <button
           onClick={() => handleStatusChange("")}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            statusFilter === ""
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${statusFilter === ""
               ? "bg-primary text-white"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
+            }`}
         >
           {t("order.all_statuses")}
         </button>
         {(["PendingPayment", "Paid", "AwaitingManualPlace", "OrderedOnPlatform",
-           "ShippedFromShop", "ArrivedChinaWh", "ShippingToVN", "ArrivedVietnam",
-           "Delivering", "Completed", "CancelledByCustomer", "CancelledByTimeout",
-           "Returned"] as OrderStatus[]).map((s) => (
-          <button
-            key={s}
-            onClick={() => handleStatusChange(s)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              statusFilter === s
-                ? "bg-primary text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            <StatusBadge status={s} />
-          </button>
-        ))}
+          "ShippedFromShop", "ArrivedChinaWh", "ShippingToVN", "ArrivedVietnam",
+          "Delivering", "Completed", "CancelledByCustomer", "CancelledByTimeout",
+          "Returned"] as OrderStatus[]).map((s) => (
+            <button
+              key={s}
+              onClick={() => handleStatusChange(s)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${statusFilter === s
+                  ? "bg-primary text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+            >
+              <StatusBadge status={s} />
+            </button>
+          ))}
       </div>
 
       {/* Orders list */}

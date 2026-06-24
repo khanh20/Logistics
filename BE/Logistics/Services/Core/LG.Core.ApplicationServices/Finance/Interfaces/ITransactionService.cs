@@ -1,4 +1,5 @@
 using LG.Core.ApplicationServices.Finance.DTOs.Transaction;
+using LG.Core.ApplicationServices.Finance.DTOs.WalletTransaction;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ namespace LG.Core.ApplicationServices.Finance.Interfaces
         Task<TopupResponseDto> CreateTopupRequestAsync(CreateTopupDto dto, Guid currentUserId);
         Task<List<TopupResponseDto>> GetMyTopupsAsync(Guid currentUserId);
         Task<WalletDto> GetMyWalletAsync(Guid currentUserId);
+        Task<List<WalletTransactionDto>> GetMyTransactionsAsync(Guid currentUserId);
 
         // Giao dịch rút tiền (User)
         Task<WithdrawResponseDto> CreateWithdrawRequestAsync(CreateWithdrawDto dto, Guid currentUserId);

@@ -11,12 +11,16 @@ import type {
   WithdrawResponseDto,
   CreateWithdrawDto,
   PaymentLockDto,
+  WalletTransactionDto,
 } from "~/lib/types/finance";
 
 export const financeApi = {
   // ── Wallet ───────────────────────────────────────────────────
   getMyWallet: () =>
     apiModule3Client.get<unknown, ApiResponse<WalletDto>>("/api/transactions/my-wallet"),
+
+  getMyHistory: () =>
+    apiModule3Client.get<unknown, ApiResponse<WalletTransactionDto[]>>("/api/transactions/my-history"),
 
   // ── Topup ────────────────────────────────────────────────────
   getMyTopups: () =>

@@ -81,6 +81,7 @@ public static class Module1ServiceExtensions
         services.AddScoped<IOrderStatusHistoryRepository, OrderStatusHistoryRepository>();
         services.AddScoped<IPlatformOrderRepository, PlatformOrderRepository>();
         services.AddScoped<IStaffAssignmentRepository, StaffAssignmentRepository>();
+        services.AddScoped<IExtensionScrapeLogRepository, ExtensionScrapeLogRepository>();
         services.AddScoped<IModule1UnitOfWork, Module1UnitOfWork>();
 
         services.AddDataProtection()
@@ -97,11 +98,24 @@ public static class Module1ServiceExtensions
         services.AddScoped<IProductAttributeService, ProductAttributeService>();
         services.AddScoped<IPlatformService, PlatformService>();
         AddAdapters(services, config);
+        services.AddScoped<ExtensionProductUpserter>();
         services.AddScoped<IProductIngestionService, ProductIngestionService>();
         services.AddScoped<ICartService, CartService>();
+        services.AddScoped<IExtensionCartService, ExtensionCartService>();
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
         services.AddScoped<IOrderManagementService, OrderManagementService>();
-        services.AddScoped<IWalletService, WalletServiceStub>();
+        services.AddHttpClient<IWalletService, WalletService>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var baseUrl = cfg["Core:BaseUrl"]
+                       ?? Environment.GetEnvironmentVariable("CORE__BASEURL")
+                       ?? "https://localhost:7215";
+
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout     = TimeSpan.FromSeconds(10);
+        })
+        .AddPolicyHandler(GetRetryPolicy("Core"));
+
         services.AddScoped<IStaffAssignmentService, StaffAssignmentService>();
         services.AddScoped<ILogisticsService, LogisticsServiceStub>();
 

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>MuaHo</title>
+    <style>
+      body {
+        width: 300px;
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        color: #1f2937;
+      }
+      .header {
+        background: linear-gradient(135deg, #f97316, #fb923c);
+        color: #fff;
+        padding: 16px;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .header img {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: #fff;
+        object-fit: contain;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .header p {
+        margin: 4px 0 0;
+        font-size: 12px;
+        opacity: 0.9;
+      }
+      .body {
+        padding: 14px 16px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #9ca3af;
+      }
+      .dot.ok {
+        background: #16a34a;
+      }
+      .dot.off {
+        background: #dc2626;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px solid #f3f4f6;
+      }
+      .actions {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+      }
+      .btn {
+        flex: 1;
+        text-align: center;
+        text-decoration: none;
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid #e5e7eb;
+        color: #1f2937;
+        background: #fff;
+      }
+      .btn.primary {
+        background: #f97316;
+        color: #fff;
+        border-color: #f97316;
+      }
+      .sites {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <img src="images/logo.png" alt="MuaHo" />
+      <div>
+        <h1>MuaHo</h1>
+        <p>Đặt hàng 1688 · Taobao · Tmall · Alibaba</p>
+      </div>
+    </div>
+    <div class="body">
+      <div class="status">
+        <span class="dot" id="conn-dot"></span>
+        <span id="conn-text">Đang kiểm tra kết nối...</span>
+      </div>
+      <div class="row"><span>Tỉ giá hiện tại</span><strong id="rate-val">—</strong></div>
+      <div class="sites">
+        Mở trang sản phẩm trên <b>1688.com</b> hoặc <b>tmall.com</b>, bảng MuaHo sẽ hiện
+        góc dưới phải để thêm vào giỏ.
+      </div>
+      <div class="actions">
+        <a class="btn primary" id="open-cart" href="#" target="_blank">Giỏ hàng</a>
+        <a class="btn" id="open-options" href="#">Cài đặt</a>
+      </div>
+    </div>
+    <script src="js/popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,76 @@
+{
+  "manifest_version": 3,
+  "name": "MuaHo - Mua hộ online",
+  "short_name": "MuaHo",
+  "version": "1.0.0",
+  "description": "Công cụ đặt hàng hỗ trợ mua hộ từ 1688, Taobao, Tmall, Alibaba qua MuaHo Logistics.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "images/icon128.png"
+  },
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1LeGKaVMAwoUSNrWhiC/JYAq9JTtw3S5ORM4vCi1qTwTLDg2v9bqKzGUMkbvViGO4YMHXcJ65K/9espyaHoKsAxbo81UhXN+oC1GOXXNhXDlrUB9ADai2MQbGh+hJzCL/Fw94M+R2L7XvRkysYObSoh62xPqLOmxop8vD8b3R4ogwygXKrmzXbM2WLllwPnjrIKGxGZrQAgUKhbRfOOqRpT0GNopYbAUJ+x0qOciPDySEaQOslBPJv5QhCioF+0BnMX4XJq557cPphdVo13BzXrVSJB6xVEyfNGxwigcOk7w81wI6GsTzFr4C6mW6XeBlBK8/IJMyrrnkv22PTp6yQIDAQAB",
+  "permissions": ["storage", "cookies", "tabs"],
+  "host_permissions": [
+    "https://*.1688.com/*",
+    "https://*.taobao.com/*",
+    "https://*.tmall.com/*",
+    "https://*.tmall.hk/*",
+    "https://localhost:7167/*",
+    "https://localhost:7237/*",
+    "http://localhost:5173/*",
+    "https://api.muaho.vn/*",
+    "https://auth.muaho.vn/*",
+    "https://muaho.vn/*",
+    "https://*.muaho.vn/*"
+  ],
+  "content_scripts": [
+    {
+      "css": ["css/main.css"],
+      "js": [
+        "js/jquery.js",
+        "js/md5.min.js",
+        "js/config.js",
+        "js/adapters/common.js",
+        "js/adapters/alibaba.js",
+        "js/adapters/taobao.js",
+        "js/adapters/tmall.js",
+        "js/script.js"
+      ],
+      "matches": [
+        "https://*.1688.com/*",
+        "https://*.taobao.com/*",
+        "https://*.tmall.com/*",
+        "https://*.tmall.hk/*"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": ["<all_urls>"],
+      "resources": [
+        "images/*",
+        "template/*",
+        "css/*",
+        "js/inject_script.js",
+        "js/getGlobalData.js"
+      ]
+    }
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:5173/*",
+      "https://muaho.vn/*",
+      "https://*.muaho.vn/*"
+    ]
+  },
+  "options_page": "options.html"
+}

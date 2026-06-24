@@ -89,6 +89,10 @@ export interface OrderDetailResponse {
   rateVndPerCny: number;
   isDepositPaid: boolean;
   isFinalPaid: boolean;
+  actualWeightKg: number | null;
+  volumeCm3: number | null;
+  storageDaysOverFree: number;
+  shippingFeeVnd: number;
   deliveryAddressNote: string | null;
   customerNote: string | null;
   staffNote: string | null;
@@ -135,6 +139,13 @@ export interface RecordIssueRequest {
 }
 
 export interface OrderTransitionRequest {
+  note?: string;
+}
+
+export interface ArrivedVietnamRequest {
+  actualWeightKg: number;
+  volumeCm3?: number;
+  storageDaysOverFree: number;
   note?: string;
 }
 

@@ -219,6 +219,9 @@ namespace LG.Module1.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("ActualWeightKg")
+                        .HasColumnType("numeric");
+
                     b.Property<Guid?>("AssignedStaffId")
                         .HasColumnType("uuid");
 
@@ -284,6 +287,9 @@ namespace LG.Module1.Infrastructure.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
+                    b.Property<decimal>("ShippingFeeVnd")
+                        .HasColumnType("numeric");
+
                     b.Property<Guid>("ShopId")
                         .HasColumnType("uuid");
 
@@ -301,12 +307,18 @@ namespace LG.Module1.Infrastructure.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<int>("StorageDaysOverFree")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("TotalCny")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("VolumeCm3")
+                        .HasColumnType("numeric");
 
                     b.HasKey("Id");
 
@@ -414,6 +426,57 @@ namespace LG.Module1.Infrastructure.Migrations
                             RateVndPerCny = 3480m,
                             Source = "Manual"
                         });
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.ExtensionScrapeLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConfidenceTier")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ExtensionVersion")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PlatformProductId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("Success")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("Platform", "Success", "CreatedAt");
+
+                    b.ToTable("extension_scrape_logs", "mod1");
                 });
 
             modelBuilder.Entity("LG.Module1.Domain.Entities.ForbiddenCategory", b =>
@@ -708,6 +771,24 @@ namespace LG.Module1.Infrastructure.Migrations
                             CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             IsActive = true,
                             Name = "eBay"
+                        },
+                        new
+                        {
+                            Id = new Guid("60000000-0000-0000-0000-000000000005"),
+                            ApiProvider = "Apify",
+                            BaseUrl = "https://www.tmall.com",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "Tmall"
+                        },
+                        new
+                        {
+                            Id = new Guid("60000000-0000-0000-0000-000000000006"),
+                            ApiProvider = "PublicApi",
+                            BaseUrl = "https://www.rakuten.co.jp",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "Rakuten"
                         });
                 });
 

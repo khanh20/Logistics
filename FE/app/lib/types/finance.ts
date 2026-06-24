@@ -30,6 +30,7 @@ export interface TopupResponseDto {
 export interface CreateTopupDto {
   bankAccountId: string;
   amount: number;
+  note?: string;
 }
 
 export interface WithdrawResponseDto {
@@ -66,4 +67,18 @@ export interface PaymentLockDto {
 
 export interface ReleasePaymentLockDto {
   releaseReason: ReleaseReasonEnum;
+}
+
+export interface WalletTransactionDto {
+  id: string;
+  walletId: string;
+  typeId: string;
+  typeName?: string;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  referenceType: string;
+  referenceId: string;
+  note?: string;
+  createdDate?: string;
 }

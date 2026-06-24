@@ -112,6 +112,13 @@ public interface IProductAttributeService
     Task<List<ProductAttributeResponse>> SyncAsync(Guid productId, List<AddAttributeRequest> attributes, CancellationToken ct = default);
 }
 
+// ── Extension Cart (Chrome Extension scraping) ─────────────────────
+public interface IExtensionCartService
+{
+    Task<AddFromExtensionResponse> AddAsync(Guid customerId,
+        AddFromExtensionRequest req, CancellationToken ct = default);
+}
+
 // ── Cart ────────────────────────────────────────────────────────────
 public interface ICartService
 {
@@ -151,6 +158,9 @@ public interface ICustomerOrderService
 
     /// Placeholder Phase 8 — khách xác nhận đặt cọc (wallet trả tiền).
     Task<OrderDetailResponse> PayDepositAsync(Guid customerId, Guid orderId, CancellationToken ct = default);
+
+    /// Khách thanh toán phần còn lại khi hàng về kho VN.
+    Task<OrderDetailResponse> PayFinalAsync(Guid customerId, Guid orderId, CancellationToken ct = default);
 }
 
 // ── Order (Staff) ───────────────────────────────────────────────────
@@ -177,7 +187,7 @@ public interface IOrderManagementService
     Task<OrderDetailResponse> MarkShippingToVNAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
 
     /// Ghi nhận hàng đã về kho VN.
-    Task<OrderDetailResponse> MarkArrivedVietnamAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
+    Task<OrderDetailResponse> MarkArrivedVietnamAsync(Guid orderId, Guid staffId, ArrivedVietnamRequest req, CancellationToken ct = default);
 
     /// Ghi nhận đang giao cho khách.
     Task<OrderDetailResponse> MarkDeliveringAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
@@ -195,14 +205,39 @@ public interface IOrderManagementService
     Task<OrderDetailResponse> MarkReturnedAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
 }
 
-// ── Wallet stub (Phase 8) ──────────────────────────────────────────
+public record WalletCalculateFeesResponse(
+    decimal ServiceFeeVnd,
+    decimal InspectionFeeVnd,
+    decimal InsuranceFeeVnd,
+    string  InsuranceOption,
+    decimal TotalCheckoutFeeVnd,
+    Guid?   FeeRuleId
+);
+
+public record WalletCalculateShippingFeesResponse(
+    decimal ShippingIntlFeeVnd,
+    decimal StorageFeeVnd,
+    decimal ChargeableWeightKg,
+    decimal TotalShippingFeeVnd
+);
+
+// ── Wallet Service Integration ──────────────────────────────────────
 public interface IWalletService
 {
-    /// Kiểm tra số dư ví — stub Phase 8, luôn trả available = 0.
+    /// Lấy số dư khả dụng của ví.
     Task<decimal> GetBalanceAsync(Guid customerId, CancellationToken ct = default);
 
-    /// Trừ tiền ví — stub Phase 8, throw NotImplementedException.
-    Task DeductAsync(Guid customerId, decimal amountVnd, string description, CancellationToken ct = default);
+    /// Trừ tiền ví (cọc hoặc thanh toán cuối kỳ).
+    Task DeductAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId, string description, CancellationToken ct = default);
+
+    /// Hoàn tiền ví (hủy đơn).
+    Task RefundAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId, string description, CancellationToken ct = default);
+
+    /// Tính toán các khoản phí checkout (dịch vụ, kiểm hàng, bảo hiểm).
+    Task<WalletCalculateFeesResponse> CalculateCheckoutFeesAsync(Guid customerId, decimal subtotalVnd, string insuranceOption, CancellationToken ct = default);
+
+    /// Tính toán phí vận chuyển quốc tế và lưu kho.
+    Task<WalletCalculateShippingFeesResponse> CalculateShippingFeesAsync(Guid customerId, decimal actualWeightKg, decimal? volumeCm3, int storageDaysOverFree, CancellationToken ct = default);
 }
 
 // ── Staff Assignment ─────────────────────────────────────────────────────────

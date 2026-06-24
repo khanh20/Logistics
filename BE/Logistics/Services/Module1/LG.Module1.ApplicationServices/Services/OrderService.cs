@@ -8,15 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LG.Module1.ApplicationServices.Services;
 
-// ── WalletService stub (Phase 8 bên Module 3) ──────────────────────────────────────────────
-public class WalletServiceStub : IWalletService
-{
-    public Task<decimal> GetBalanceAsync(Guid customerId, CancellationToken ct = default)
-        => Task.FromResult(decimal.MaxValue);   // Stub: Phase 8 sẽ call Module 3 Finance
 
-    public Task DeductAsync(Guid customerId, decimal amountVnd, string description, CancellationToken ct = default)
-        => throw new NotImplementedException("Wallet integration is pending Phase 8.");
-}
 
 // ── CustomerOrderService ──────────────────────────────────────────────────────
 ///  Customer-facing order operations.
@@ -48,41 +40,133 @@ public class CustomerOrderService(
     public async Task<OrderDetailResponse> CancelOrderAsync(Guid customerId, Guid orderId,
         CancelOrderRequest req, CancellationToken ct = default)
     {
-        return await uow.ExecuteInTransactionAsync(async innerCt =>
+        var (order, wasPaid, depositVnd) = await uow.ExecuteInTransactionAsync(async innerCt =>
         {
-            var order = await orderRepo.GetByIdWithDetailsAsync(orderId, innerCt)
+            var orderTx = await orderRepo.GetByIdWithDetailsAsync(orderId, innerCt)
                         ?? throw new OrderNotFoundException(orderId);
-            if (order.CustomerId != customerId)
+            if (orderTx.CustomerId != customerId)
                 throw new OrderNotFoundException(orderId);
 
-            order.CancelByCustomer(req.Reason);
-            await historyRepo.AddAsync(order.History.Last(), innerCt);
-            await orderRepo.UpdateAsync(order, innerCt);
-            logger.LogInformation("Order {OrderCode} cancelled by customer {CustomerId}", order.OrderCode, customerId);
-            return MapToDetail(order);
+            var paid = orderTx.IsDepositPaid;
+            var amt = orderTx.DepositVnd;
+
+            orderTx.CancelByCustomer(req.Reason);
+            await historyRepo.AddAsync(orderTx.History.Last(), innerCt);
+            await orderRepo.UpdateAsync(orderTx, innerCt);
+            return (orderTx, paid, amt);
         }, ct);
+
+        logger.LogInformation("Order {OrderCode} cancelled by customer {CustomerId}. WasPaid: {WasPaid}", order.OrderCode, customerId, wasPaid);
+
+        if (wasPaid && depositVnd > 0)
+        {
+            try
+            {
+                await walletService.RefundAsync(customerId, depositVnd, "OrderCancelRefund", order.Id, $"Hoàn tiền cọc đơn {order.OrderCode} do khách hủy đơn", ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogCritical(ex, "CRITICAL: Lỗi hoàn tiền ví cho khách {CustomerId} sau khi hủy đơn {OrderId} (Số tiền: {Amount})", 
+                    customerId, orderId, depositVnd);
+            }
+        }
+
+        return MapToDetail(order);
     }
 
-    /// Phase 8 stub — sau khi Phase 8 triển khai wallet sẽ thay thế bằng thực tế.
     public async Task<OrderDetailResponse> PayDepositAsync(Guid customerId, Guid orderId, CancellationToken ct = default)
     {
-        return await uow.ExecuteInTransactionAsync(async innerCt =>
+        var order = await orderRepo.GetByIdWithDetailsAsync(orderId, ct)
+                    ?? throw new OrderNotFoundException(orderId);
+        if (order.CustomerId != customerId)
+            throw new OrderNotFoundException(orderId);
+
+        if (order.Status != OrderStatus.PendingPayment)
+            throw new Exception("Đơn hàng không ở trạng thái chờ thanh toán đặt cọc.");
+
+        // 1. Trừ tiền ví thực tế
+        await walletService.DeductAsync(customerId, order.DepositVnd, "OrderDeposit", order.Id, $"Thanh toán đặt cọc đơn hàng {order.OrderCode}", ct);
+
+        try
         {
-            var order = await orderRepo.GetByIdWithDetailsAsync(orderId, innerCt)
-                        ?? throw new OrderNotFoundException(orderId);
-            if (order.CustomerId != customerId)
-                throw new OrderNotFoundException(orderId);
+            return await uow.ExecuteInTransactionAsync(async innerCt =>
+            {
+                var orderTx = await orderRepo.GetByIdWithDetailsAsync(orderId, innerCt)
+                            ?? throw new OrderNotFoundException(orderId);
+                
+                orderTx.MarkPaid();
+                await historyRepo.AddAsync(orderTx.History.Last(), innerCt);
+                await orderRepo.UpdateAsync(orderTx, innerCt);
+                logger.LogInformation("Order {OrderCode} deposit paid by customer {CustomerId}", orderTx.OrderCode, customerId);
+                return MapToDetail(orderTx);
+            }, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Thanh toán cọc cho đơn {OrderId} thất bại ở Module1. Đang tiến hành hoàn tiền...", orderId);
+            try
+            {
+                await walletService.RefundAsync(customerId, order.DepositVnd, "OrderDepositRefund", order.Id, $"Hoàn tiền cọc lỗi hệ thống đơn {order.OrderCode}", ct);
+            }
+            catch (Exception refundEx)
+            {
+                logger.LogCritical(refundEx, "CRITICAL: Hoàn cọc thất bại cho đơn {OrderId} sau khi lỗi ghi nhận database!", orderId);
+            }
+            throw;
+        }
+    }
 
-            var balance = await walletService.GetBalanceAsync(customerId, innerCt);
-            if (balance < order.DepositVnd)
-                throw new InsufficientWalletException(order.DepositVnd, balance);
+    public async Task<OrderDetailResponse> PayFinalAsync(Guid customerId, Guid orderId, CancellationToken ct = default)
+    {
+        var order = await orderRepo.GetByIdWithDetailsAsync(orderId, ct)
+                    ?? throw new OrderNotFoundException(orderId);
+        if (order.CustomerId != customerId)
+            throw new OrderNotFoundException(orderId);
 
-            order.MarkPaid();
-            await historyRepo.AddAsync(order.History.Last(), innerCt);
-            await orderRepo.UpdateAsync(order, innerCt);
-            logger.LogInformation("Order {OrderCode} deposit paid by customer {CustomerId}", order.OrderCode, customerId);
-            return MapToDetail(order);
-        }, ct);
+        if (order.Status != OrderStatus.ArrivedVietnam)
+            throw new Exception("Đơn hàng phải ở trạng thái đã về kho VN mới có thể thanh toán cuối kỳ.");
+
+        if (order.IsFinalPaid)
+            throw new Exception("Đơn hàng đã thanh toán cuối kỳ.");
+
+        var remainingAmount = order.FinalAmountVnd - order.DepositVnd;
+
+        if (remainingAmount > 0)
+        {
+            // 1. Trừ tiền ví thực tế cho phần còn lại
+            await walletService.DeductAsync(customerId, remainingAmount, "OrderFinalPayment", order.Id, $"Thanh toán cuối kỳ đơn hàng {order.OrderCode}", ct);
+        }
+
+        try
+        {
+            return await uow.ExecuteInTransactionAsync(async innerCt =>
+            {
+                var orderTx = await orderRepo.GetByIdWithDetailsAsync(orderId, innerCt)
+                            ?? throw new OrderNotFoundException(orderId);
+                
+                orderTx.MarkFinalPaid();
+                await historyRepo.AddAsync(orderTx.History.Last(), innerCt);
+                await orderRepo.UpdateAsync(orderTx, innerCt);
+                logger.LogInformation("Order {OrderCode} final payment paid by customer {CustomerId}", orderTx.OrderCode, customerId);
+                return MapToDetail(orderTx);
+            }, ct);
+        }
+        catch (Exception ex)
+        {
+            if (remainingAmount > 0)
+            {
+                logger.LogError(ex, "Thanh toán cuối kỳ cho đơn {OrderId} thất bại ở Module1. Đang tiến hành hoàn tiền...", orderId);
+                try
+                {
+                    await walletService.RefundAsync(customerId, remainingAmount, "OrderFinalRefund", order.Id, $"Hoàn tiền thanh toán cuối kỳ lỗi hệ thống đơn {order.OrderCode}", ct);
+                }
+                catch (Exception refundEx)
+                {
+                    logger.LogCritical(refundEx, "CRITICAL: Hoàn tiền thanh toán cuối kỳ thất bại cho đơn {OrderId} sau khi lỗi ghi nhận database!", orderId);
+                }
+            }
+            throw;
+        }
     }
 
     // ── Mappers ───────────────────────────────────────────────────────────────
@@ -118,6 +202,10 @@ public class CustomerOrderService(
         RateVndPerCny:      o.RateVndPerCny,
         IsDepositPaid:      o.IsDepositPaid,
         IsFinalPaid:        o.IsFinalPaid,
+        ActualWeightKg:     o.ActualWeightKg,
+        VolumeCm3:          o.VolumeCm3,
+        StorageDaysOverFree: o.StorageDaysOverFree,
+        ShippingFeeVnd:      o.ShippingFeeVnd,
         DeliveryAddressNote: o.DeliveryAddressNote,
         CustomerNote:       o.CustomerNote,
         StaffNote:          o.StaffNote,
@@ -171,6 +259,7 @@ public class OrderManagementService(
     IPlatformShopRepository         shopRepo,
     ILogisticsService               logisticsService,
     IModule1UnitOfWork              uow,
+    IWalletService                  walletService,
     ILogger<OrderManagementService> logger
 ) : IOrderManagementService
 {
@@ -261,9 +350,31 @@ public class OrderManagementService(
         OrderTransitionRequest req, CancellationToken ct = default) =>
         SimpleTransitionAsync(orderId, staffId, ct, (o, note) => o.MarkShippingToVN(staffId, note), req.Note);
 
-    public Task<OrderDetailResponse> MarkArrivedVietnamAsync(Guid orderId, Guid staffId,
-        OrderTransitionRequest req, CancellationToken ct = default) =>
-        SimpleTransitionAsync(orderId, staffId, ct, (o, note) => o.MarkArrivedVietnam(staffId, note), req.Note);
+    public async Task<OrderDetailResponse> MarkArrivedVietnamAsync(Guid orderId, Guid staffId,
+        ArrivedVietnamRequest req, CancellationToken ct = default)
+    {
+        var orderPre = await orderRepo.GetByIdWithDetailsAsync(orderId, ct)
+                       ?? throw new OrderNotFoundException(orderId);
+
+        var shippingFeeCalc = await walletService.CalculateShippingFeesAsync(
+            orderPre.CustomerId, req.ActualWeightKg, req.VolumeCm3, req.StorageDaysOverFree, ct);
+
+        return await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            var order = await RequireOrderAsync(orderId, innerCt);
+            
+            order.UpdateShippingInfo(req.ActualWeightKg, req.VolumeCm3, req.StorageDaysOverFree, shippingFeeCalc.TotalShippingFeeVnd);
+            order.MarkArrivedVietnam(staffId, req.Note);
+
+            await historyRepo.AddAsync(order.History.Last(), innerCt);
+            await orderRepo.UpdateAsync(order, innerCt);
+
+            logger.LogInformation("Order {OrderCode} marked ArrivedVietnam by staff {StaffId}. Shipping Fee: {ShippingFee}", 
+                order.OrderCode, staffId, shippingFeeCalc.TotalShippingFeeVnd);
+
+            return CustomerOrderService.MapToDetail(order);
+        }, ct);
+    }
 
     public Task<OrderDetailResponse> MarkDeliveringAsync(Guid orderId, Guid staffId,
         OrderTransitionRequest req, CancellationToken ct = default) =>

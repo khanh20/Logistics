@@ -13,6 +13,8 @@ import "./app.css";
 import "~/lib/i18n";
 import { Provider } from "react-redux";
 import { store } from "~/lib/feature/store";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -38,6 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <ToastContainer position="top-right" autoClose={2000} theme="light" />
         <ScrollRestoration />
         <Scripts />
       </body>

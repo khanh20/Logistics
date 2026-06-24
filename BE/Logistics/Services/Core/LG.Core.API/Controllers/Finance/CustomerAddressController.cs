@@ -39,16 +39,14 @@ namespace LG.Core.API.Controllers.Finance
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, UpdateCustomerAddressDto dto)
         {
-            var result = await _service.UpdateAsync(id, dto);
-            if (!result) return NotFound();
+            await _service.UpdateAsync(id, dto);
             return Ok<object?>(null, "Cập nhật địa chỉ thành công.");
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var result = await _service.DeleteAsync(id);
-            if (!result) return NotFound();
+            await _service.DeleteAsync(id);
             return Ok<object?>(null, "Xóa địa chỉ thành công.");
         }
 
@@ -56,8 +54,7 @@ namespace LG.Core.API.Controllers.Finance
         public async Task<IActionResult> SetDefault(Guid id)
         {
             var userId = CurrentUserId;
-            var result = await _service.SetDefaultAsync(id, userId);
-            if (!result) return NotFound();
+            await _service.SetDefaultAsync(id, userId);
             return Ok<object?>(null, "Đặt địa chỉ mặc định thành công.");
         }
     }
