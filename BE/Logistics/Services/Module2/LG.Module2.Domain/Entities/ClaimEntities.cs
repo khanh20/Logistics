@@ -49,6 +49,8 @@ public class MissingClaim
     public Guid                   PackageId             { get; private set; }
     public Guid                   CustomerId            { get; private set; }
     public MissingClaimStatus     Status                { get; private set; } = MissingClaimStatus.Submitted;
+    public string?                Description            { get; private set; }  // Mô tả từ khách
+    public string?                EvidenceUrls          { get; private set; }  // JSON array ảnh/chứng cứ
     public decimal?               ClaimedValueVnd       { get; private set; }
     public decimal?               InsuranceCoveragePct  { get; private set; }  // 0.5 hoặc 1.0
     public decimal?               ResolvedAmountVnd     { get; private set; }
@@ -62,12 +64,18 @@ public class MissingClaim
     private MissingClaim() { }
 
     public static MissingClaim Submit(Guid packageId, Guid customerId,
+                                       string? description = null,
+                                       IEnumerable<string>? evidenceUrls = null,
                                        decimal? claimedValueVnd = null,
                                        decimal? insuranceCoveragePct = null) =>
         new()
         {
             PackageId            = packageId,
             CustomerId           = customerId,
+            Description          = description?.Trim(),
+            EvidenceUrls         = evidenceUrls is not null
+                ? System.Text.Json.JsonSerializer.Serialize(evidenceUrls)
+                : null,
             ClaimedValueVnd      = claimedValueVnd,
             InsuranceCoveragePct = insuranceCoveragePct,
         };
@@ -114,6 +122,8 @@ public class InsuranceClaim
     public Guid                  OrderId         { get; private set; }
     public Guid?                 MissingClaimId  { get; private set; }
     public InsuranceClaimStatus  Status          { get; private set; } = InsuranceClaimStatus.Submitted;
+    public string?               Description     { get; private set; }  // Mô tả từ khách
+    public decimal?              ClaimedAmountVnd { get; private set; } // Số tiền khách yêu cầu
     public string?               DamagePhotos    { get; private set; }  // JSON array of URLs
     public string?               AdjusterNote    { get; private set; }
     public decimal?              ApprovedAmount  { get; private set; }
@@ -126,16 +136,26 @@ public class InsuranceClaim
 
     public static InsuranceClaim Submit(Guid packageId, Guid orderId,
                                          Guid? missingClaimId = null,
+                                         decimal? claimedAmountVnd = null,
+                                         string? description = null,
                                          IEnumerable<string>? damagePhotoUrls = null) =>
         new()
         {
-            PackageId      = packageId,
-            OrderId        = orderId,
-            MissingClaimId = missingClaimId,
-            DamagePhotos   = damagePhotoUrls is not null
+            PackageId        = packageId,
+            OrderId          = orderId,
+            MissingClaimId   = missingClaimId,
+            ClaimedAmountVnd = claimedAmountVnd,
+            Description      = description?.Trim(),
+            DamagePhotos     = damagePhotoUrls is not null
                 ? System.Text.Json.JsonSerializer.Serialize(damagePhotoUrls)
                 : null,
         };
+
+    public void SetUnderReview()
+    {
+        Status    = InsuranceClaimStatus.UnderReview;
+        UpdatedAt = DateTime.UtcNow;
+    }
 
     public void Approve(decimal approvedAmount, string? adjusterNote = null)
     {

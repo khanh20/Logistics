@@ -73,3 +73,23 @@ public record UploadPackageImageRequest(
     string Url,
     string? Note
 );
+
+// ── Fee (UC-2.07) ─────────────────────────────────────────────────────────────
+public record CalculateFeeRequest(
+    decimal  RatePerKgVnd,
+    decimal? InsuranceRate    = null,   // VD: 0.02 = 2% giá trị khai báo
+    decimal? DeclaredValueVnd = null
+);
+
+public record PackageFeeResponse(
+    Guid     PackageId,
+    string   Barcode,
+    string   Status,
+    decimal? ChargedWeightKg,
+    decimal? RatePerKgVnd,
+    decimal? ShipIntlVnd,
+    bool     InsuranceOpted,
+    decimal? InsuranceFeeVnd,
+    decimal? TotalFeeVnd,
+    DateTime? CalculatedAt
+);

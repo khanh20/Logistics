@@ -1,5 +1,6 @@
 using LG.Module2.ApplicationServices.Interfaces;
 using LG.Module2.ApplicationServices.Services;
+using LG.Module2.ApplicationServices.Services.Carrier;
 using LG.Module2.Domain.Repositories;
 using LG.Module2.Infrastructure.Data;
 using LG.Module2.Infrastructure.Repositories;
@@ -72,8 +73,43 @@ public static class Module2ServiceExtensions
         services.AddScoped<IPackageService,      PackageService>();
         services.AddScoped<ISackService,         SackService>();
         services.AddScoped<IContainerService,    ContainerService>();
+        services.AddScoped<ICustomsService,      CustomsService>();
+        services.AddScoped<IFeeCalculationService, FeeCalculationService>();
+        services.AddScoped<IDeliveryService,     DeliveryService>();
+        services.AddScoped<ITrackingService,     TrackingService>();
+        services.AddScoped<IClaimService,        ClaimService>();
+
+        // ── Carrier gateways (GHTK API thật + fallback stub) ──────────────────
+        var ghtk = BuildGhtkOptions(config);
+        services.AddSingleton(ghtk);
+        services.AddHttpClient<GhtkCarrierGateway>(c =>
+        {
+            c.BaseAddress = new Uri(ghtk.BaseUrl);
+            c.Timeout     = TimeSpan.FromSeconds(20);
+        });
+        services.AddScoped<ICarrierGateway>(sp => sp.GetRequiredService<GhtkCarrierGateway>());
+        services.AddScoped<ICarrierGateway, StubCarrierGateway>();
+        services.AddScoped<ICarrierGatewayResolver, CarrierGatewayResolver>();
 
         return services;
+    }
+
+    private static GhtkOptions BuildGhtkOptions(IConfiguration config)
+    {
+        var s = config.GetSection("Ghtk");
+        return new GhtkOptions
+        {
+            BaseUrl      = s["BaseUrl"]      ?? "https://services.giaohangtietkiem.vn",
+            Token        = s["Token"]        ?? Environment.GetEnvironmentVariable("GHTK_TOKEN"),
+            ClientSource = s["ClientSource"] ?? Environment.GetEnvironmentVariable("GHTK_CLIENT_SOURCE"),
+            WebhookToken = s["WebhookToken"] ?? Environment.GetEnvironmentVariable("GHTK_WEBHOOK_TOKEN"),
+            PickName     = s["Pick:Name"]     ?? "Kho MuaHo",
+            PickTel      = s["Pick:Tel"]      ?? "",
+            PickAddress  = s["Pick:Address"]  ?? "",
+            PickProvince = s["Pick:Province"] ?? "",
+            PickDistrict = s["Pick:District"] ?? "",
+            PickWard     = s["Pick:Ward"]     ?? "",
+        };
     }
 
     private static string NormalizePg(string raw)

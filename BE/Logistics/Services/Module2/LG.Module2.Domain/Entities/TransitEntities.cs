@@ -147,12 +147,13 @@ public class CustomsClearance
     private CustomsClearance() { }
 
     public static CustomsClearance Create(Guid containerTripId, ClearanceType clearanceType,
-                                           decimal? declaredValueVnd = null) =>
+                                           decimal? declaredValueVnd = null, string? hsCodeSummary = null) =>
         new()
         {
             ContainerTripId  = containerTripId,
             ClearanceType    = clearanceType,
             DeclaredValueVnd = declaredValueVnd,
+            HsCodeSummary    = hsCodeSummary?.Trim(),
         };
 
     public void UpdateStatus(CustomsClearanceStatus newStatus, string? heldReason = null,

@@ -61,6 +61,13 @@ public class Package
     public bool           InsuranceOpted  { get; private set; } = false;
     public InsuranceLevel? InsuranceLevel { get; private set; }
 
+    // ── Cước vận chuyển quốc tế (UC-2.07) ───────────────────────────────────────
+    public decimal? DeclaredValueVnd { get; private set; }  // Giá trị khai báo, dùng tính phí bảo hiểm
+    public decimal? FeeRatePerKgVnd  { get; private set; }  // Đơn giá/kg snapshot tại thời điểm tính cước
+    public decimal? ShipIntlVnd      { get; private set; }  // Cước quốc tế = charged_weight × đơn giá
+    public decimal? InsuranceFeeVnd  { get; private set; }  // Phí bảo hiểm = declared_value × tỉ lệ
+    public DateTime? FeeCalculatedAt { get; private set; }
+
     public DateTime  CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime  UpdatedAt { get; private set; } = DateTime.UtcNow;
 
@@ -124,6 +131,30 @@ public class Package
     {
         InsuranceOpted = true;
         InsuranceLevel = level;
+        Touch();
+    }
+
+    /// UC-2.07: Tính cước vận chuyển quốc tế. Yêu cầu kiện đã được cân (có charged_weight).
+    /// shipping = charged_weight × đơn giá/kg; insurance = declared_value × tỉ lệ (nếu khách mua bảo hiểm).
+    public void CalculateInternationalFee(decimal ratePerKgVnd, decimal? insuranceRate = null,
+                                          decimal? declaredValueVnd = null)
+    {
+        if (!ChargedWeightKg.HasValue)
+            throw new PackageNotWeighedException(Barcode);
+        if (ratePerKgVnd <= 0)
+            throw new ArgumentOutOfRangeException(nameof(ratePerKgVnd), "Đơn giá/kg phải lớn hơn 0.");
+
+        FeeRatePerKgVnd = ratePerKgVnd;
+        ShipIntlVnd     = Math.Round(ChargedWeightKg.Value * ratePerKgVnd, 0);
+
+        if (declaredValueVnd.HasValue)
+            DeclaredValueVnd = declaredValueVnd;
+
+        InsuranceFeeVnd = (InsuranceOpted && insuranceRate is > 0m && DeclaredValueVnd.HasValue)
+            ? Math.Round(DeclaredValueVnd.Value * insuranceRate.Value, 0)
+            : 0m;
+
+        FeeCalculatedAt = DateTime.UtcNow;
         Touch();
     }
 

@@ -3,6 +3,7 @@ using System;
 using LG.Module2.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LG.Module2.Infrastructure.Migrations
 {
     [DbContext(typeof(Module2DbContext))]
-    partial class Module2DbContextModelSnapshot : ModelSnapshot
+    [Migration("20260625103633_AddPackageInternationalFee")]
+    partial class AddPackageInternationalFee
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -483,19 +486,11 @@ namespace LG.Module2.Infrastructure.Migrations
                         .HasPrecision(14)
                         .HasColumnType("numeric(14,0)");
 
-                    b.Property<decimal?>("ClaimedAmountVnd")
-                        .HasPrecision(14)
-                        .HasColumnType("numeric(14,0)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DamagePhotos")
                         .HasColumnType("text");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
 
                     b.Property<Guid?>("MissingClaimId")
                         .HasColumnType("uuid");
@@ -536,13 +531,6 @@ namespace LG.Module2.Infrastructure.Migrations
 
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("EvidenceUrls")
-                        .HasColumnType("text");
 
                     b.Property<decimal?>("InsuranceCoveragePct")
                         .HasPrecision(4, 2)
