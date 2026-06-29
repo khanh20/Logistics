@@ -56,7 +56,8 @@
     "next_page": "Tiếp →",
     "browse_products": "Tìm sản phẩm →",
     "optional": "tuỳ chọn",
-    "edit": "Sửa"
+    "edit": "Sửa",
+    "refresh": "Tải lại"
   },
   "auth": {
     "login": "Đăng nhập",
@@ -537,9 +538,11 @@
     "orders": "Đơn hàng",
     "platform_orders": "Đơn sàn",
     "products": "Sản phẩm",
+    "favorites": "Yêu thích",
     "categories": "Danh mục",
     "platforms": "Sàn TMĐT",
     "ingestion": "Import sản phẩm",
+    "reviews": "Đánh giá",
     "exchange_rates": "Tỉ giá",
     "staff": "Nhân viên",
     "finance": "Tài chính",
@@ -644,6 +647,66 @@
     "filter_module": "Lọc theo module",
     "all_modules": "Tất cả module",
     "search_placeholder": "Tìm theo tên hoặc code..."
+  },
+  "products": {
+    "title": "Tìm kiếm sản phẩm",
+    "subtitle": "Khám phá sản phẩm từ Taobao, 1688, Tmall, eBay...",
+    "results": "{{count}} sản phẩm",
+    "search_placeholder": "Tìm theo tên sản phẩm (VD: túi vải, áo thun...)",
+    "filter_category": "Danh mục",
+    "all_categories": "Tất cả danh mục",
+    "filter_platform": "Sàn",
+    "all_platforms": "Tất cả sàn",
+    "sort_label": "Sắp xếp",
+    "sort_relevance": "Liên quan nhất",
+    "sort_priceasc": "Giá: thấp → cao",
+    "sort_pricedesc": "Giá: cao → thấp",
+    "sort_newest": "Mới nhất",
+    "sort_bestselling": "Bán chạy",
+    "sort_mostviewed": "Xem nhiều",
+    "price_from": "Giá từ (¥)",
+    "price_to": "Đến (¥)",
+    "apply": "Lọc",
+    "empty_title": "Không tìm thấy sản phẩm",
+    "empty_hint": "Thử từ khoá khác hoặc nới khoảng giá / bỏ bớt bộ lọc.",
+    "pagination": "Trang {{page}}/{{total}}"
+  },
+  "reviews": {
+    "title": "Đánh giá",
+    "write": "Viết đánh giá",
+    "placeholder": "Chia sẻ cảm nhận của bạn về sản phẩm...",
+    "submit": "Gửi đánh giá",
+    "empty": "Chưa có đánh giá nào.",
+    "purchase_hint": "Chỉ khách đã mua mới đánh giá được.",
+    "status_pending": "Chờ duyệt",
+    "status_approved": "Đã duyệt",
+    "status_rejected": "Bị từ chối"
+  },
+  "recommend": {
+    "trending": "Đang thịnh hành",
+    "featured": "Nổi bật",
+    "recently_viewed": "Bạn đã xem gần đây",
+    "similar_to_viewed": "Giống thứ bạn đã xem",
+    "also_viewed": "Người xem cũng xem",
+    "for_you": "Gợi ý cho bạn"
+  },
+  "favorites": {
+    "title": "Sản phẩm yêu thích",
+    "subtitle": "Những sản phẩm bạn đã lưu",
+    "count": "{{count}} sản phẩm",
+    "empty": "Chưa có sản phẩm yêu thích",
+    "empty_hint": "Nhấn vào trái tim trên sản phẩm để lưu lại."
+  },
+  "admin_reviews": {
+    "title": "Kiểm duyệt đánh giá",
+    "pending_count": "{{count}} đánh giá chờ duyệt",
+    "empty": "Không có đánh giá chờ duyệt",
+    "approve": "Duyệt",
+    "reject": "Từ chối",
+    "view_product": "Xem sản phẩm",
+    "reject_title": "Từ chối đánh giá",
+    "reject_hint": "Lý do từ chối (gửi cho khách):",
+    "reject_placeholder": "VD: nội dung không phù hợp..."
   },
   "home": {
     "badge": "Đặt hàng từ Taobao, eBay, Rakuten — giao tận nhà",

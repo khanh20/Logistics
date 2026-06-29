@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pgvector;
 
 #nullable disable
 
@@ -21,6 +22,7 @@ namespace LG.Module1.Infrastructure.Migrations
                 .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("LG.Module1.Domain.Entities.CancelReason", b =>
@@ -1160,6 +1162,61 @@ namespace LG.Module1.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("LG.Module1.Domain.Entities.ProductCoView", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ComputedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RelatedProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("Score")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "RelatedProductId")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId", "Score");
+
+                    b.ToTable("product_co_views", "mod1");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.ProductEmbedding", b =>
+                {
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Vector>("Embedding")
+                        .IsRequired()
+                        .HasColumnType("vector(1024)");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ProductId");
+
+                    b.HasIndex("Embedding");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Embedding"), "hnsw");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Embedding"), new[] { "vector_cosine_ops" });
+
+                    b.ToTable("product_embeddings", "mod1");
+                });
+
             modelBuilder.Entity("LG.Module1.Domain.Entities.ProductImage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1317,6 +1374,59 @@ namespace LG.Module1.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("product_price_tiers", "mod1");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.ProductReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ModeratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ModeratedByStaffId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ProductId", "Status");
+
+                    b.ToTable("product_reviews", "mod1");
                 });
 
             modelBuilder.Entity("LG.Module1.Domain.Entities.ProductVariant", b =>
@@ -1590,6 +1700,103 @@ namespace LG.Module1.Infrastructure.Migrations
                     b.ToTable("supplier_chat_logs", "mod1");
                 });
 
+            modelBuilder.Entity("LG.Module1.Domain.Entities.TrendingProduct", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ComputedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("Score")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId")
+                        .IsUnique();
+
+                    b.HasIndex("Rank");
+
+                    b.ToTable("trending_products", "mod1");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.UserActivityEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Keyword")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SessionKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionKey");
+
+                    b.HasIndex("CustomerId", "CreatedAt");
+
+                    b.HasIndex("ProductId", "EventType");
+
+                    b.ToTable("user_activity_events", "mod1");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.UserFavorite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("CustomerId", "ProductId")
+                        .IsUnique();
+
+                    b.ToTable("user_favorites", "mod1");
+                });
+
             modelBuilder.Entity("LG.Module1.Domain.Entities.CartItem", b =>
                 {
                     b.HasOne("LG.Module1.Domain.Entities.Cart", "Cart")
@@ -1734,6 +1941,17 @@ namespace LG.Module1.Infrastructure.Migrations
                     b.Navigation("Parent");
                 });
 
+            modelBuilder.Entity("LG.Module1.Domain.Entities.ProductEmbedding", b =>
+                {
+                    b.HasOne("LG.Module1.Domain.Entities.ProductMaster", "Product")
+                        .WithOne()
+                        .HasForeignKey("LG.Module1.Domain.Entities.ProductEmbedding", "ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("LG.Module1.Domain.Entities.ProductImage", b =>
                 {
                     b.HasOne("LG.Module1.Domain.Entities.ProductMaster", "Product")
@@ -1782,6 +2000,17 @@ namespace LG.Module1.Infrastructure.Migrations
                     b.Navigation("Variant");
                 });
 
+            modelBuilder.Entity("LG.Module1.Domain.Entities.ProductReview", b =>
+                {
+                    b.HasOne("LG.Module1.Domain.Entities.ProductMaster", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("LG.Module1.Domain.Entities.ProductVariant", b =>
                 {
                     b.HasOne("LG.Module1.Domain.Entities.ProductMaster", "Product")
@@ -1802,6 +2031,17 @@ namespace LG.Module1.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("LG.Module1.Domain.Entities.UserFavorite", b =>
+                {
+                    b.HasOne("LG.Module1.Domain.Entities.ProductMaster", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("LG.Module1.Domain.Entities.Cart", b =>

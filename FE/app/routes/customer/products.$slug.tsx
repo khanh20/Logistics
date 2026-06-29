@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { store } from "~/lib/feature/store";
 import { productsApi } from "~/lib/api/products";
 import { cartApi } from "~/lib/api/cart";
+import { activityApi } from "~/lib/api/engagement";
+import { getSessionKey } from "~/lib/utils/session";
 import { Button } from "~/components/ui/Button";
+import { FavoriteButton } from "~/components/customer/FavoriteButton";
+import { ProductReviews } from "~/components/customer/ProductReviews";
 import { formatCNY } from "~/lib/utils/format";
 import { cn } from "~/lib/utils/cn";
 import type { ProductVariant, PriceTier, ProductDetail } from "~/lib/types/product";
@@ -54,6 +58,14 @@ export default function ProductDetailPage({
 
   const navigate = useNavigate();
   const { token } = store.getState().authState;
+
+  // Track lượt xem (nuôi recommend: trending / similar / co-view) — best-effort.
+  useEffect(() => {
+    activityApi
+      .track({ type: "View", productId: product.id, categoryId: product.category?.id, sessionKey: getSessionKey() })
+      .catch(() => {});
+  }, [product.id, product.category?.id]);
+
   const primaryImage = product.images.find((i) => i.isPrimary) ?? product.images[0];
   const activeImage = product.images[activeImageIdx] ?? primaryImage;
 
@@ -161,6 +173,11 @@ export default function ProductDetailPage({
               <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">
                 {product.shop.platformName}
               </span>
+              <FavoriteButton
+                productId={product.id}
+                size={20}
+                className="ml-auto bg-slate-100 p-2 hover:bg-slate-200"
+              />
             </div>
 
             <h1 className="text-xl font-bold text-gray-900 leading-snug">{displayTitle}</h1>
@@ -367,6 +384,9 @@ export default function ProductDetailPage({
           </div>
         </div>
       )}
+
+      {/* Reviews */}
+      <ProductReviews productId={product.id} />
     </div>
   );
 }

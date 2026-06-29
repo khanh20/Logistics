@@ -3,10 +3,45 @@ using LG.Module1.ApplicationServices.DTOs.Category;
 using LG.Module1.ApplicationServices.DTOs.Order;
 using LG.Module1.ApplicationServices.DTOs.Platform;
 using LG.Module1.ApplicationServices.DTOs.Product;
+using LG.Module1.ApplicationServices.DTOs.Recommendation;
+using LG.Module1.ApplicationServices.DTOs.Review;
 using LG.Module1.ApplicationServices.DTOs.Staff;
 using LG.Module1.Domain.Entities;
 
 namespace LG.Module1.ApplicationServices.Interfaces;
+
+// ── Product reviews + kiểm duyệt  ────────────────────────────────────
+public interface IReviewService
+{
+    /// Khách gửi đánh giá — chỉ cho phép nếu đã mua sản phẩm; trạng thái Pending.
+    Task<ReviewResponse> SubmitAsync(Guid customerId, Guid productId, SubmitReviewRequest req, CancellationToken ct = default);
+    /// Đánh giá đã duyệt của 1 sản phẩm (cho khách xem).
+    Task<PagedReviewResponse> GetApprovedByProductAsync(Guid productId, int page, int pageSize, CancellationToken ct = default);
+    /// Đánh giá của chính khách cho 1 sản phẩm (gồm cả Pending) — để FE biết đã gửi chưa.
+    Task<ReviewResponse?> GetMineForProductAsync(Guid customerId, Guid productId, CancellationToken ct = default);
+    /// Hàng đợi kiểm duyệt (Admin/Staff).
+    Task<PagedReviewResponse> GetQueueAsync(ReviewStatus? status, int page, int pageSize, CancellationToken ct = default);
+    /// Duyệt / từ chối 1 đánh giá.
+    Task<ReviewResponse> ModerateAsync(Guid reviewId, Guid staffId, ModerateReviewRequest req, CancellationToken ct = default);
+}
+
+// ── Recommendation / Engagement  ────────────────────────────────────
+public interface IRecommendationService
+{
+    /// Gợi ý theo phân khúc khách. customerId null = khách ẩn danh (cold-start).
+    Task<RecommendationResponse> GetAsync(Guid? customerId, string? sessionKey, int perSection, CancellationToken ct = default);
+}
+
+public interface IEngagementService
+{
+    /// Ghi nhận hành vi (View/Search/...). customerId null thì req.SessionKey phải có.
+    Task TrackAsync(Guid? customerId, TrackActivityRequest req, CancellationToken ct = default);
+
+    Task<List<ProductListItemResponse>> GetFavoritesAsync(Guid customerId, CancellationToken ct = default);
+    /// Thêm yêu thích. Trả false nếu đã tồn tại.
+    Task<bool> AddFavoriteAsync(Guid customerId, Guid productId, CancellationToken ct = default);
+    Task RemoveFavoriteAsync(Guid customerId, Guid productId, CancellationToken ct = default);
+}
 
 public interface IProductCategoryService
 {

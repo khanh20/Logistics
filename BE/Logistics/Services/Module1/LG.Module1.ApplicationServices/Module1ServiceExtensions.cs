@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Pgvector.EntityFrameworkCore;
 using Polly;
 using System.Text;
 
@@ -46,6 +47,7 @@ public static class Module1ServiceExtensions
                     errorCodesToAdd: null);
                 npg.CommandTimeout(30);
                 npg.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                npg.UseVector(); // pgvector — ProductEmbedding
 
             });
 
@@ -89,7 +91,25 @@ public static class Module1ServiceExtensions
         services.AddScoped<IStaffNotificationRepository, StaffNotificationRepository>();
         services.AddScoped<IOrderComplaintRepository, OrderComplaintRepository>();
         services.AddScoped<ISupplierChatLogRepository, SupplierChatLogRepository>();
+        // Engagement / Recommendation repos 
+        services.AddScoped<IUserActivityRepository, UserActivityRepository>();
+        services.AddScoped<IUserFavoriteRepository, UserFavoriteRepository>();
+        services.AddScoped<IProductReviewRepository, ProductReviewRepository>();
+        services.AddScoped<ITrendingProductRepository, TrendingProductRepository>();
+        services.AddScoped<IProductEmbeddingRepository, ProductEmbeddingRepository>();
+        services.AddScoped<IProductCoViewRepository, ProductCoViewRepository>();
         services.AddScoped<IModule1UnitOfWork, Module1UnitOfWork>();
+
+        // Embedding  — TEI/Qwen3-Embedding. Config: Embedding:BaseUrl, Embedding:Model.
+        services.AddHttpClient<IEmbeddingProvider, HttpEmbeddingService>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var baseUrl = cfg["Embedding:BaseUrl"]
+                       ?? Environment.GetEnvironmentVariable("EMBEDDING__BASEURL")
+                       ?? "http://localhost:8080";
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout     = TimeSpan.FromSeconds(30);
+        });
 
         services.AddDataProtection()
            .SetApplicationName("LG.Module1");
@@ -132,6 +152,10 @@ public static class Module1ServiceExtensions
         services.AddScoped<IStaffPerformanceService, StaffPerformanceService>();
         services.AddScoped<IComplaintService, ComplaintService>();
         services.AddScoped<ISupplierChatLogService, SupplierChatLogService>();
+        // Recommendation / Engagement + Reviews +
+        services.AddScoped<IRecommendationService, RecommendationService>();
+        services.AddScoped<IEngagementService, EngagementService>();
+        services.AddScoped<IReviewService, ReviewService>();
 
         // HttpClient cho StaffRosterHttpService — set BaseAddress + InternalKey header sẵn.
         // Đọc Auth:BaseUrl + Auth:InternalApiKey từ appsettings/env (env override).

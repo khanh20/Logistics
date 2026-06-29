@@ -42,6 +42,7 @@ public static class Permissions
     public const string StaffManage     = "staff.manage";   // admin: KPI đội, capacity/ca NV
     public const string ComplaintRead   = "complaint.read";
     public const string ComplaintManage = "complaint.manage";
+    public const string ReviewModerate  = "review.moderate"; // duyệt/từ chối đánh giá sản phẩm
     public const string PlatformRead    = "platform.read";
     public const string PlatformManage  = "platform.manage";
     public const string ExchangeRateRead   = "exchange_rate.read";
@@ -86,6 +87,7 @@ public static class Permissions
         CrawlSubmit,
         OrderRead, OrderManage,
         ComplaintRead, ComplaintManage,
+        ReviewModerate,
         PlatformRead,
         ExchangeRateRead,
         UserRead,
@@ -119,6 +121,7 @@ public static class Permissions
         UserRead,
         OrderRead, OrderManage,
         ComplaintRead, ComplaintManage,
+        ReviewModerate,
         NotificationRead, NotificationManage,
         AuditRead,
     };
@@ -135,7 +138,7 @@ public static class Permissions
         CrawlSubmit,
         CartRead, CartManage,
         OrderRead, OrderCreate, OrderDeposit, OrderManage, StaffManage,
-        ComplaintRead, ComplaintManage,
+        ComplaintRead, ComplaintManage, ReviewModerate,
         PlatformRead, PlatformManage,
         ExchangeRateRead, ExchangeRateManage,
         WarehouseRead, WarehouseManage,

@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Kiểu Vector cho embedding (Plan G). Core package, không kéo theo EF/Npgsql. -->
+    <PackageReference Include="Pgvector" Version="0.3.0" />
+  </ItemGroup>
+
 </Project>

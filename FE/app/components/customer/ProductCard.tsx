@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { cn } from "~/lib/utils/cn";
 import { formatVND } from "~/lib/utils/format";
+import { FavoriteButton } from "./FavoriteButton";
 import type { ProductListItem } from "~/lib/types/product";
 
 interface ProductCardProps {
@@ -53,6 +54,12 @@ export function ProductCard({ product, className }: ProductCardProps) {
             Nổi bật
           </span>
         )}
+
+        <FavoriteButton
+          productId={product.id}
+          size={16}
+          className="absolute top-2 right-2 bg-white/85 p-1.5 shadow-sm backdrop-blur hover:bg-white"
+        />
       </div>
 
       {/* Info */}

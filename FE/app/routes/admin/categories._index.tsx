@@ -5,6 +5,11 @@ import { categoriesApi, forbiddenCategoriesApi } from "~/lib/api/categories";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { Badge } from "~/components/ui/Badge";
+import { SectionHeader, EmptyState } from "~/components/shared/Panels";
+import { SkeletonPanel } from "~/components/shared/Skeleton";
+import { FadeIn } from "~/components/shared/Motion";
+import { Plus, PencilSimple, Trash, Tag, Prohibit, WarningCircle } from "~/components/shared/icons";
+import { useFetch } from "~/lib/hooks/useFetch";
 import { cn } from "~/lib/utils/cn";
 import type {
   CategoryTree,
@@ -18,47 +23,71 @@ export function meta(_: Route.MetaArgs) {
   return [{ title: "Quản lý danh mục — MuaHo Admin" }];
 }
 
-export async function clientLoader() {
-  const [categoriesRes, forbiddenRes] = await Promise.all([
-    categoriesApi.getTree(),
-    forbiddenCategoriesApi.getAll(),
-  ]);
-  return { categories: categoriesRes.data, forbidden: forbiddenRes.data };
-}
-
 type ActiveTab = "categories" | "forbidden";
 
-export default function CategoriesPage({
-  loaderData,
+export default function CategoriesPage() {
+  const { t } = useTranslation();
+
+  const { data, loading, error } = useFetch<{ categories: CategoryTree[]; forbidden: ForbiddenCategory[] }>(
+    async () => {
+      const [categoriesRes, forbiddenRes] = await Promise.all([
+        categoriesApi.getTree(),
+        forbiddenCategoriesApi.getAll(),
+      ]);
+      return { categories: categoriesRes.data, forbidden: forbiddenRes.data };
+    },
+    []
+  );
+
+  return (
+    <FadeIn className="max-w-6xl space-y-6">
+      <SectionHeader title={t("category.manage")} />
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <WarningCircle size={18} weight="fill" />
+          {error}
+        </div>
+      )}
+      {loading && !data ? (
+        <SkeletonPanel rows={8} cols={4} />
+      ) : !data ? null : (
+        <CategoriesInner initialCategories={data.categories} initialForbidden={data.forbidden} />
+      )}
+    </FadeIn>
+  );
+}
+
+function CategoriesInner({
+  initialCategories,
+  initialForbidden,
 }: {
-  loaderData: { categories: CategoryTree[]; forbidden: ForbiddenCategory[] };
+  initialCategories: CategoryTree[];
+  initialForbidden: ForbiddenCategory[];
 }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<ActiveTab>("categories");
-  const [categories, setCategories] = useState<CategoryTree[]>(loaderData.categories);
-  const [forbidden, setForbidden] = useState<ForbiddenCategory[]>(loaderData.forbidden);
+  const [categories, setCategories] = useState<CategoryTree[]>(initialCategories);
+  const [forbidden, setForbidden] = useState<ForbiddenCategory[]>(initialForbidden);
 
   const TABS: { key: ActiveTab; label: string }[] = [
     { key: "categories", label: t("category.tab_categories") },
-    { key: "forbidden",  label: t("category.tab_forbidden") },
+    { key: "forbidden", label: t("category.tab_forbidden") },
   ];
 
   return (
-    <div className="max-w-6xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t("category.manage")}</h1>
-
+    <div className="space-y-6">
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-slate-200">
         <div className="flex">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px",
+                "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
                 activeTab === tab.key
                   ? "border-primary text-primary"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
               )}
             >
               {tab.label}
@@ -67,12 +96,8 @@ export default function CategoriesPage({
         </div>
       </div>
 
-      {activeTab === "categories" && (
-        <CategoriesTab categories={categories} onUpdate={setCategories} />
-      )}
-      {activeTab === "forbidden" && (
-        <ForbiddenTab forbidden={forbidden} onUpdate={setForbidden} />
-      )}
+      {activeTab === "categories" && <CategoriesTab categories={categories} onUpdate={setCategories} />}
+      {activeTab === "forbidden" && <ForbiddenTab forbidden={forbidden} onUpdate={setForbidden} />}
     </div>
   );
 }
@@ -165,7 +190,6 @@ function CategoriesTab({
         };
         await categoriesApi.update(editingId!, req);
       }
-      // Reload tree
       const res = await categoriesApi.getTree();
       onUpdate(res.data);
       closeForm();
@@ -189,56 +213,32 @@ function CategoriesTab({
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <Button size="sm" onClick={openAdd}>
-          + {t("category.create")}
+      <div className="mb-3 flex justify-end">
+        <Button size="sm" onClick={openAdd} className="gap-1.5">
+          <Plus size={15} weight="bold" />
+          {t("category.create")}
         </Button>
       </div>
 
       {/* Form panel */}
       {editingId !== null && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-4">
-          <h3 className="font-semibold text-gray-800 mb-4">
+        <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <h3 className="mb-4 font-heading font-semibold text-slate-800">
             {editingId === "new" ? t("category.create") : t("category.edit")}
           </h3>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <Input
-              label={t("category.name_vn")}
-              value={form.nameVn}
-              onChange={(e) => setForm((f) => ({ ...f, nameVn: e.target.value }))}
-              required
-            />
-            <Input
-              label={t("category.name_cn")}
-              value={form.nameCn}
-              onChange={(e) => setForm((f) => ({ ...f, nameCn: e.target.value }))}
-            />
-            <Input
-              label={t("category.slug")}
-              value={form.slug}
-              onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-              required
-            />
-            <Input
-              label={t("category.sort_order")}
-              type="number"
-              value={form.sortOrder}
-              onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
-            />
-            <Input
-              label={t("category.icon_url")}
-              value={form.iconUrl}
-              onChange={(e) => setForm((f) => ({ ...f, iconUrl: e.target.value }))}
-            />
+          <div className="mb-3 grid grid-cols-2 gap-3">
+            <Input label={t("category.name_vn")} value={form.nameVn} onChange={(e) => setForm((f) => ({ ...f, nameVn: e.target.value }))} required />
+            <Input label={t("category.name_cn")} value={form.nameCn} onChange={(e) => setForm((f) => ({ ...f, nameCn: e.target.value }))} />
+            <Input label={t("category.slug")} value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} required />
+            <Input label={t("category.sort_order")} type="number" value={form.sortOrder} onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))} />
+            <Input label={t("category.icon_url")} value={form.iconUrl} onChange={(e) => setForm((f) => ({ ...f, iconUrl: e.target.value }))} />
             {editingId === "new" && (
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">
-                  {t("category.parent")}
-                </label>
+                <label className="text-xs font-medium text-slate-500">{t("category.parent")}</label>
                 <select
                   value={form.parentId}
                   onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
-                  className="h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">{t("category.no_parent")}</option>
                   {flatAll.map((c) => (
@@ -251,12 +251,12 @@ function CategoriesTab({
               </div>
             )}
             {editingId !== "new" && (
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer self-end pb-2">
+              <label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={form.isActive}
                   onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
-                  className="rounded border-gray-300"
+                  className="rounded border-slate-300"
                 />
                 {t("category.is_active")}
               </label>
@@ -264,7 +264,8 @@ function CategoriesTab({
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">
+            <p className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <WarningCircle size={18} weight="fill" />
               {error}
             </p>
           )}
@@ -280,56 +281,55 @@ function CategoriesTab({
       )}
 
       {/* Category tree list */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-            <tr>
-              <th className="px-4 py-3 text-left">{t("common.name")}</th>
-              <th className="px-4 py-3 text-left">{t("category.slug")}</th>
-              <th className="px-4 py-3 text-right">{t("category.sort_order")}</th>
-              <th className="px-4 py-3 text-center">{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {flatAll.map((c) => (
-              <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 font-medium text-gray-900">
-                  <span className="text-gray-300">{c.prefix}</span>
-                  {c.nameVn}
-                  {c.nameCn && (
-                    <span className="ml-2 text-xs text-gray-400">({c.nameCn})</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{c.slug}</code>
-                </td>
-                <td className="px-4 py-3 text-right text-gray-500">{c.sortOrder}</td>
-                <td className="px-4 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      onClick={() => openEdit(c)}
-                      className="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 transition-colors text-sm"
-                      title={t("category.edit")}
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(c.id, c.nameVn)}
-                      className="p-1.5 rounded-lg bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600 transition-colors text-sm"
-                      title={t("common.delete")}
-                    >
-                      🗑
-                    </button>
-                  </div>
-                </td>
+      {flatAll.length === 0 ? (
+        <EmptyState icon={<Tag size={40} />} title={t("common.no_data")} />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50/80 text-xs uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium">{t("common.name")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("category.slug")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("category.sort_order")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("common.actions")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {flatAll.length === 0 && (
-          <p className="text-center text-gray-400 py-10">{t("common.no_data")}</p>
-        )}
-      </div>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {flatAll.map((c) => (
+                <tr key={c.id} className="transition-colors hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-900">
+                    <span className="text-slate-300">{c.prefix}</span>
+                    {c.nameVn}
+                    {c.nameCn && <span className="ml-2 text-xs text-slate-400">({c.nameCn})</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{c.slug}</code>
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-500">{c.sortOrder}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => openEdit(c)}
+                        className="rounded-lg bg-slate-100 p-1.5 text-slate-500 transition hover:bg-blue-100 hover:text-blue-600 active:scale-95"
+                        title={t("category.edit")}
+                      >
+                        <PencilSimple size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(c.id, c.nameVn)}
+                        className="rounded-lg bg-slate-100 p-1.5 text-slate-400 transition hover:bg-red-100 hover:text-red-600 active:scale-95"
+                        title={t("common.delete")}
+                      >
+                        <Trash size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -420,61 +420,40 @@ function ForbiddenTab({
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <Button size="sm" onClick={openAdd}>
-          + {t("forbidden.create")}
+      <div className="mb-3 flex justify-end">
+        <Button size="sm" onClick={openAdd} className="gap-1.5">
+          <Plus size={15} weight="bold" />
+          {t("forbidden.create")}
         </Button>
       </div>
 
       {/* Form panel */}
       {editingId !== null && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-4">
-          <h3 className="font-semibold text-gray-800 mb-4">
+        <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-5">
+          <h3 className="mb-4 font-heading font-semibold text-slate-800">
             {editingId === "new" ? t("forbidden.create") : t("forbidden.edit")}
           </h3>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <Input
-              label={t("forbidden.name")}
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              required
-            />
+          <div className="mb-3 grid grid-cols-2 gap-3">
+            <Input label={t("forbidden.name")} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">
-                {t("forbidden.severity")}
-              </label>
+              <label className="text-xs font-medium text-slate-500">{t("forbidden.severity")}</label>
               <select
                 value={form.severity}
                 onChange={(e) => setForm((f) => ({ ...f, severity: e.target.value }))}
-                className="h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+                className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="Block">{t("forbidden.severity_block")}</option>
                 <option value="Warn">{t("forbidden.severity_warn")}</option>
               </select>
             </div>
-            <Input
-              label={t("forbidden.reason")}
-              value={form.reason}
-              onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
-              required
-              className="col-span-2"
-            />
-            <Input
-              label={t("forbidden.keywords_cn")}
-              value={form.keywordsCn}
-              onChange={(e) => setForm((f) => ({ ...f, keywordsCn: e.target.value }))}
-              placeholder="keyword1, keyword2..."
-            />
-            <Input
-              label={t("forbidden.keywords_vn")}
-              value={form.keywordsVn}
-              onChange={(e) => setForm((f) => ({ ...f, keywordsVn: e.target.value }))}
-              placeholder="từ khóa 1, từ khóa 2..."
-            />
+            <Input label={t("forbidden.reason")} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} required className="col-span-2" />
+            <Input label={t("forbidden.keywords_cn")} value={form.keywordsCn} onChange={(e) => setForm((f) => ({ ...f, keywordsCn: e.target.value }))} placeholder="keyword1, keyword2..." />
+            <Input label={t("forbidden.keywords_vn")} value={form.keywordsVn} onChange={(e) => setForm((f) => ({ ...f, keywordsVn: e.target.value }))} placeholder="từ khóa 1, từ khóa 2..." />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-100 border border-red-200 rounded-lg px-3 py-2 mb-3">
+            <p className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-700">
+              <WarningCircle size={18} weight="fill" />
               {error}
             </p>
           )}
@@ -490,57 +469,54 @@ function ForbiddenTab({
       )}
 
       {/* Forbidden list */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-            <tr>
-              <th className="px-4 py-3 text-left">{t("forbidden.name")}</th>
-              <th className="px-4 py-3 text-left">{t("forbidden.reason")}</th>
-              <th className="px-4 py-3 text-left">{t("forbidden.keywords_vn")}</th>
-              <th className="px-4 py-3 text-center">{t("forbidden.severity")}</th>
-              <th className="px-4 py-3 text-center">{t("common.status")}</th>
-              <th className="px-4 py-3 text-center">{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {forbidden.map((f) => (
-              <tr key={f.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 font-medium text-gray-900">{f.name}</td>
-                <td className="px-4 py-3 text-gray-600 max-w-xs truncate" title={f.reason}>
-                  {f.reason}
-                </td>
-                <td className="px-4 py-3 text-gray-500 text-xs max-w-xs truncate">
-                  {f.keywordsVn ?? "—"}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <Badge variant={f.severity === "Block" ? "error" : "warning"}>
-                    {f.severity}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {f.isActive ? (
-                    <Badge variant="success">{t("forbidden.is_active")}</Badge>
-                  ) : (
-                    <Badge variant="default">{t("common.inactive")}</Badge>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => openEdit(f)}
-                    className="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 transition-colors text-sm"
-                    title={t("forbidden.edit")}
-                  >
-                    ✏️
-                  </button>
-                </td>
+      {forbidden.length === 0 ? (
+        <EmptyState icon={<Prohibit size={40} />} title={t("common.no_data")} />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50/80 text-xs uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium">{t("forbidden.name")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("forbidden.reason")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("forbidden.keywords_vn")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("forbidden.severity")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("common.status")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("common.actions")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {forbidden.length === 0 && (
-          <p className="text-center text-gray-400 py-10">{t("common.no_data")}</p>
-        )}
-      </div>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {forbidden.map((f) => (
+                <tr key={f.id} className="transition-colors hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-900">{f.name}</td>
+                  <td className="max-w-xs truncate px-4 py-3 text-slate-600" title={f.reason}>
+                    {f.reason}
+                  </td>
+                  <td className="max-w-xs truncate px-4 py-3 text-xs text-slate-500">{f.keywordsVn ?? "—"}</td>
+                  <td className="px-4 py-3 text-center">
+                    <Badge variant={f.severity === "Block" ? "error" : "warning"}>{f.severity}</Badge>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {f.isActive ? (
+                      <Badge variant="success">{t("forbidden.is_active")}</Badge>
+                    ) : (
+                      <Badge variant="default">{t("common.inactive")}</Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button
+                      onClick={() => openEdit(f)}
+                      className="rounded-lg bg-slate-100 p-1.5 text-slate-500 transition hover:bg-blue-100 hover:text-blue-600 active:scale-95"
+                      title={t("forbidden.edit")}
+                    >
+                      <PencilSimple size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -555,7 +531,6 @@ function flattenTree(
     { ...c, prefix: "　".repeat(depth) },
     ...flattenTree(c.children ?? [], depth + 1).map((child) => ({
       ...child,
-      // Only set parentId for direct children at this level
       parentId: child.parentId ?? c.id,
     })),
   ]);

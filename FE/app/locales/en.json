@@ -56,7 +56,8 @@
     "next_page": "Next →",
     "browse_products": "Browse products →",
     "optional": "optional",
-    "edit": "Edit"
+    "edit": "Edit",
+    "refresh": "Refresh"
   },
   "auth": {
     "login": "Login",
@@ -537,9 +538,11 @@
     "orders": "Orders",
     "platform_orders": "Platform Orders",
     "products": "Products",
+    "favorites": "Favorites",
     "categories": "Categories",
     "platforms": "Platforms",
     "ingestion": "Import Products",
+    "reviews": "Reviews",
     "exchange_rates": "Exchange Rate",
     "staff": "Staff",
     "finance": "Finance",
@@ -644,6 +647,66 @@
     "filter_module": "Filter by module",
     "all_modules": "All modules",
     "search_placeholder": "Search by name or code..."
+  },
+  "products": {
+    "title": "Search products",
+    "subtitle": "Browse products from Taobao, 1688, Tmall, eBay...",
+    "results": "{{count}} products",
+    "search_placeholder": "Search by product name (e.g. tote bag, t-shirt...)",
+    "filter_category": "Category",
+    "all_categories": "All categories",
+    "filter_platform": "Platform",
+    "all_platforms": "All platforms",
+    "sort_label": "Sort",
+    "sort_relevance": "Most relevant",
+    "sort_priceasc": "Price: low to high",
+    "sort_pricedesc": "Price: high to low",
+    "sort_newest": "Newest",
+    "sort_bestselling": "Best selling",
+    "sort_mostviewed": "Most viewed",
+    "price_from": "Price from (¥)",
+    "price_to": "To (¥)",
+    "apply": "Filter",
+    "empty_title": "No products found",
+    "empty_hint": "Try a different keyword or widen the price range / clear filters.",
+    "pagination": "Page {{page}}/{{total}}"
+  },
+  "reviews": {
+    "title": "Reviews",
+    "write": "Write a review",
+    "placeholder": "Share your thoughts about this product...",
+    "submit": "Submit review",
+    "empty": "No reviews yet.",
+    "purchase_hint": "Only customers who purchased can review.",
+    "status_pending": "Pending",
+    "status_approved": "Approved",
+    "status_rejected": "Rejected"
+  },
+  "recommend": {
+    "trending": "Trending now",
+    "featured": "Featured",
+    "recently_viewed": "Recently viewed",
+    "similar_to_viewed": "Similar to what you viewed",
+    "also_viewed": "People also viewed",
+    "for_you": "For you"
+  },
+  "favorites": {
+    "title": "Favorite products",
+    "subtitle": "Products you saved",
+    "count": "{{count}} products",
+    "empty": "No favorites yet",
+    "empty_hint": "Tap the heart on a product to save it."
+  },
+  "admin_reviews": {
+    "title": "Review moderation",
+    "pending_count": "{{count}} reviews pending",
+    "empty": "No reviews pending",
+    "approve": "Approve",
+    "reject": "Reject",
+    "view_product": "View product",
+    "reject_title": "Reject review",
+    "reject_hint": "Rejection reason (sent to customer):",
+    "reject_placeholder": "e.g. inappropriate content..."
   },
   "home": {
     "badge": "Order from Taobao, eBay, Rakuten — delivered to your door",

@@ -66,6 +66,7 @@ public static class DataSeeder
             [Permissions.StaffManage]   = ("Quản lý nhân viên (KPI/ca)", "mod1"),
             [Permissions.ComplaintRead]   = ("Xem khiếu nại",          "mod1"),
             [Permissions.ComplaintManage] = ("Quản lý khiếu nại",      "mod1"),
+            [Permissions.ReviewModerate]  = ("Kiểm duyệt đánh giá",    "mod1"),
             [Permissions.PlatformRead]   = ("Xem sàn TMĐT",            "mod1"),
             [Permissions.PlatformManage] = ("Quản lý sàn TMĐT",        "mod1"),
             [Permissions.ExchangeRateRead]   = ("Xem tỉ giá",          "mod1"),

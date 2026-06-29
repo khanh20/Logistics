@@ -22,3 +22,5 @@ Thumbs.db
 .agents
 /BE/Logistics/Services/Core/LG.Core.Infrastructure/CoreDbContextFactory.cs
 /BE/Logistics/Services/Core/LG.Core.API/.env
+note.txt
+BE/Logistics/search_indexes_mod1.sql

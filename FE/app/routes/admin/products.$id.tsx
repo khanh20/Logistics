@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { Route } from "./+types/products.$id";
 import { productsApi, variantsApi, imagesApi } from "~/lib/api/products";
@@ -7,6 +7,13 @@ import { categoriesApi } from "~/lib/api/categories";
 import { Button } from "~/components/ui/Button";
 import { Badge } from "~/components/ui/Badge";
 import { Input } from "~/components/ui/Input";
+import { EmptyState } from "~/components/shared/Panels";
+import { SkeletonPanel } from "~/components/shared/Skeleton";
+import { FadeIn } from "~/components/shared/Motion";
+import {
+  ArrowLeft, Star, PencilSimple, Trash, X, Plus, Package, WarningCircle, Image as ImageIcon,
+} from "~/components/shared/icons";
+import { useFetch } from "~/lib/hooks/useFetch";
 import { cn } from "~/lib/utils/cn";
 import { formatDate, formatCNY } from "~/lib/utils/format";
 import type {
@@ -20,32 +27,59 @@ import type {
 } from "~/lib/types/product";
 import type { CategoryTree } from "~/lib/types/category";
 
-export function meta({ data }: Route.MetaArgs) {
-  const p = (data as { product: ProductDetail } | undefined)?.product;
-  const title = p?.translatedTitle ?? p?.originalTitle ?? "Chi tiết sản phẩm";
-  return [{ title: `${title} — MuaHo Admin` }];
+export function meta(_: Route.MetaArgs) {
+  return [{ title: "Chi tiết sản phẩm — MuaHo Admin" }];
 }
 
-export async function clientLoader({ params }: Route.ClientLoaderArgs) {
-  const [productRes, categoriesRes] = await Promise.all([
-    productsApi.getDetailForAdmin(params.id!),   // admin endpoint — no view-count increment
-    categoriesApi.getTree(),
-  ]);
-  return { product: productRes.data, categories: categoriesRes.data };
+// ── Fetch wrapper: render NGAY + skeleton (non-blocking, không dùng clientLoader) ──
+export default function ProductDetailPage() {
+  const { t } = useTranslation();
+  const { id } = useParams();
+
+  const { data, loading, error } = useFetch<{ product: ProductDetail; categories: CategoryTree[] }>(
+    async () => {
+      const [productRes, categoriesRes] = await Promise.all([
+        productsApi.getDetailForAdmin(id!), // admin endpoint — no view-count increment
+        categoriesApi.getTree(),
+      ]);
+      return { product: productRes.data, categories: categoriesRes.data };
+    },
+    [id]
+  );
+
+  return (
+    <FadeIn className="max-w-5xl space-y-6">
+      <Link
+        to="/admin/products"
+        className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-primary"
+      >
+        <ArrowLeft size={16} weight="bold" />
+        {t("common.back")}
+      </Link>
+
+      {loading && !data ? (
+        <SkeletonPanel rows={8} cols={3} />
+      ) : error || !data ? (
+        <EmptyState icon={<WarningCircle size={40} />} title={error ?? t("common.error")} />
+      ) : (
+        <ProductDetailInner key={data.product.id} product={data.product} categories={data.categories} />
+      )}
+    </FadeIn>
+  );
 }
 
-type Tab = "info" | "variants" | "images" | "attributes";
-
-export default function ProductDetailPage({
-  loaderData,
+function ProductDetailInner({
+  product: initialProduct,
+  categories,
 }: {
-  loaderData: { product: ProductDetail; categories: CategoryTree[] };
+  product: ProductDetail;
+  categories: CategoryTree[];
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [product, setProduct] = useState(loaderData.product);
-  const [variants, setVariants] = useState<ProductVariant[]>(loaderData.product.variants);
-  const [images, setImages] = useState<ProductImage[]>(loaderData.product.images);
+  const [product, setProduct] = useState(initialProduct);
+  const [variants, setVariants] = useState<ProductVariant[]>(initialProduct.variants);
+  const [images, setImages] = useState<ProductImage[]>(initialProduct.images);
   const [activeTab, setActiveTab] = useState<Tab>("info");
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -81,29 +115,19 @@ export default function ProductDetailPage({
   ];
 
   return (
-    <div className="max-w-5xl">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6 gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link
-            to="/admin/products"
-            className="text-sm text-gray-500 hover:text-primary transition-colors"
-          >
-            ← {t("common.back")}
-          </Link>
-          <h1 className="text-xl font-bold text-gray-900 leading-snug mt-1">
+          <h1 className="font-heading text-xl font-bold leading-snug tracking-tight text-slate-900">
             {product.translatedTitle ?? product.originalTitle}
           </h1>
           {product.translatedTitle && (
-            <p className="text-sm text-gray-500 mt-0.5">{product.originalTitle}</p>
+            <p className="mt-0.5 text-sm text-slate-500">{product.originalTitle}</p>
           )}
-          <div className="flex flex-wrap gap-1.5 mt-2">
-            {product.isFeatured && (
-              <Badge variant="info">{t("product.featured_badge")}</Badge>
-            )}
-            {product.isForbidden && (
-              <Badge variant="error">{t("product.forbidden_badge")}</Badge>
-            )}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {product.isFeatured && <Badge variant="info">{t("product.featured_badge")}</Badge>}
+            {product.isForbidden && <Badge variant="error">{t("product.forbidden_badge")}</Badge>}
             {product.isActive ? (
               <Badge variant="success">{t("product.active_badge")}</Badge>
             ) : (
@@ -112,24 +136,19 @@ export default function ProductDetailPage({
           </div>
         </div>
 
-        <div className="flex gap-2 shrink-0">
+        <div className="flex shrink-0 gap-2">
           <Button
             variant={product.isFeatured ? "secondary" : "primary"}
             size="sm"
             loading={actionLoading}
             onClick={handleToggleFeatured}
+            className="gap-1.5"
           >
-            {product.isFeatured
-              ? `★ ${t("product.toggle_featured_off")}`
-              : `☆ ${t("product.toggle_featured_on")}`}
+            <Star size={15} weight={product.isFeatured ? "fill" : "regular"} />
+            {product.isFeatured ? t("product.toggle_featured_off") : t("product.toggle_featured_on")}
           </Button>
           {product.isActive && (
-            <Button
-              variant="danger"
-              size="sm"
-              loading={actionLoading}
-              onClick={handleDeactivate}
-            >
+            <Button variant="danger" size="sm" loading={actionLoading} onClick={handleDeactivate}>
               {t("product.deactivate")}
             </Button>
           )}
@@ -137,17 +156,17 @@ export default function ProductDetailPage({
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-slate-200">
         <div className="flex">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                "px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px",
+                "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
                 activeTab === tab.key
                   ? "border-primary text-primary"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
               )}
             >
               {tab.label}
@@ -157,32 +176,20 @@ export default function ProductDetailPage({
       </div>
 
       {activeTab === "info" && (
-        <InfoTab
-          product={product}
-          categories={loaderData.categories}
-          onUpdate={setProduct}
-        />
+        <InfoTab product={product} categories={categories} onUpdate={setProduct} />
       )}
       {activeTab === "variants" && (
-        <VariantsTab
-          productId={product.id}
-          variants={variants}
-          onUpdate={setVariants}
-        />
+        <VariantsTab productId={product.id} variants={variants} onUpdate={setVariants} />
       )}
       {activeTab === "images" && (
-        <ImagesTab
-          productId={product.id}
-          images={images}
-          onUpdate={setImages}
-        />
+        <ImagesTab productId={product.id} images={images} onUpdate={setImages} />
       )}
-      {activeTab === "attributes" && (
-        <AttributesTab attributes={product.attributes} />
-      )}
+      {activeTab === "attributes" && <AttributesTab attributes={product.attributes} />}
     </div>
   );
 }
+
+type Tab = "info" | "variants" | "images" | "attributes";
 
 // ── Info tab ──────────────────────────────────────────────────────────────────
 
@@ -226,9 +233,7 @@ function InfoTab({
   const rows: { label: string; value: React.ReactNode }[] = [
     {
       label: "Slug",
-      value: (
-        <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">{product.slug}</code>
-      ),
+      value: <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{product.slug}</code>,
     },
     { label: t("product.original_title"), value: product.originalTitle },
     {
@@ -250,7 +255,7 @@ function InfoTab({
           value={seoDesc}
           onChange={(e) => setSeoDesc(e.target.value)}
           rows={3}
-          className="w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       ) : (
         product.seoDescription ?? "—"
@@ -263,7 +268,7 @@ function InfoTab({
           href={product.originalUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary hover:underline truncate block max-w-sm"
+          className="block max-w-sm truncate text-primary hover:underline"
         >
           {product.originalUrl}
         </a>
@@ -275,7 +280,7 @@ function InfoTab({
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          className="h-9 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+          className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         >
           {flatCategories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -290,7 +295,13 @@ function InfoTab({
     },
     {
       label: "Shop",
-      value: `${product.shop.shopName} · ${product.shop.platformName} · ★ ${product.shop.internalRating.toFixed(1)}`,
+      value: (
+        <span className="inline-flex items-center gap-1">
+          {product.shop.shopName} · {product.shop.platformName} ·
+          <Star size={13} weight="fill" className="text-amber-500" />
+          {product.shop.internalRating.toFixed(1)}
+        </span>
+      ),
     },
     { label: t("product.view_count"), value: product.viewCount.toLocaleString() },
     {
@@ -305,7 +316,7 @@ function InfoTab({
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
+      <div className="mb-3 flex justify-end">
         {editing ? (
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={() => setEditing(false)}>
@@ -316,24 +327,26 @@ function InfoTab({
             </Button>
           </div>
         ) : (
-          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)} className="gap-1.5">
+            <PencilSimple size={15} />
             {t("product.edit_info")}
           </Button>
         )}
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">
+        <p className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <WarningCircle size={18} weight="fill" />
           {error}
         </p>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <dl className="divide-y divide-gray-100">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+        <dl className="divide-y divide-slate-100">
           {rows.map(({ label, value }) => (
-            <div key={label} className="px-6 py-3 grid grid-cols-3 gap-4">
-              <dt className="text-sm font-medium text-gray-500 col-span-1">{label}</dt>
-              <dd className="text-sm text-gray-900 col-span-2">{value}</dd>
+            <div key={label} className="grid grid-cols-3 gap-4 px-6 py-3">
+              <dt className="col-span-1 text-sm font-medium text-slate-500">{label}</dt>
+              <dd className="col-span-2 text-sm text-slate-900">{value}</dd>
             </div>
           ))}
         </dl>
@@ -437,7 +450,6 @@ function VariantsTab({
         };
         const res = await variantsApi.add(productId, req);
         const newVariant = res.data;
-        // Sync price tiers if any
         if (form.tiers.length > 0) {
           const tiersRes = await variantsApi.syncPriceTiers(productId, newVariant.id, {
             tiers: form.tiers,
@@ -482,10 +494,7 @@ function VariantsTab({
   }
 
   function addTier() {
-    setForm((f) => ({
-      ...f,
-      tiers: [...f.tiers, { minQuantity: 1, priceCny: 0 }],
-    }));
+    setForm((f) => ({ ...f, tiers: [...f.tiers, { minQuantity: 1, priceCny: 0 }] }));
   }
 
   function removeTier(i: number) {
@@ -511,20 +520,21 @@ function VariantsTab({
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <Button size="sm" onClick={openAdd}>
-          + {t("product.add_variant")}
+      <div className="mb-3 flex justify-end">
+        <Button size="sm" onClick={openAdd} className="gap-1.5">
+          <Plus size={15} weight="bold" />
+          {t("product.add_variant")}
         </Button>
       </div>
 
       {/* Variant form panel */}
       {editingId !== null && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-4">
-          <h3 className="font-semibold text-gray-800 mb-4">
+        <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <h3 className="mb-4 font-heading font-semibold text-slate-800">
             {editingId === "new" ? t("product.add_variant") : t("product.edit_variant")}
           </h3>
 
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="mb-3 grid grid-cols-2 gap-3">
             <Input
               label={t("product.variant_name")}
               value={form.variantName}
@@ -566,12 +576,12 @@ function VariantsTab({
           </div>
 
           {editingId !== "new" && (
-            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mb-4">
+            <label className="mb-4 flex cursor-pointer items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
                 checked={form.isAvailable}
                 onChange={(e) => setForm((f) => ({ ...f, isAvailable: e.target.checked }))}
-                className="rounded border-gray-300"
+                className="rounded border-slate-300"
               />
               {t("product.is_available")}
             </label>
@@ -579,14 +589,15 @@ function VariantsTab({
 
           {/* Price tiers */}
           <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-gray-700">{t("product.price_tiers")}</p>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-medium text-slate-700">{t("product.price_tiers")}</p>
               <button
                 type="button"
                 onClick={addTier}
-                className="text-xs text-primary hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
               >
-                + {t("product.add_price_tier")}
+                <Plus size={13} weight="bold" />
+                {t("product.add_price_tier")}
               </button>
             </div>
             {form.tiers.length > 0 && (
@@ -623,11 +634,12 @@ function VariantsTab({
                       type="button"
                       onClick={() => removeTier(i)}
                       className={cn(
-                        "text-red-400 hover:text-red-600 transition-colors text-lg leading-none",
+                        "rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-100 hover:text-red-600",
                         i === 0 ? "mt-5" : ""
                       )}
+                      title={t("common.delete")}
                     >
-                      ×
+                      <X size={16} weight="bold" />
                     </button>
                   </div>
                 ))}
@@ -636,7 +648,8 @@ function VariantsTab({
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">
+            <p className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <WarningCircle size={18} weight="fill" />
               {error}
             </p>
           )}
@@ -653,88 +666,81 @@ function VariantsTab({
       )}
 
       {/* Variants table */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
-            <tr>
-              <th className="px-4 py-3 text-left">{t("product.col_variants")}</th>
-              <th className="px-4 py-3 text-right">{t("product.col_current_price")}</th>
-              <th className="px-4 py-3 text-right">{t("product.col_min_price")}</th>
-              <th className="px-4 py-3 text-right">{t("product.col_stock")}</th>
-              <th className="px-4 py-3 text-center">{t("product.col_availability")}</th>
-              <th className="px-4 py-3 text-center">{t("product.col_price_tiers")}</th>
-              <th className="px-4 py-3 text-center">{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {variants.map((v) => (
-              <tr key={v.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    {v.imageUrl && (
-                      <img
-                        src={v.imageUrl}
-                        alt=""
-                        className="w-8 h-8 object-cover rounded bg-gray-100 shrink-0"
-                      />
-                    )}
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {v.translatedName ?? v.variantName}
-                      </p>
-                      {v.translatedName && (
-                        <p className="text-xs text-gray-400">{v.variantName}</p>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right font-mono">
-                  {formatCNY(v.priceCnyCurrent)}
-                </td>
-                <td className="px-4 py-3 text-right font-mono text-gray-500">
-                  {v.priceCnyMin != null ? formatCNY(v.priceCnyMin) : "—"}
-                </td>
-                <td className="px-4 py-3 text-right text-gray-600">
-                  {v.stockRaw != null ? v.stockRaw.toLocaleString() : "—"}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {v.isAvailable ? (
-                    <Badge variant="success">{t("product.in_stock")}</Badge>
-                  ) : (
-                    <Badge variant="default">{t("product.out_of_stock")}</Badge>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-center text-xs text-gray-500">
-                  {v.priceTiers.length > 0
-                    ? t("product.tiers_count", { count: v.priceTiers.length })
-                    : "—"}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      onClick={() => openEdit(v)}
-                      className="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-blue-100 hover:text-blue-600 transition-colors text-sm"
-                      title={t("product.edit_variant")}
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDelete(v)}
-                      className="p-1.5 rounded-lg bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600 transition-colors text-sm"
-                      title={t("product.delete_variant")}
-                    >
-                      🗑
-                    </button>
-                  </div>
-                </td>
+      {variants.length === 0 ? (
+        <EmptyState icon={<Package size={40} />} title={t("common.no_data")} />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50/80 text-xs uppercase tracking-wide text-slate-400">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium">{t("product.col_variants")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("product.col_current_price")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("product.col_min_price")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("product.col_stock")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("product.col_availability")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("product.col_price_tiers")}</th>
+                <th className="px-4 py-3 text-center font-medium">{t("common.actions")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {variants.length === 0 && (
-          <p className="text-center text-gray-400 py-10">{t("common.no_data")}</p>
-        )}
-      </div>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {variants.map((v) => (
+                <tr key={v.id} className="transition-colors hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {v.imageUrl && (
+                        <img
+                          src={v.imageUrl}
+                          alt=""
+                          className="h-8 w-8 shrink-0 rounded bg-slate-100 object-cover"
+                        />
+                      )}
+                      <div>
+                        <p className="font-medium text-slate-900">{v.translatedName ?? v.variantName}</p>
+                        {v.translatedName && <p className="text-xs text-slate-400">{v.variantName}</p>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums">{formatCNY(v.priceCnyCurrent)}</td>
+                  <td className="px-4 py-3 text-right font-mono tabular-nums text-slate-500">
+                    {v.priceCnyMin != null ? formatCNY(v.priceCnyMin) : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-slate-600">
+                    {v.stockRaw != null ? v.stockRaw.toLocaleString() : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {v.isAvailable ? (
+                      <Badge variant="success">{t("product.in_stock")}</Badge>
+                    ) : (
+                      <Badge variant="default">{t("product.out_of_stock")}</Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center text-xs text-slate-500">
+                    {v.priceTiers.length > 0 ? t("product.tiers_count", { count: v.priceTiers.length }) : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => openEdit(v)}
+                        className="rounded-lg bg-slate-100 p-1.5 text-slate-500 transition hover:bg-blue-100 hover:text-blue-600 active:scale-95"
+                        title={t("product.edit_variant")}
+                      >
+                        <PencilSimple size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(v)}
+                        className="rounded-lg bg-slate-100 p-1.5 text-slate-400 transition hover:bg-red-100 hover:text-red-600 active:scale-95"
+                        title={t("product.delete_variant")}
+                      >
+                        <Trash size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -783,11 +789,7 @@ function ImagesTab({
   async function handleSetPrimary(img: ProductImage) {
     try {
       const res = await imagesApi.setPrimary(productId, img.id);
-      onUpdate(
-        images.map((i) =>
-          i.id === img.id ? res.data : { ...i, isPrimary: false }
-        )
-      );
+      onUpdate(images.map((i) => (i.id === img.id ? res.data : { ...i, isPrimary: false })));
     } catch {
       /* noop */
     }
@@ -807,16 +809,17 @@ function ImagesTab({
 
   return (
     <div>
-      <div className="flex justify-end mb-3">
-        <Button size="sm" onClick={() => setShowForm((v) => !v)}>
-          + {t("product.add_image")}
+      <div className="mb-3 flex justify-end">
+        <Button size="sm" onClick={() => setShowForm((v) => !v)} className="gap-1.5">
+          <Plus size={15} weight="bold" />
+          {t("product.add_image")}
         </Button>
       </div>
 
       {showForm && (
         <form
           onSubmit={handleAdd}
-          className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-4 flex flex-wrap items-end gap-3"
+          className="mb-4 flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4"
         >
           <Input
             label={t("product.image_source_url")}
@@ -824,27 +827,20 @@ function ImagesTab({
             onChange={(e) => setSourceUrl(e.target.value)}
             placeholder="https://..."
             required
-            className="flex-1 min-w-52"
+            className="min-w-52 flex-1"
           />
-          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer pb-1">
+          <label className="flex cursor-pointer items-center gap-2 pb-1 text-sm text-slate-700">
             <input
               type="checkbox"
               checked={isPrimary}
               onChange={(e) => setIsPrimary(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-slate-300"
             />
             {t("product.is_primary")}
           </label>
-          {error && (
-            <p className="w-full text-sm text-red-600">{error}</p>
-          )}
+          {error && <p className="w-full text-sm text-red-600">{error}</p>}
           <div className="flex gap-2 pb-1">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setShowForm(false)}
-            >
+            <Button type="button" variant="secondary" size="sm" onClick={() => setShowForm(false)}>
               {t("common.cancel")}
             </Button>
             <Button type="submit" size="sm" loading={adding}>
@@ -855,42 +851,40 @@ function ImagesTab({
       )}
 
       {sorted.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10 text-center text-gray-400">
-          {t("common.no_data")}
-        </div>
+        <EmptyState icon={<ImageIcon size={40} />} title={t("common.no_data")} />
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
           {sorted.map((img) => (
-            <div key={img.id} className="relative group aspect-square">
+            <div key={img.id} className="group relative aspect-square">
               <img
                 src={img.url}
                 alt=""
-                className="w-full h-full object-cover rounded-xl border border-gray-200 bg-gray-100"
+                className="h-full w-full rounded-xl border border-slate-200 bg-slate-100 object-cover"
               />
               {img.isPrimary && (
-                <span className="absolute top-1 left-1 text-xs bg-primary text-white px-1.5 py-0.5 rounded-full font-medium">
+                <span className="absolute left-1 top-1 rounded-full bg-primary px-1.5 py-0.5 text-xs font-medium text-white">
                   {t("product.image_primary")}
                 </span>
               )}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 rounded-xl transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+              <div className="absolute inset-0 flex items-center justify-center gap-1 rounded-xl bg-black/0 opacity-0 transition-colors group-hover:bg-black/30 group-hover:opacity-100">
                 {!img.isPrimary && (
                   <button
                     onClick={() => handleSetPrimary(img)}
                     title={t("product.set_primary")}
-                    className="p-1 bg-white rounded-lg text-xs hover:bg-primary hover:text-white transition-colors"
+                    className="rounded-lg bg-white p-1.5 text-slate-600 transition-colors hover:bg-primary hover:text-white"
                   >
-                    ⭐
+                    <Star size={15} weight="fill" />
                   </button>
                 )}
                 <button
                   onClick={() => handleDelete(img)}
                   title={t("common.delete")}
-                  className="p-1 bg-white rounded-lg text-xs hover:bg-red-500 hover:text-white transition-colors"
+                  className="rounded-lg bg-white p-1.5 text-slate-600 transition-colors hover:bg-red-500 hover:text-white"
                 >
-                  🗑
+                  <Trash size={15} />
                 </button>
               </div>
-              <span className="absolute bottom-1 right-1 text-xs bg-black/50 text-white px-1 py-0.5 rounded">
+              <span className="absolute bottom-1 right-1 rounded bg-black/50 px-1 py-0.5 text-xs text-white">
                 #{img.sortOrder}
               </span>
             </div>
@@ -905,31 +899,31 @@ function ImagesTab({
 
 function AttributesTab({ attributes }: { attributes: ProductDetail["attributes"] }) {
   const { t } = useTranslation();
+  if (attributes.length === 0) {
+    return <EmptyState icon={<Package size={40} />} title={t("common.no_data")} />;
+  }
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
       <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+        <thead className="bg-slate-50/80 text-xs uppercase tracking-wide text-slate-400">
           <tr>
-            <th className="px-4 py-3 text-left">{t("product.attr_key_cn")}</th>
-            <th className="px-4 py-3 text-left">{t("product.attr_key_vn")}</th>
-            <th className="px-4 py-3 text-left">{t("product.attr_val_cn")}</th>
-            <th className="px-4 py-3 text-left">{t("product.attr_val_vn")}</th>
+            <th className="px-4 py-3 text-left font-medium">{t("product.attr_key_cn")}</th>
+            <th className="px-4 py-3 text-left font-medium">{t("product.attr_key_vn")}</th>
+            <th className="px-4 py-3 text-left font-medium">{t("product.attr_val_cn")}</th>
+            <th className="px-4 py-3 text-left font-medium">{t("product.attr_val_vn")}</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-slate-100">
           {attributes.map((attr, i) => (
-            <tr key={i} className="hover:bg-gray-50">
-              <td className="px-4 py-2 text-gray-500">{attr.keyCn ?? "—"}</td>
-              <td className="px-4 py-2 font-medium text-gray-900">{attr.keyVn ?? "—"}</td>
-              <td className="px-4 py-2 text-gray-500">{attr.valueCn ?? "—"}</td>
-              <td className="px-4 py-2 text-gray-900">{attr.valueVn ?? "—"}</td>
+            <tr key={i} className="transition-colors hover:bg-slate-50">
+              <td className="px-4 py-2 text-slate-500">{attr.keyCn ?? "—"}</td>
+              <td className="px-4 py-2 font-medium text-slate-900">{attr.keyVn ?? "—"}</td>
+              <td className="px-4 py-2 text-slate-500">{attr.valueCn ?? "—"}</td>
+              <td className="px-4 py-2 text-slate-900">{attr.valueVn ?? "—"}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {attributes.length === 0 && (
-        <p className="text-center text-gray-400 py-10">{t("common.no_data")}</p>
-      )}
     </div>
   );
 }

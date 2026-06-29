@@ -83,6 +83,7 @@ public record ProductSearchRequest(
     decimal? MinPriceCny = null,
     decimal? MaxPriceCny = null,
     bool     ActiveOnly  = true,
+    ProductSort Sort     = ProductSort.Relevance,
     int      Page        = 1,
     [Range(1, 100)] int PageSize = 20
 );

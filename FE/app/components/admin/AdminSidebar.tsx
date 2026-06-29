@@ -71,6 +71,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
         { to: "/admin/categories", label: t("nav.categories"), icon: <FaFolder className="text-base text-yellow-400" /> },
         { to: "/admin/platforms", label: t("nav.platforms"), icon: <FaGlobe className="text-base text-cyan-400" /> },
         { to: "/admin/ingestion", label: t("nav.ingestion"), icon: <FaFileImport className="text-base text-orange-400" /> },
+        { to: "/admin/reviews", label: t("nav.reviews"), icon: <FaStar className="text-base text-amber-400" /> },
       ]
     },
     {

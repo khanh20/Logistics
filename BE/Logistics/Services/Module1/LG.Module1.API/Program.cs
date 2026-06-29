@@ -252,6 +252,9 @@ builder.Services.AddHostedService<OrderTimeoutJob>();
 builder.Services.AddHostedService<OrderAssignmentJob>();
 builder.Services.AddHostedService<SlaMonitorJob>();
 builder.Services.AddHostedService<StaffKpiAggregationJob>();
+builder.Services.AddHostedService<TrendingAggregationJob>();
+builder.Services.AddHostedService<EmbeddingBackfillJob>();
+builder.Services.AddHostedService<CoViewMatrixJob>();
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 3. BUILD

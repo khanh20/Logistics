@@ -20,7 +20,9 @@ export default [
     route("cart", "routes/customer/cart.tsx"),
     route("orders", "routes/customer/orders._index.tsx"),
     route("orders/:id", "routes/customer/orders.$id.tsx"),
+    route("products", "routes/customer/products._index.tsx"),
     route("products/:slug", "routes/customer/products.$slug.tsx"),
+    route("favorites", "routes/customer/favorites.tsx"),
     // route("profile",        "routes/customer/profile.tsx"),
   ]),
 
@@ -61,6 +63,7 @@ export default [
       route("staff-dashboard", "routes/admin/staff-dashboard.tsx"),
       route("assignments/overdue", "routes/admin/assignments.overdue.tsx"),
       route("staff", "routes/admin/staff._index.tsx"),
+      route("reviews", "routes/admin/reviews._index.tsx"),
       route("roles", "routes/admin/roles._index.tsx"),
       route("roles/:id", "routes/admin/roles.$id.tsx"),
       route("permissions", "routes/admin/permissions._index.tsx"),
