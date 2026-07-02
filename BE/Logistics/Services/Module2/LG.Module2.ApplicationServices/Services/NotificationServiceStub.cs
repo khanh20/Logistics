@@ -60,4 +60,11 @@ public class NotificationServiceStub(ILogger<NotificationServiceStub> logger) : 
             amountVnd, reason, customerId);
         return Task.CompletedTask;
     }
+
+    public Task SendBorderAlertAsync(Guid customerId, string borderName, string severity, int? estimatedDelayDays, CancellationToken ct = default)
+    {
+        logger.LogWarning("[NOTIFY-STUB] Border congestion at {Border} ({Severity}, delay ~{Delay} days) → customer {CustomerId}",
+            borderName, severity, estimatedDelayDays, customerId);
+        return Task.CompletedTask;
+    }
 }

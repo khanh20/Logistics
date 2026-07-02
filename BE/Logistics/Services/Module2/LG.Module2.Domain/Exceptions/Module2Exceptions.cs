@@ -92,3 +92,10 @@ public class InvalidClaimStateException(string currentStatus, string action)
 
 public class PackageNotInsuredException(string barcode)
     : Module2DomainException($"Kiện '{barcode}' không mua bảo hiểm nên không thể bồi thường.", "PACKAGE_NOT_INSURED");
+
+// ── Phase 8 — AI Forecast ─────────────────────────────────────────────────────
+public class BorderAlertNotFoundException(object id)
+    : Module2DomainException($"Không tìm thấy cảnh báo tắc biên: {id}.", "BORDER_ALERT_NOT_FOUND");
+
+public class BorderAlertAlreadyResolvedException(object id)
+    : Module2DomainException($"Cảnh báo tắc biên {id} đã được gỡ trước đó.", "BORDER_ALERT_ALREADY_RESOLVED");

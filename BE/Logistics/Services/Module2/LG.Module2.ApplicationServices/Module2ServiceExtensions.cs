@@ -64,6 +64,8 @@ public static class Module2ServiceExtensions
         services.AddScoped<IMissingClaimRepository,     MissingClaimRepository>();
         services.AddScoped<IInsuranceClaimRepository,   InsuranceClaimRepository>();
         services.AddScoped<IStoragePenaltyRepository,   StoragePenaltyRepository>();
+        services.AddScoped<IAITransitForecastRepository, AITransitForecastRepository>();
+        services.AddScoped<IAIBorderAlertRepository,    AIBorderAlertRepository>();
         services.AddScoped<IModule2UnitOfWork,          Module2UnitOfWork>();
 
         // ── Application Services ──────────────────────────────────────────────
@@ -78,6 +80,7 @@ public static class Module2ServiceExtensions
         services.AddScoped<IDeliveryService,     DeliveryService>();
         services.AddScoped<ITrackingService,     TrackingService>();
         services.AddScoped<IClaimService,        ClaimService>();
+        services.AddScoped<IAIForecastService,   AIForecastService>();  // Phase 8: stub rule-based
 
         // ── Carrier gateways (GHTK API thật + fallback stub) ──────────────────
         var ghtk = BuildGhtkOptions(config);

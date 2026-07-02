@@ -191,6 +191,13 @@ public class ContainerTripRepository(Module2DbContext db) : IContainerTripReposi
     public Task<List<ContainerTrip>> GetByStatusAsync(ContainerTripStatus status, CancellationToken ct = default) =>
         db.ContainerTrips.Where(x => x.Status == status).ToListAsync(ct);
 
+    public Task<List<ContainerTrip>> GetArrivedBetweenAsync(BorderCrossing border, DateTime fromUtc, DateTime toUtc, CancellationToken ct = default) =>
+        db.ContainerTrips
+          .Where(x => x.BorderCrossing == border
+                   && x.Status == ContainerTripStatus.ArrivedVn
+                   && x.ArrivedVnAt != null && x.ArrivedVnAt >= fromUtc && x.ArrivedVnAt < toUtc)
+          .ToListAsync(ct);
+
     public async Task AddAsync(ContainerTrip trip, CancellationToken ct = default) =>
         await db.ContainerTrips.AddAsync(trip, ct);
 
@@ -355,6 +362,37 @@ public class InsuranceClaimRepository(Module2DbContext db) : IInsuranceClaimRepo
     public Task UpdateAsync(InsuranceClaim claim, CancellationToken ct = default)
     {
         db.InsuranceClaims.Update(claim);
+        return Task.CompletedTask;
+    }
+}
+
+// ── AI Forecast (Phase 8) ─────────────────────────────────────────────────────
+public class AITransitForecastRepository(Module2DbContext db) : IAITransitForecastRepository
+{
+    public Task<List<AITransitForecast>> GetRecentAsync(int limit, CancellationToken ct = default) =>
+        db.AITransitForecasts.OrderByDescending(x => x.ForecastedAt).Take(limit).ToListAsync(ct);
+
+    public async Task AddAsync(AITransitForecast forecast, CancellationToken ct = default) =>
+        await db.AITransitForecasts.AddAsync(forecast, ct);
+}
+
+public class AIBorderAlertRepository(Module2DbContext db) : IAIBorderAlertRepository
+{
+    public Task<AIBorderAlert?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.AIBorderAlerts.FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public Task<List<AIBorderAlert>> GetActiveAsync(CancellationToken ct = default) =>
+        db.AIBorderAlerts.Where(x => x.IsActive).OrderByDescending(x => x.CreatedAt).ToListAsync(ct);
+
+    public Task<List<AIBorderAlert>> GetActiveByBorderAsync(BorderCrossing border, CancellationToken ct = default) =>
+        db.AIBorderAlerts.Where(x => x.IsActive && x.AffectedBorder == border).ToListAsync(ct);
+
+    public async Task AddAsync(AIBorderAlert alert, CancellationToken ct = default) =>
+        await db.AIBorderAlerts.AddAsync(alert, ct);
+
+    public Task UpdateAsync(AIBorderAlert alert, CancellationToken ct = default)
+    {
+        db.AIBorderAlerts.Update(alert);
         return Task.CompletedTask;
     }
 }

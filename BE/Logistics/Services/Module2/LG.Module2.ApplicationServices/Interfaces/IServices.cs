@@ -1,3 +1,4 @@
+using LG.Module2.ApplicationServices.DTOs.AI;
 using LG.Module2.ApplicationServices.DTOs.Carrier;
 using LG.Module2.ApplicationServices.DTOs.Claim;
 using LG.Module2.ApplicationServices.DTOs.Container;
@@ -28,6 +29,7 @@ public interface INotificationService
     Task SendDeliveryFailedAlertAsync(string trackingNo, int attemptCount, string? reason, CancellationToken ct = default);
     Task SendClaimResolvedAsync(Guid customerId, string claimType, string outcome, CancellationToken ct = default);
     Task SendRefundIssuedAsync(Guid customerId, decimal amountVnd, string reason, CancellationToken ct = default);
+    Task SendBorderAlertAsync(Guid customerId, string borderName, string severity, int? estimatedDelayDays, CancellationToken ct = default);
 }
 
 // ── IWarehouseService ─────────────────────────────────────────────────────────
@@ -145,6 +147,24 @@ public interface IClaimService
     Task<InsuranceClaimResponse>     GetInsuranceClaimAsync(Guid id, CancellationToken ct = default);
     Task<InsuranceClaimResponse>     UpdateInsuranceClaimAsync(Guid id, UpdateInsuranceClaimRequest req, CancellationToken ct = default);
     Task<InsuranceClaimResponse>     PayInsuranceClaimAsync(Guid id, CancellationToken ct = default);
+}
+
+// ── IAIForecastService (Phase 8 — stub, sẽ thay ruột bằng ML.NET/LLM sau) ─────
+public interface IAIForecastService
+{
+    /// Dự báo lead time TQ→VN theo heuristic (baseline cửa khẩu + mùa + cảnh báo tắc biên đang active).
+    Task<TransitForecastResponse> ForecastTransitAsync(TransitForecastRequest req, CancellationToken ct = default);
+    Task<List<TransitForecastResponse>> GetRecentForecastsAsync(int limit = 20, CancellationToken ct = default);
+
+    // Border alerts
+    Task<BorderAlertResponse>       CreateBorderAlertAsync(CreateBorderAlertRequest req, CancellationToken ct = default);
+    Task<List<BorderAlertResponse>> GetActiveBorderAlertsAsync(CancellationToken ct = default);
+    Task<BorderAlertResponse>       GetBorderAlertAsync(Guid id, CancellationToken ct = default);
+    Task<BorderAlertResponse>       ResolveBorderAlertAsync(Guid id, CancellationToken ct = default);
+
+    /// Quét dữ liệu nội bộ (thời gian qua biên của ContainerTrip 7 ngày gần nhất vs baseline 30 ngày trước đó),
+    /// tự tạo AIBorderAlert (source=InternalData) nếu phát hiện chậm bất thường.
+    Task<CongestionScanResult> ScanBorderCongestionAsync(CancellationToken ct = default);
 }
 
 // ── IPackageService ───────────────────────────────────────────────────────────

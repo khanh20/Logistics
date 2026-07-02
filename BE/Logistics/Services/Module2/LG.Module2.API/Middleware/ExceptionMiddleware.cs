@@ -32,6 +32,7 @@ public class Module2ExceptionMiddleware(
             ChinaWaybillNotFoundException e     => (404, e.Code, e.Message),
             CustomsClearanceNotFoundException e => (404, e.Code, e.Message),
             DomesticWaybillNotFoundException e  => (404, e.Code, e.Message),
+            BorderAlertNotFoundException e      => (404, e.Code, e.Message),
 
             DuplicateBarcodeException e         => (409, e.Code, e.Message),
             PackageAlreadyInSackException e     => (409, e.Code, e.Message),
@@ -50,6 +51,7 @@ public class Module2ExceptionMiddleware(
             DeliveryNotCancellableException e   => (422, e.Code, e.Message),
             InvalidClaimStateException e        => (422, e.Code, e.Message),
             PackageNotInsuredException e        => (422, e.Code, e.Message),
+            BorderAlertAlreadyResolvedException e => (422, e.Code, e.Message),
 
             Module2DomainException e            => (400, e.Code, e.Message),
 

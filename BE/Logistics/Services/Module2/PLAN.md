@@ -70,21 +70,20 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 | Phase 5 | Customs + FeeCalculation (UC-2.05, UC-2.07) | ✅ Done |
 | Phase 6 | Delivery + Carrier integration GHTK/GHN (UC-2.08, UC-2.09) | 🚧 Dở dang (luồng lõi + GHTK create/fee/webhook xong; còn cancel/query/idempotency) |
 | Phase 7 | Claims + Insurance (UC-2.10) | ✅ Done |
-| Phase 8 | AI forecast entities + stub service | 🔲 Pending |
+| Phase 8 | AI forecast entities + stub service | ✅ Done |
 
 ---
 
 ## Tiến độ hiện tại
 
-**Cập nhật:** 2026-06-25
+**Cập nhật:** 2026-07-02
 
 ### Đã hoàn thành
 - Thiết kế tài liệu (CLAUDE.md): Đặc tả đầy đủ 24 entities, 10 use cases, business rules
 - PLAN.md: Lên kế hoạch triển khai 8 phase
-- Phase 1 → Phase 5 (xem chi tiết phần Ghi chú)
+- Phase 1 → Phase 5, Phase 7, Phase 8 (xem chi tiết phần Ghi chú)
 
 ### Đang triển khai
-- **Phase 8 — AI forecast** (UC AItransit/AIborder) — sắp bắt đầu.
 - **Phase 6 — CHƯA XONG, sẽ quay lại sau.** Luồng lõi UC-2.08/2.09 + tích hợp GHTK (báo giá/tạo đơn/webhook) đã chạy được. Còn các hạng mục dưới đây.
 
 ### Phase 6 — việc còn lại (TODO khi quay lại)
@@ -104,7 +103,8 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 - [ ] Reconcile `DeliveryAddressId` với sổ địa chỉ (hiện địa chỉ lấy trực tiếp từ body request)
 
 ### Còn pending
-- Phase 6 (phần còn lại ở trên) → Phase 7 → Phase 8
+- Phase 6 (phần còn lại ở trên)
+- Phase 8 nâng cấp sau (không chặn): thay heuristic bằng ML.NET khi đủ dữ liệu; nguồn NewsScrape cho border alert (Claude API structured outputs); chuyển scan tắc biên từ endpoint thủ công sang BackgroundService định kỳ
 
 ### Ghi chú
 - Module1 (Catalog + Ordering) đã hoàn thành và là pattern tham chiếu
@@ -140,6 +140,16 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
   - Migration `AddClaimFields` (4 cột); Controllers: `MissingClaimsController`, `MyMissingClaimsController`, `InsuranceClaimsController`
   - Quyền: khách tạo (`order.create`) + xem của mình (`order.read`/`complaint.read`); staff CSKH xử lý (`complaint.manage`)
   - **Lưu ý:** hoàn tiền/RefundProcess vẫn stub (chờ Module3 Finance)
+- Phase 8 hoàn thành: build 0 warning, 0 error — **stub rule-based, chưa gọi AI thật** (API contract giữ nguyên khi thay ruột sau này)
+  - `AIForecastService` (UC AItransit/AIborder):
+    - **Transit forecast**: heuristic baseline theo cửa khẩu (Hữu Nghị 3–5 / Lào Cai 4–6 / Móng Cái 4–7 ngày) + phụ trội mùa (`tet` +3/+5, tự suy mùa từ tháng nếu không truyền) + hàng ≥500kg + cộng delay nếu cửa khẩu có cảnh báo active; confidence 0.30–0.90; lưu `ai_transit_forecasts`
+    - **Border alert**: staff tạo/gỡ thủ công; `POST /scan` quét dữ liệu nội bộ — so avg thời gian qua biên (`DepartureCnAt→ArrivedVnAt`) 7 ngày gần nhất vs baseline 30 ngày trước, chậm ≥1.5× (≥3 chuyến) → tự tạo alert (1.5×=Medium / 2×=High / 3×=Critical, source=InternalData), không tạo trùng khi border đã có alert active
+    - Alert mức High/Critical → notify khách có kiện `InTransit`/`Customs` (stub log) + `MarkNotified(count)`
+  - 2 repositories mới: `AITransitForecastRepository`, `AIBorderAlertRepository`; `ContainerTripRepository` thêm `GetArrivedBetweenAsync` (phục vụ scan)
+  - 2 exception mới (`BorderAlertNotFound` 404, `BorderAlertAlreadyResolved` 422); `INotificationService` thêm `SendBorderAlertAsync`
+  - Controllers: `AITransitForecastsController` (`POST /api/ai/transit-forecasts` khách+staff, `GET /recent` staff), `AIBorderAlertsController` (`GET /api/ai/border-alerts` khách xem active, `POST`/`POST {id}/resolve`/`POST /scan` staff `shipment.manage`)
+  - Không cần migration mới (bảng đã có từ Phase 1–2)
+  - **Hướng nâng cấp (đã chốt thiết kế, xem Note.md gốc repo):** forecast → ML.NET (LightGBM) train trên dữ liệu `ContainerTrip`/`TrackingEvent` khi đủ ~vài nghìn chuyến, batch precompute hàng đêm; border alert thêm nguồn `NewsScrape` → Claude API (`claude-opus-4-8`) + structured outputs; scan chuyển thành `BackgroundService` chạy định kỳ
 - Tất cả 4 projects đã thêm vào solution: Domain, Infrastructure, ApplicationServices, API
 - **SDK:** global.json yêu cầu **8.0.420** (giữ nguyên, không sửa). Máy dev này chỉ có 8.0.127 hệ thống → cài song song bằng:
   `curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 8.0.420 --install-dir $HOME/.dotnet`

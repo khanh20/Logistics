@@ -77,6 +77,8 @@ public interface IContainerTripRepository
     Task<ContainerTrip?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<ContainerTrip?> GetByTripCodeAsync(string tripCode, CancellationToken ct = default);
     Task<List<ContainerTrip>> GetByStatusAsync(ContainerTripStatus status, CancellationToken ct = default);
+    /// Các chuyến đã về VN qua cửa khẩu `border`, ArrivedVnAt trong [fromUtc, toUtc) — dùng cho AI border scan.
+    Task<List<ContainerTrip>> GetArrivedBetweenAsync(BorderCrossing border, DateTime fromUtc, DateTime toUtc, CancellationToken ct = default);
     Task AddAsync(ContainerTrip trip, CancellationToken ct = default);
     Task UpdateAsync(ContainerTrip trip, CancellationToken ct = default);
 }
@@ -163,4 +165,20 @@ public interface IStoragePenaltyRepository
     Task<List<StoragePenalty>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default);
     Task AddAsync(StoragePenalty penalty, CancellationToken ct = default);
     Task UpdateAsync(StoragePenalty penalty, CancellationToken ct = default);
+}
+
+// ── AI Forecast (Phase 8) ─────────────────────────────────────────────────────
+public interface IAITransitForecastRepository
+{
+    Task<List<AITransitForecast>> GetRecentAsync(int limit, CancellationToken ct = default);
+    Task AddAsync(AITransitForecast forecast, CancellationToken ct = default);
+}
+
+public interface IAIBorderAlertRepository
+{
+    Task<AIBorderAlert?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<AIBorderAlert>> GetActiveAsync(CancellationToken ct = default);
+    Task<List<AIBorderAlert>> GetActiveByBorderAsync(BorderCrossing border, CancellationToken ct = default);
+    Task AddAsync(AIBorderAlert alert, CancellationToken ct = default);
+    Task UpdateAsync(AIBorderAlert alert, CancellationToken ct = default);
 }
