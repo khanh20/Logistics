@@ -41,6 +41,10 @@ export function ChatUrlProduct({ url, onAdded }: { url: string; onAdded?: () => 
     const kind = detectPlatform(url);
     try {
       if (kind === "CN") {
+        // Ưu tiên: hỏi backend trước (rẻ) — nếu SP đã có sẵn trong DB thì khỏi cần extension.
+        const known = await ingestionApi.resolveUrl({ url });
+        if (known.data.status !== "NeedExtension") return handleResp(known.data);
+        // Chưa có trong DB → mới cần extension scrape.
         const hasExt = await pingExtension();
         if (!hasExt) return setStep("need_ext");
         const scraped = await scrapeViaExtension(url);

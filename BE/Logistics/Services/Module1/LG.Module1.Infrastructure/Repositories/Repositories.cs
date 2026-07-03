@@ -236,6 +236,12 @@ public class ProductRepository(Module1DbContext db) : IProductRepository
           .FirstOrDefaultAsync(x => x.ShopId == shopId
                                     && x.PlatformProductId == platformProductId, ct);
 
+    public Task<ProductMaster?> GetByPlatformAndProductIdAsync(Guid platformId, string platformProductId, CancellationToken ct = default) =>
+        db.ProductMasters
+          .Where(x => x.Shop.PlatformId == platformId && x.PlatformProductId == platformProductId)
+          .OrderByDescending(x => x.IsActive)   // ưu tiên bản đang active nếu trùng id
+          .FirstOrDefaultAsync(ct);
+
     public async Task<(List<ProductMaster> Items, int TotalCount)> SearchAsync(
         string? keyword, Guid? categoryId, Guid? platformId,
         decimal? minPriceCny, decimal? maxPriceCny,

@@ -85,6 +85,9 @@ public interface IProductRepository
     Task<ProductMaster?> GetBySlugAsync(string slug, CancellationToken ct = default);
     Task<ProductMaster?> GetByPlatformProductIdAsync(Guid shopId, string platformProductId, CancellationToken ct = default);
 
+    /// Tìm sản phẩm đã có theo platform + id-trên-sàn (không cần shopId) — dùng khi resolve link mà DB đã fetch sẵn.
+    Task<ProductMaster?> GetByPlatformAndProductIdAsync(Guid platformId, string platformProductId, CancellationToken ct = default);
+
     Task<(List<ProductMaster> Items, int TotalCount)> SearchAsync(
         string? keyword, Guid? categoryId, Guid? platformId,
         decimal? minPriceCny, decimal? maxPriceCny,

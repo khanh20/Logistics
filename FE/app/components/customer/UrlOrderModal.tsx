@@ -87,7 +87,13 @@ export function UrlOrderModal({ open, onClose }: UrlOrderModalProps) {
 
     try {
       if (kind === "CN") {
-        // Sàn TQ → cần extension scrape.
+        // Hỏi backend trước — nếu SP đã có sẵn trong DB thì khỏi cần extension.
+        const known = await ingestionApi.resolveUrl({ url: trimmed });
+        if (known.data.status !== "NeedExtension") {
+          handleResolveResponse(known.data);
+          return;
+        }
+        // Chưa có → sàn TQ cần extension scrape.
         const hasExt = await pingExtension();
         if (!hasExt) {
           setStep("need_ext");
