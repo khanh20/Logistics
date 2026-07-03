@@ -39,7 +39,9 @@
     "tool_web_search": "Tìm trên web",
     "tool_calculator": "Tính toán",
     "loading_products": "Đang tải sản phẩm…",
-    "no_products": "Không tìm thấy sản phẩm phù hợp"
+    "no_products": "Không tìm thấy sản phẩm phù hợp",
+    "url_checking": "Đang kiểm tra sản phẩm từ link…",
+    "login_to_cart": "Bạn cần đăng nhập để thêm sản phẩm vào giỏ."
   },
   "common": {
     "loading": "Đang tải...",

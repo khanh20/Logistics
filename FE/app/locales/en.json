@@ -39,7 +39,9 @@
     "tool_web_search": "Web search",
     "tool_calculator": "Calculator",
     "loading_products": "Loading products…",
-    "no_products": "No matching products found"
+    "no_products": "No matching products found",
+    "url_checking": "Checking product from link…",
+    "login_to_cart": "Please sign in to add products to your cart."
   },
   "common": {
     "loading": "Loading...",

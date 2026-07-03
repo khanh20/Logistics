@@ -5,8 +5,13 @@ import { cn } from "~/lib/utils/cn";
 import { getSessionKey } from "~/lib/utils/session";
 import { streamAssistant, type AssistantMessage } from "~/lib/api/assistant";
 import { productsApi } from "~/lib/api/products";
+import { cartApi } from "~/lib/api/cart";
 import { ProductCard } from "./ProductCard";
+import { ChatUrlProduct } from "./ChatUrlProduct";
+import { useAppSelector } from "~/lib/feature/hooks";
+import { selectAuth } from "~/lib/feature/auth/authSelector";
 import type { ProductListItem } from "~/lib/types/product";
+import type { CartResponse } from "~/lib/types/cart";
 
 // Một bước dùng tool (hiện đơn giản: tool gì + đầu vào gì; KHÔNG lộ output/xử lý thô).
 interface ToolStep {
@@ -22,6 +27,25 @@ interface ChatTurn {
   role: "user" | "assistant";
   content: string;
   steps?: ToolStep[];
+  urlProduct?: string;   // nếu set: render ChatUrlProduct (resolve link + thêm giỏ inline)
+}
+
+// Bắt link sàn (taobao/1688/tmall/eBay/Rakuten) trong tin nhắn user.
+function detectMarketplaceUrl(text: string): string | null {
+  const m = text.match(/https?:\/\/[^\s]+/i);
+  if (!m) return null;
+  const url = m[0];
+  return /1688\.com|taobao\.com|tmall\.com|tmall\.hk|ebay\.|rakuten\.co\.jp/i.test(url) ? url : null;
+}
+
+// Tóm tắt giỏ hàng để bơm vào ngữ cảnh (bot "biết" giỏ). Không hiện trong transcript.
+function buildCartSummary(cart: CartResponse | null): string {
+  if (!cart || cart.totalItemCount === 0) return "trống (0 sản phẩm)";
+  const items = cart.groupsByShop
+    .flatMap((g) => g.items)
+    .slice(0, 8)
+    .map((it) => `${it.productTitle} ×${it.quantity} (¥${it.lineTotalCny})`);
+  return `${cart.totalItemCount} sản phẩm, tổng tạm tính ¥${cart.subtotalCny}. Gồm: ${items.join("; ")}`;
 }
 
 // Markdown tối giản cho câu trả lời bot: **đậm**, [text](url), `code`.
@@ -99,6 +123,8 @@ export function AssistantWidget() {
   const [streaming, setStreaming] = useState(false);
   const [chip, setChip] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { token } = useAppSelector(selectAuth);
+  const [cart, setCart] = useState<CartResponse | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -108,6 +134,16 @@ export function AssistantWidget() {
   }, [turns, chip]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Bot "biết" giỏ: nạp giỏ khi mở widget (nếu đã đăng nhập) + sau khi thêm giỏ.
+  const refreshCart = () => {
+    if (!token) return;
+    cartApi.getCart().then((r) => setCart(r.data ?? null)).catch(() => {});
+  };
+  useEffect(() => {
+    if (open && token) refreshCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, token]);
 
   // Cập nhật assistant turn hiện tại (turn cuối).
   const patchAssistant = (fn: (turn: ChatTurn) => ChatTurn) =>
@@ -125,11 +161,31 @@ export function AssistantWidget() {
     setError(null);
     setInput("");
 
+    // Link sàn → resolve + thêm giỏ NGAY trong chat (không cần gọi LLM).
+    const marketUrl = detectMarketplaceUrl(text);
+    if (marketUrl) {
+      setTurns((prev) => [...prev, { role: "user", content: text }]);
+      if (!token) {
+        setTurns((prev) => [
+          ...prev,
+          { role: "assistant", content: t("assistant.login_to_cart", "Bạn cần đăng nhập để thêm sản phẩm vào giỏ.") },
+        ]);
+      } else {
+        setTurns((prev) => [...prev, { role: "assistant", content: "", urlProduct: marketUrl }]);
+      }
+      return;
+    }
+
     const userTurn: ChatTurn = { role: "user", content: text };
-    const history: AssistantMessage[] = [...turns, userTurn].map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    // Bơm tóm tắt giỏ vào tin nhắn gửi lên (KHÔNG hiện ở transcript) → bot "biết" giỏ.
+    const sentContent =
+      token && cart
+        ? `${text}\n\n(Ngữ cảnh hệ thống — giỏ hàng của tôi: ${buildCartSummary(cart)})`
+        : text;
+    const history: AssistantMessage[] = [
+      ...turns.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user", content: sentContent },
+    ];
 
     setTurns((prev) => [...prev, userTurn, { role: "assistant", content: "", steps: [] }]);
     setStreaming(true);
@@ -287,10 +343,11 @@ export function AssistantWidget() {
                   </div>
                 </div>
               ) : (
-                <div key={i} className="flex flex-col items-start gap-2">
+                <div key={i} className="flex w-full flex-col items-start gap-2">
                   {m.steps?.map((s) => (
                     <ToolStepView key={s.id} step={s} />
                   ))}
+                  {m.urlProduct && <ChatUrlProduct url={m.urlProduct} onAdded={refreshCart} />}
                   {m.content && (
                     <div className="max-w-[92%] whitespace-pre-wrap rounded-2xl bg-slate-100 px-3.5 py-2 text-sm leading-relaxed text-slate-800">
                       {renderRich(m.content)}

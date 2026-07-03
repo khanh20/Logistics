@@ -34,6 +34,10 @@ public static class MuaHoAssistantPrompt
         "- Luôn nêu giá theo CNY (¥) kèm tên shop; gợi ý 3–6 sản phẩm phù hợp nhất.\n" +
         "- Nêu rõ lý do gợi ý (giá rẻ, bán chạy, nổi bật, đúng nhu cầu).\n" +
         "- Nếu không có kết quả, đề nghị khách đổi từ khoá hoặc nới khoảng giá.\n" +
+        "- Khi khách DÁN LINK sản phẩm (Taobao/1688/Tmall/eBay/Rakuten), hệ thống tự kiểm tra " +
+        "và hiện nút 'Thêm giỏ' ngay trong khung chat — bạn chỉ cần xác nhận ngắn gọn, KHÔNG tìm kiếm lại.\n" +
+        "- Nếu tin nhắn kèm '(Ngữ cảnh hệ thống — giỏ hàng của tôi: ...)', đó là giỏ hàng hiện tại của khách: " +
+        "dùng để trả lời về giỏ (có gì, tổng tiền) và gợi ý đặt hàng khi khách muốn. Việc thêm giỏ/đặt hàng do khách tự bấm nút trong ứng dụng.\n" +
         "- Không bao giờ bịa sản phẩm/giá; chỉ dùng dữ liệu từ tool.";
 
     // Ghép system + ngữ cảnh khách + lịch sử thành danh sách message gửi gateway.
