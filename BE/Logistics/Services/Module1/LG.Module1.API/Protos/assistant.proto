@@ -1,0 +1,32 @@
+// LG.Module1.API/Protos/assistant.proto
+//
+// Service .NET expose cho FE qua gRPC-web (AssistantWidget).
+// Backed by ILlmGateway → forward sự kiện interleaved của agent (token xen tool).
+// SSE REST (AiAssistantController) là transport song song; cùng nội dung event.
+
+syntax = "proto3";
+
+package muaho.assistant;
+option csharp_namespace = "LG.Module1.API.Grpc";
+
+service AssistantService {
+  // Stream câu trả lời interleaved: token chảy + tool_call_start/tool_call/tool_result.
+  rpc StreamAssistant(AssistantRequest) returns (stream AssistantEvent);
+}
+
+message AssistantTurn {
+  string role    = 1;   // user | assistant
+  string content = 2;
+}
+
+message AssistantRequest {
+  repeated AssistantTurn messages = 1;
+  string session_key              = 2;   // khách ẩn danh (gắn customerId nếu có JWT)
+}
+
+message AssistantEvent {
+  // type: token | thinking | tool_call_start | tool_call | tool_result | done | error
+  string type      = 1;
+  string data_json = 2;   // JSON payload (FE parse theo type)
+  string text      = 3;   // tiện cho type=token (FE nối thẳng)
+}

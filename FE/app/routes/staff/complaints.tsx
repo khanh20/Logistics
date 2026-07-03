@@ -98,7 +98,7 @@ export default function StaffComplaintsPage() {
                 return (
                   <tr key={c.id} className="align-top transition-colors hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <Link to={`/admin/orders/${c.orderId}`} className="font-mono text-primary hover:underline">{c.orderCode}</Link>
+                      <Link to={`/staff/orders/${c.orderId}`} className="font-mono text-primary hover:underline">{c.orderCode}</Link>
                       <p className="text-xs text-slate-400">{formatDate(c.createdAt)}</p>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{t(`complaint.type_${c.type}`, c.type)}</td>

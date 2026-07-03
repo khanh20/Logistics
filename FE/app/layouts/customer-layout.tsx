@@ -1,5 +1,6 @@
 import { Outlet } from "react-router";
 import { CustomerNavbar } from "~/components/customer/CustomerNavbar";
+import { AssistantWidget } from "~/components/customer/AssistantWidget";
 import { ErrorState } from "~/components/shared/ErrorState";
 import type { Route } from "./+types/customer-layout";
 
@@ -15,6 +16,7 @@ export default function CustomerLayout() {
           © 2026 MuaHo Logistics
         </div>
       </footer>
+      <AssistantWidget />
     </div>
   );
 }

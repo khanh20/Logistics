@@ -22,6 +22,8 @@ export const PORTAL_ROLES: Role[] = [
   ROLES.ADMIN,
   ROLES.NV_MUA_HANG,
   ROLES.NV_CSKH,
+  ROLES.NV_KHO,
+  ROLES.KE_TOAN,
 ];
 
 export const ADMIN_ONLY_ROLES: Role[] = [ROLES.ADMIN];

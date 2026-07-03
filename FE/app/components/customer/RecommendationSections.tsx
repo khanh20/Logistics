@@ -1,21 +1,14 @@
 import { useTranslation } from "react-i18next";
-import { recommendationsApi } from "~/lib/api/engagement";
-import { useFetch } from "~/lib/hooks/useFetch";
-import { getSessionKey } from "~/lib/utils/session";
+import { useRecommend } from "~/lib/stores/recommendStore";
 import { ProductCard } from "./ProductCard";
 import { Skeleton } from "~/components/shared/Skeleton";
 import { FadeIn } from "~/components/shared/Motion";
-import type { RecommendationResponse } from "~/lib/types/engagement";
 import { cn } from "~/lib/utils/cn";
 
-// Các dải gợi ý (trending / similar_to_viewed / for_you / also_viewed ...) — non-blocking.
+// Các dải gợi ý (trending / similar_to_viewed / for_you / also_viewed ...) — dùng cache zustand.
 export function RecommendationSections({ className }: { className?: string }) {
   const { t } = useTranslation();
-
-  const { data, loading } = useFetch<RecommendationResponse>(
-    async () => (await recommendationsApi.get({ sessionKey: getSessionKey(), perSection: 12 })).data,
-    []
-  );
+  const { data, loading } = useRecommend();
 
   if (loading && !data) {
     return (
@@ -53,7 +46,7 @@ export function RecommendationSections({ className }: { className?: string }) {
   );
 }
 
-const RECOMMEND_FALLBACK: Record<string, string> = {
+export const RECOMMEND_FALLBACK: Record<string, string> = {
   trending: "Đang thịnh hành",
   featured: "Nổi bật",
   recently_viewed: "Bạn đã xem gần đây",

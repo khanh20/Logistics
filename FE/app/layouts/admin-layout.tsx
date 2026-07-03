@@ -4,7 +4,7 @@ import { AdminTopbar } from "~/components/admin/AdminTopbar";
 import { store } from "~/lib/feature/store";
 import { ErrorState } from "~/components/shared/ErrorState";
 
-import { STAFF_ROLES, type Role } from "~/lib/constants/roles";
+import { PORTAL_ROLES, isAdmin, type Role } from "~/lib/constants/roles";
 import type { UserAuthInfo } from "~/lib/types/auth";
 import type { Route } from "./+types/admin-layout";
 import { ConfigProvider } from "antd";
@@ -14,7 +14,10 @@ export async function clientLoader() {
 
   if (!token || !user) throw redirect("/login");
 
-  if (!roles.some((r) => STAFF_ROLES.includes(r as Role))) throw redirect("/");
+  // /admin CHỈ dành cho Admin. Staff khác bị đẩy về portal của họ (/staff) hoặc trang chủ.
+  if (!isAdmin(roles)) {
+    throw redirect(roles.some((r) => PORTAL_ROLES.includes(r as Role)) ? "/staff" : "/");
+  }
 
   return { user };
 }

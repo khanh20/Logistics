@@ -49,7 +49,8 @@ function availableActions(status: OrderStatus) {
 }
 
 // ── Fetch wrapper: render NGAY + skeleton (non-blocking) ──────────────────────
-export default function AdminOrderDetailPage() {
+// Dùng chung cho cả /admin/orders/:id và /staff/orders/:id — chỉ khác nút "Quay lại".
+export function OrderDetailView({ backTo = "/admin/orders" }: { backTo?: string }) {
   const { t } = useTranslation();
   const { id } = useParams();
 
@@ -74,7 +75,7 @@ export default function AdminOrderDetailPage() {
   return (
     <FadeIn className="max-w-4xl space-y-5">
       <Link
-        to="/admin/orders"
+        to={backTo}
         className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-700"
       >
         <ArrowLeft size={16} weight="bold" />
@@ -95,6 +96,10 @@ export default function AdminOrderDetailPage() {
       )}
     </FadeIn>
   );
+}
+
+export default function AdminOrderDetailPage() {
+  return <OrderDetailView backTo="/admin/orders" />;
 }
 
 function OrderDetailInner({
@@ -130,6 +135,11 @@ function OrderDetailInner({
   const [storageDays, setStorageDays] = useState("0");
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
 
+  // Lỗi validate inline theo từng field (key = tên field).
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const clearErr = (key: string) =>
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: "" } : prev));
+
   const actions = availableActions(order.status);
 
   async function callAction<T>(fn: () => Promise<{ data: T }>, successMsg: string) {
@@ -144,6 +154,81 @@ function OrderDetailInner({
     } finally {
       setLoading(false);
     }
+  }
+
+  // ── Validate + submit cho từng thao tác (chặn gọi API nếu có lỗi) ────────────
+  function submitTracking() {
+    const tn = trackingNumber.trim();
+    const cr = trackingCarrier.trim();
+    const e: Record<string, string> = {};
+    if (!tn) e.trackingNumber = t("order.err_tracking_required");
+    else if (tn.length < 4 || tn.length > 50) e.trackingNumber = t("order.err_tracking_length");
+    if (!cr) e.trackingCarrier = t("order.err_carrier_required");
+    else if (cr.length > 50) e.trackingCarrier = t("order.err_carrier_length");
+    setErrors(e);
+    if (Object.values(e).some(Boolean)) return;
+    callAction(
+      () => manageOrdersApi.updateTracking(order.id, { trackingNumber: tn, carrier: cr }),
+      t("order.tracking_success"),
+    );
+  }
+
+  function submitManualPlace() {
+    const pid = platformOrderId.trim();
+    const e: Record<string, string> = {};
+    if (!pid) e.platformOrderId = t("order.err_platform_required");
+    else if (pid.length > 100) e.platformOrderId = t("order.err_platform_length");
+    setErrors(e);
+    if (Object.values(e).some(Boolean)) return;
+    callAction(
+      () => manageOrdersApi.placeManual(order.id, { platformOrderId: pid, note: placeNote || undefined }),
+      t("order.manual_place_success"),
+    );
+  }
+
+  function submitArrivedVN() {
+    const e: Record<string, string> = {};
+    const w = parseFloat(weightKg);
+    if (!weightKg.trim() || Number.isNaN(w) || w <= 0) e.weightKg = t("order.err_weight_required");
+    else if (w > 1000) e.weightKg = t("order.err_weight_max");
+    if (volumeCm3.trim()) {
+      const v = parseFloat(volumeCm3);
+      if (Number.isNaN(v) || v < 0) e.volumeCm3 = t("order.err_volume_invalid");
+    }
+    if (storageDays.trim()) {
+      const s = Number(storageDays);
+      if (!Number.isInteger(s) || s < 0) e.storageDays = t("order.err_storage_invalid");
+    }
+    setErrors(e);
+    if (Object.values(e).some(Boolean)) return;
+    callAction(
+      () =>
+        manageOrdersApi.arrivedVietnam(order.id, {
+          actualWeightKg: w,
+          volumeCm3: volumeCm3.trim() ? parseFloat(volumeCm3) : undefined,
+          storageDaysOverFree: parseInt(storageDays) || 0,
+          note: transitionNote || undefined,
+        }),
+      t("order.arrived_vn_success", "Đã ghi nhận hàng về kho VN và tính phí ship."),
+    );
+  }
+
+  function submitRecordIssue() {
+    const note = issueNote.trim();
+    const e: Record<string, string> = {};
+    if (note.length < 5) e.issueNote = t("order.err_issue_min");
+    setErrors(e);
+    if (Object.values(e).some(Boolean)) return;
+    callAction(() => manageOrdersApi.recordIssue(order.id, { issueNote: note }), t("order.issue_success"));
+  }
+
+  function submitCancel() {
+    const reason = cancelReason.trim();
+    const e: Record<string, string> = {};
+    if (reason.length < 5) e.cancelReason = t("order.err_reason_min");
+    setErrors(e);
+    if (Object.values(e).some(Boolean)) return false;
+    return true;
   }
 
   return (
@@ -410,10 +495,14 @@ function OrderDetailInner({
             <ActionCard title={t("order.action_manual_place")}>
               <input
                 value={platformOrderId}
-                onChange={(e) => setPlatformOrderId(e.target.value)}
+                onChange={(e) => {
+                  setPlatformOrderId(e.target.value);
+                  clearErr("platformOrderId");
+                }}
                 placeholder={t("order.platform_id_placeholder")}
                 className="action-input"
               />
+              {errors.platformOrderId && <p className="mt-1 text-xs text-red-500">{errors.platformOrderId}</p>}
               <textarea
                 value={placeNote}
                 onChange={(e) => setPlaceNote(e.target.value)}
@@ -421,18 +510,7 @@ function OrderDetailInner({
                 rows={2}
                 className="action-textarea mt-2"
               />
-              <Button
-                size="sm"
-                className="mt-2 w-full"
-                loading={loading}
-                onClick={() =>
-                  callAction(
-                    () => manageOrdersApi.placeManual(order.id, { platformOrderId: platformOrderId.trim(), note: placeNote || undefined }),
-                    t("order.manual_place_success")
-                  )
-                }
-                disabled={!platformOrderId.trim()}
-              >
+              <Button size="sm" className="mt-2 w-full" loading={loading} onClick={submitManualPlace}>
                 {t("order.place_confirm_btn")}
               </Button>
             </ActionCard>
@@ -443,28 +521,25 @@ function OrderDetailInner({
             <ActionCard title={t("order.action_update_tracking")}>
               <input
                 value={trackingNumber}
-                onChange={(e) => setTrackingNumber(e.target.value)}
+                onChange={(e) => {
+                  setTrackingNumber(e.target.value);
+                  clearErr("trackingNumber");
+                }}
                 placeholder={t("order.tracking_placeholder")}
                 className="action-input"
               />
+              {errors.trackingNumber && <p className="mt-1 text-xs text-red-500">{errors.trackingNumber}</p>}
               <input
                 value={trackingCarrier}
-                onChange={(e) => setTrackingCarrier(e.target.value)}
+                onChange={(e) => {
+                  setTrackingCarrier(e.target.value);
+                  clearErr("trackingCarrier");
+                }}
                 placeholder={t("order.carrier_placeholder")}
                 className="action-input mt-2"
               />
-              <Button
-                size="sm"
-                className="mt-2 w-full"
-                loading={loading}
-                onClick={() =>
-                  callAction(
-                    () => manageOrdersApi.updateTracking(order.id, { trackingNumber: trackingNumber.trim(), carrier: trackingCarrier.trim() }),
-                    t("order.tracking_success")
-                  )
-                }
-                disabled={!trackingNumber.trim()}
-              >
+              {errors.trackingCarrier && <p className="mt-1 text-xs text-red-500">{errors.trackingCarrier}</p>}
+              <Button size="sm" className="mt-2 w-full" loading={loading} onClick={submitTracking}>
                 {t("order.save_tracking_btn")}
               </Button>
             </ActionCard>
@@ -509,34 +584,25 @@ function OrderDetailInner({
                   <div className="space-y-2">
                     <div>
                       <label className="text-[11px] text-slate-500">{t("order.actual_weight_required", "Cân nặng thực (kg) *")}</label>
-                      <input type="number" min="0" step="0.01" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} placeholder="VD: 1.5" className="action-input mt-0.5" />
+                      <input type="number" min="0" step="0.01" value={weightKg} onChange={(e) => { setWeightKg(e.target.value); clearErr("weightKg"); }} placeholder="VD: 1.5" className="action-input mt-0.5" />
+                      {errors.weightKg && <p className="mt-1 text-xs text-red-500">{errors.weightKg}</p>}
                     </div>
                     <div>
                       <label className="text-[11px] text-slate-500">{t("order.volume_optional", "Thể tích (cm³) — tuỳ chọn")}</label>
-                      <input type="number" min="0" step="1" value={volumeCm3} onChange={(e) => setVolumeCm3(e.target.value)} placeholder="VD: 3000" className="action-input mt-0.5" />
+                      <input type="number" min="0" step="1" value={volumeCm3} onChange={(e) => { setVolumeCm3(e.target.value); clearErr("volumeCm3"); }} placeholder="VD: 3000" className="action-input mt-0.5" />
+                      {errors.volumeCm3 && <p className="mt-1 text-xs text-red-500">{errors.volumeCm3}</p>}
                     </div>
                     <div>
                       <label className="text-[11px] text-slate-500">{t("order.storage_days_over", "Ngày lưu kho vượt miễn phí")}</label>
-                      <input type="number" min="0" step="1" value={storageDays} onChange={(e) => setStorageDays(e.target.value)} className="action-input mt-0.5" />
+                      <input type="number" min="0" step="1" value={storageDays} onChange={(e) => { setStorageDays(e.target.value); clearErr("storageDays"); }} className="action-input mt-0.5" />
+                      {errors.storageDays && <p className="mt-1 text-xs text-red-500">{errors.storageDays}</p>}
                     </div>
                   </div>
                   <Button
                     size="sm"
                     className="mt-3 w-full"
                     loading={loading}
-                    disabled={!weightKg || parseFloat(weightKg) <= 0}
-                    onClick={() =>
-                      callAction(
-                        () =>
-                          manageOrdersApi.arrivedVietnam(order.id, {
-                            actualWeightKg: parseFloat(weightKg),
-                            volumeCm3: volumeCm3 ? parseFloat(volumeCm3) : undefined,
-                            storageDaysOverFree: parseInt(storageDays) || 0,
-                            note: transitionNote || undefined,
-                          }),
-                        t("order.arrived_vn_success", "Đã ghi nhận hàng về kho VN và tính phí ship.")
-                      )
-                    }
+                    onClick={submitArrivedVN}
                   >
                     {t("order.arrived_vn_confirm", "Xác nhận hàng về kho VN")}
                   </Button>
@@ -572,18 +638,21 @@ function OrderDetailInner({
             <ActionCard title={t("order.action_record_issue")}>
               <textarea
                 value={issueNote}
-                onChange={(e) => setIssueNote(e.target.value)}
+                onChange={(e) => {
+                  setIssueNote(e.target.value);
+                  clearErr("issueNote");
+                }}
                 placeholder={t("order.issue_placeholder")}
                 rows={3}
                 className="action-textarea"
               />
+              {errors.issueNote && <p className="mt-1 text-xs text-red-500">{errors.issueNote}</p>}
               <Button
                 variant="secondary"
                 size="sm"
                 className="mt-2 w-full"
                 loading={loading}
-                onClick={() => callAction(() => manageOrdersApi.recordIssue(order.id, { issueNote: issueNote.trim() }), t("order.issue_success"))}
-                disabled={!issueNote.trim()}
+                onClick={submitRecordIssue}
               >
                 {t("order.action_record_issue")}
               </Button>
@@ -646,17 +715,22 @@ function OrderDetailInner({
             <ActionCard title={t("order.action_cancel_staff")} danger>
               <input
                 value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
+                onChange={(e) => {
+                  setCancelReason(e.target.value);
+                  clearErr("cancelReason");
+                }}
                 placeholder={t("order.cancel_reason_placeholder")}
                 className="action-input"
               />
+              {errors.cancelReason && <p className="mt-1 text-xs text-red-500">{errors.cancelReason}</p>}
               <Button
                 variant="danger"
                 size="sm"
                 className="mt-2 w-full"
                 loading={loading}
-                onClick={() => setIsCancelConfirmOpen(true)}
-                disabled={!cancelReason.trim()}
+                onClick={() => {
+                  if (submitCancel()) setIsCancelConfirmOpen(true);
+                }}
               >
                 {t("order.cancel_btn")}
               </Button>

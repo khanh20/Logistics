@@ -21,7 +21,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
     <Link
       to={`/products/${product.slug}`}
       className={cn(
-        "group flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden",
+        "group flex h-full flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden",
         "hover:shadow-md hover:border-gray-300 transition-all",
         className
       )}
@@ -64,7 +64,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
 
       {/* Info */}
       <div className="flex flex-col gap-1.5 p-3 flex-1">
-        <h3 className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">
+        <h3 className="min-h-[2.4rem] text-sm font-medium text-gray-900 line-clamp-2 leading-snug">
           {product.translatedTitle ?? product.originalTitle}
         </h3>
 

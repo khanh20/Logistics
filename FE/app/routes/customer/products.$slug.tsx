@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { store } from "~/lib/feature/store";
 import { productsApi } from "~/lib/api/products";
@@ -9,6 +9,8 @@ import { getSessionKey } from "~/lib/utils/session";
 import { Button } from "~/components/ui/Button";
 import { FavoriteButton } from "~/components/customer/FavoriteButton";
 import { ProductReviews } from "~/components/customer/ProductReviews";
+import { ProductRail } from "~/components/customer/ProductRail";
+import { RecommendationSections } from "~/components/customer/RecommendationSections";
 import { formatCNY } from "~/lib/utils/format";
 import { cn } from "~/lib/utils/cn";
 import type { ProductVariant, PriceTier, ProductDetail } from "~/lib/types/product";
@@ -105,14 +107,23 @@ export default function ProductDetailPage({
   const displayTitle = product.translatedTitle ?? product.originalTitle;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      {/* Back */}
-      <Link
-        to="/"
+    <div className="mx-auto grid max-w-[1760px] grid-cols-1 gap-6 px-4 py-8 xl:grid-cols-[auto_minmax(0,1fr)_auto]">
+      <ProductRail
+        className="xl:col-start-1"
+        sectionKeys={["trending", "featured"]}
+        title={t("recommend.trending")}
+        tagline={t("recommend.rail_tagline", "Đang được quan tâm")}
+      />
+
+      <div className="min-w-0 xl:col-start-2">
+      {/* Back — quay lại trang trước trong lịch sử; vào thẳng detail (không có lịch sử app) thì về /products. */}
+      <button
+        type="button"
+        onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/products"))}
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6"
       >
         {t("product.back_btn")}
-      </Link>
+      </button>
 
       {/* Forbidden warning */}
       {product.isForbidden && (
@@ -387,6 +398,23 @@ export default function ProductDetailPage({
 
       {/* Reviews */}
       <ProductReviews productId={product.id} />
+
+      {/* Sản phẩm bạn có thể thích */}
+      <div className="mt-10 border-t border-slate-200 pt-8">
+        <h2 className="mb-4 font-heading text-lg font-bold tracking-tight text-slate-900">
+          {t("product.you_may_like", "Sản phẩm bạn có thể thích")}
+        </h2>
+        <RecommendationSections />
+      </div>
+      </div>
+
+      <ProductRail
+        className="xl:col-start-3"
+        tail
+        sectionKeys={["for_you", "also_viewed", "featured"]}
+        title={t("recommend.for_you")}
+        tagline={t("recommend.rail_tagline2", "Có thể bạn thích")}
+      />
     </div>
   );
 }

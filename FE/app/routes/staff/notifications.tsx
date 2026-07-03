@@ -66,7 +66,7 @@ export default function StaffNotificationsPage() {
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     {n.refOrderId && (
-                      <Link to={`/admin/orders/${n.refOrderId}`} className="inline-flex items-center gap-0.5 text-xs text-primary hover:underline">
+                      <Link to={`/staff/orders/${n.refOrderId}`} className="inline-flex items-center gap-0.5 text-xs text-primary hover:underline">
                         {t("staff_portal.view_order")} <ArrowRight size={12} />
                       </Link>
                     )}

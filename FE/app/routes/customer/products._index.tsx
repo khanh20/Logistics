@@ -8,6 +8,7 @@ import { platformsApi } from "~/lib/api/platforms";
 import { ProductCard } from "~/components/customer/ProductCard";
 import { ProductFilters, type ProductFilterValues } from "~/components/customer/ProductFilters";
 import { RecommendationSections } from "~/components/customer/RecommendationSections";
+import { ProductRail } from "~/components/customer/ProductRail";
 import { SectionHeader, EmptyState } from "~/components/shared/Panels";
 import { Skeleton } from "~/components/shared/Skeleton";
 import { FadeIn, Stagger, StaggerItem } from "~/components/shared/Motion";
@@ -45,10 +46,13 @@ export default function CustomerProductsPage() {
     [spKey] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  // Tuỳ chọn lọc (load 1 lần).
+  // Tuỳ chọn lọc (load 1 lần). allSettled: 1 call lỗi không làm hỏng cả bộ lọc.
   const options = useFetch<{ categories: CategoryTree[]; platforms: PlatformSlim[] }>(async () => {
-    const [cat, plat] = await Promise.all([categoriesApi.getTree(), platformsApi.getAllActive()]);
-    return { categories: cat.data, platforms: plat.data };
+    const [catRes, platRes] = await Promise.allSettled([categoriesApi.getTree(), platformsApi.getAllActive()]);
+    return {
+      categories: catRes.status === "fulfilled" ? catRes.value.data : [],
+      platforms: platRes.status === "fulfilled" ? platRes.value.data : [],
+    };
   }, []);
 
   // Kết quả tìm kiếm (reload khi URL đổi) — non-blocking.
@@ -95,7 +99,15 @@ export default function CustomerProductsPage() {
   const totalPages = data?.totalPages ?? 1;
 
   return (
-    <FadeIn className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto grid max-w-[1760px] grid-cols-1 gap-6 px-4 py-6 sm:px-6 lg:px-8 xl:grid-cols-[auto_minmax(0,1fr)_auto]">
+      <ProductRail
+        className="xl:col-start-1"
+        sectionKeys={["trending", "featured"]}
+        title={t("recommend.trending")}
+        tagline={t("recommend.rail_tagline", "Đang được quan tâm")}
+      />
+
+      <FadeIn className="min-w-0 space-y-6 xl:col-start-2">
       <SectionHeader
         title={t("products.title")}
         subtitle={data ? t("products.results", { count: totalCount }) : t("products.subtitle")}
@@ -129,7 +141,7 @@ export default function CustomerProductsPage() {
           hint={t("products.empty_hint")}
         />
       ) : (
-        <Stagger className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <Stagger className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
           {items.map((product) => (
             <StaggerItem key={product.id}>
               <ProductCard product={product} />
@@ -155,14 +167,23 @@ export default function CustomerProductsPage() {
           </div>
         </div>
       )}
-    </FadeIn>
+      </FadeIn>
+
+      <ProductRail
+        className="xl:col-start-3"
+        tail
+        sectionKeys={["for_you", "also_viewed", "featured"]}
+        title={t("recommend.for_you")}
+        tagline={t("recommend.rail_tagline2", "Có thể bạn thích")}
+      />
+    </div>
   );
 }
 
 // Skeleton khớp lưới sản phẩm (taste-skill: skeleton đúng layout).
 function ProductGridSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
       {Array.from({ length: 12 }).map((_, i) => (
         <div key={i} className="overflow-hidden rounded-xl border border-slate-200/70 bg-white">
           <Skeleton className="aspect-square w-full rounded-none" />

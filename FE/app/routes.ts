@@ -76,6 +76,7 @@ export default [
       index("routes/staff/_index.tsx"),
       route("assignments", "routes/staff/assignments.tsx"),
       route("assignments/:id", "routes/staff/assignments.$id.tsx"),
+      route("orders/:id", "routes/staff/orders.$id.tsx"),
       route("kpi", "routes/staff/kpi.tsx"),
       route("complaints", "routes/staff/complaints.tsx"),
       route("notifications", "routes/staff/notifications.tsx"),

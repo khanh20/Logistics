@@ -34,6 +34,18 @@ builder.Services.AddModule1(builder.Configuration,
 
 builder.Services.AddHttpContextAccessor();
 
+// ── AI Assistant gateway (proxy serving pipeline Qwen/Gemini) ────────────────
+// Transport .NET→Python: "rest" (SSE, mặc định cho ngrok) | "grpc" (LAN/cùng máy).
+builder.Services.AddHttpClient("llm-gateway", c => c.Timeout = TimeSpan.FromMinutes(5));
+var gwTransport = (builder.Configuration["LlmGateway:Transport"] ?? "rest").ToLowerInvariant();
+if (gwTransport == "grpc")
+    builder.Services.AddSingleton<LG.Module1.API.Ai.ILlmGateway, LG.Module1.API.Ai.LlmGatewayGrpcClient>();
+else
+    builder.Services.AddScoped<LG.Module1.API.Ai.ILlmGateway, LG.Module1.API.Ai.LlmGatewayRestClient>();
+
+// gRPC server (FE gọi qua gRPC-web).
+builder.Services.AddGrpc();
+
 // ── Controllers + JSON ───────────────────────────────────────────────────────
 builder.Services.AddControllers()
     .AddJsonOptions(opt =>
@@ -214,7 +226,8 @@ builder.Services.AddCors(opt => opt.AddPolicy("FE", p =>
      .AllowAnyMethod()
      .AllowCredentials()
      .SetPreflightMaxAge(TimeSpan.FromMinutes(10))
-     .WithExposedHeaders("x-token-expired", "Retry-After")));
+     .WithExposedHeaders("x-token-expired", "Retry-After",
+         "grpc-status", "grpc-message", "grpc-status-details-bin")));
 
 // ── Swagger ────────────────────────────────────────────────────────────────────
 builder.Services.AddSwaggerGen(opt =>
@@ -303,9 +316,13 @@ app.MapHealthChecks("/health").RequireAuthorization(p => p.RequireClaim("permiss
 // Routing → CORS → RateLimit → Auth → Controllers
 app.UseRouting();
 app.UseCors("FE");
+app.UseGrpcWeb(new GrpcWebOptions { DefaultEnabled = true });
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapGrpcService<LG.Module1.API.Ai.AiAssistantGrpcService>()
+   .EnableGrpcWeb()
+   .RequireCors("FE");
 
 await app.RunAsync();

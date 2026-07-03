@@ -133,7 +133,7 @@ export default function StaffAssignmentDetailPage() {
                   <CheckSquare size={16} weight="bold" /> {t("staff_portal.complete")}
                 </Button>
               )}
-              <Link to={`/admin/orders/${a.orderId}`}>
+              <Link to={`/staff/orders/${a.orderId}`}>
                 <Button size="sm" variant="ghost">{t("staff_portal.process")} <ArrowRight size={15} /></Button>
               </Link>
             </div>
