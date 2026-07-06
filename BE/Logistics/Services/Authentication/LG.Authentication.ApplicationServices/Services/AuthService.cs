@@ -38,6 +38,8 @@ public class AuthService(
             var rt = tokenSvc.GenerateRefreshToken(user.Id, null);
             await rtRepo.AddAsync(rt, innerCt);
 
+            await uow.SaveChangesAsync(innerCt);
+
             var roles = new List<string> { defaultRole.Name };
             var permissions = await userRepo.GetPermissionCodesAsync(user.Id, innerCt);
 
