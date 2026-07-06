@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { staffAssignmentsApi } from "~/lib/api/orders";
 import { Button } from "~/components/ui/Button";
+import { Input } from "~/components/ui/Input";
 import { formatDate } from "~/lib/utils/format";
 import type { OverdueAssignmentDto } from "~/lib/types/order";
 import type { Route } from "./+types/assignments.overdue";
@@ -121,11 +122,11 @@ export default function OverdueAssignmentsPage({
                   <td className="px-4 py-4">
                     {reassignOrderId === item.orderId ? (
                       <div className="flex flex-col gap-2">
-                        <input
+                        <Input
                           value={newStaffId}
                           onChange={(e) => setNewStaffId(e.target.value)}
                           placeholder={t("staff.new_staff_placeholder")}
-                          className="w-56 rounded border border-gray-300 px-2 py-1 text-xs focus:border-primary focus:outline-none"
+                          className="w-56 py-1.5"
                         />
                         <div className="flex gap-2">
                           <Button

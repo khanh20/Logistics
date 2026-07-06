@@ -4,6 +4,7 @@ import type { Route } from "./+types/platforms._index";
 import { platformsApi } from "~/lib/api/platforms";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
 import { Badge } from "~/components/ui/Badge";
 import { cn } from "~/lib/utils/cn";
 import { PLATFORM_ICON, API_PROVIDERS, type ApiProvider } from "~/lib/constants/platforms";
@@ -196,19 +197,16 @@ function CreatePlatformModal({
             required
           />
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              {t("platform.api_provider")}
-            </label>
-            <select
+            <Select
+              label={t("platform.api_provider")}
               name="apiProvider"
               value={form.apiProvider}
               onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             >
               {API_PROVIDERS.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
-            </select>
+            </Select>
           </div>
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">

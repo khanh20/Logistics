@@ -75,6 +75,9 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.WalletPayment
         /// <summary>Loại bảo hiểm: "none" | "basic" | "full"</summary>
         [MaxLength(10)]
         public string InsuranceOption { get; set; } = "none";
+
+        [MaxLength(20)]
+        public string ShippingLine { get; set; } = "Tmdt"; // "Tmdt" | "Bm" | "OfficialQuota"
     }
 
     /// <summary>
@@ -137,11 +140,26 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.WalletPayment
         /// <summary>Loại bảo hiểm đã áp dụng.</summary>
         public string InsuranceOption { get; set; } = "none";
 
+        /// <summary>Phí ủy thác nhập khẩu (VNĐ) — chỉ áp dụng Chính ngạch.</summary>
+        public decimal ImportEntrustmentFeeVnd { get; set; }
+
+        /// <summary>Thuế VAT (VNĐ) — chỉ áp dụng Chính ngạch.</summary>
+        public decimal ImportVatVnd { get; set; }
+
+        /// <summary>Thuế nhập khẩu (VNĐ) — chỉ áp dụng Chính ngạch.</summary>
+        public decimal ImportDutyVnd { get; set; }
+
         /// <summary>Tổng phí checkout (chưa gồm ship quốc tế).</summary>
         public decimal TotalCheckoutFeeVnd { get; set; }
 
         /// <summary>ID FeeRule đã sử dụng.</summary>
         public Guid? FeeRuleId { get; set; }
+
+        /// <summary>Ưu đãi phí dịch vụ (VNĐ).</summary>
+        public decimal ServiceFeeDiscountVnd { get; set; }
+
+        /// <summary>Ưu đãi phí kiểm hàng (VNĐ).</summary>
+        public decimal InspectionFeeDiscountVnd { get; set; }
     }
 
     public class CalculateShippingFeesResponse
@@ -155,7 +173,10 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.WalletPayment
         /// <summary>Cân nặng tính cước (kg) — max(actual, volumetric, min).</summary>
         public decimal ChargeableWeightKg { get; set; }
 
-        /// <summary>Tổng phí cuối kỳ.</summary>
+        /// <summary>Tổng phí ship (ship quốc tế + lưu kho).</summary>
         public decimal TotalShippingFeeVnd { get; set; }
+
+        /// <summary>Số ngày lưu kho tính phí (sau khi đã trừ ngày miễn phí).</summary>
+        public int StorageDaysOverFree { get; set; }
     }
 }

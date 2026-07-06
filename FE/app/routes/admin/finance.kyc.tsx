@@ -10,6 +10,8 @@ import {
   PiCopyBold,
   PiWarningCircleBold
 } from "react-icons/pi";
+import { Button } from "~/components/ui/Button";
+import { Textarea } from "~/components/ui/Textarea";
 
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { ReduxStatus } from "~/lib/feature/const";
@@ -149,16 +151,16 @@ export default function AdminFinanceKycPage() {
                       <StatusBadge status={record.status} />
                     </td>
                     <td className="py-3.5 px-6 text-right">
-                      <button
+                      <Button
+                        size="sm"
                         onClick={() => {
                           setSelectedKyc(record);
                           setIsReviewModalOpen(true);
                         }}
-                        className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-3 py-1.5 rounded transition-colors"
                       >
                         <PiEyeBold />
                         Chi tiết
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -280,31 +282,31 @@ export default function AdminFinanceKycPage() {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-[#EAEAEA] flex justify-end gap-3 bg-gray-50">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setIsReviewModalOpen(false)}
-                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
               >
                 Đóng
-              </button>
+              </Button>
 
               {selectedKyc.status === "Pending" && (
                 <>
-                  <button
+                  <Button
+                    variant="danger"
                     onClick={() => setIsRejectModalOpen(true)}
-                    disabled={actionLoading}
-                    className="inline-flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                    loading={actionLoading}
                   >
                     <PiXCircleBold />
                     Từ chối
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="primary"
                     onClick={() => handleApprove(selectedKyc.id)}
-                    disabled={actionLoading}
-                    className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                    loading={actionLoading}
                   >
                     <PiCheckCircleBold />
                     Phê duyệt
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -328,34 +330,31 @@ export default function AdminFinanceKycPage() {
 
             <form onSubmit={handleReject}>
               <div className="mb-4">
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-2">
-                  Lý do từ chối
-                </label>
-                <textarea
+                <Textarea
+                  label="Lý do từ chối"
                   rows={4}
                   required
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Ví dụ: Ảnh mặt sau bị mờ, không khớp thông tin đăng ký..."
-                  className="w-full rounded border border-[#EAEAEA] p-3 text-sm text-black focus:border-black focus:outline-none placeholder-gray-400"
-                ></textarea>
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsRejectModalOpen(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={actionLoading}
-                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  variant="danger"
+                  loading={actionLoading}
                 >
-                  {actionLoading ? "Đang xử lý..." : "Xác nhận từ chối"}
-                </button>
+                  Xác nhận từ chối
+                </Button>
               </div>
             </form>
           </div>
@@ -376,20 +375,21 @@ export default function AdminFinanceKycPage() {
               </p>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA] mt-5">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => setApprovingKycId(null)}
-                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
               >
                 Hủy
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="primary"
                 onClick={() => executeApproveKyc(approvingKycId)}
-                className="bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-4 py-2 rounded transition-colors"
+                loading={actionLoading}
               >
                 Xác nhận duyệt
-              </button>
+              </Button>
             </div>
           </div>
         </div>

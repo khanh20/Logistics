@@ -77,6 +77,7 @@ export default function CartPage({
   const [deliveryNote, setDeliveryNote] = useState("");
   const [customerNote, setCustomerNote] = useState("");
   const [insuranceOption, setInsuranceOption] = useState<string>("none");
+  const [shippingLine, setShippingLine] = useState<string>("Tmdt");
   const [preview, setPreview] = useState<CheckoutPreviewResponse | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -172,6 +173,7 @@ export default function CartPage({
         shopIds: selectedShopIds,
         deliveryAddressNote: deliveryNote || undefined,
         insuranceOption: insuranceOption,
+        shippingLine: shippingLine,
       });
       setPreview(res.data);
     } catch (err: unknown) {
@@ -197,6 +199,7 @@ export default function CartPage({
         deliveryAddressNote: deliveryNote || undefined,
         customerNote: customerNote || undefined,
         insuranceOption: insuranceOption,
+        shippingLine: shippingLine,
       });
       setCheckoutSuccess(res.data.createdOrderIds);
       await reload();
@@ -484,6 +487,42 @@ export default function CartPage({
             </div>
           </div>
 
+          {/* Shipping Line Option */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+            <h2 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1">
+              <PiStorefrontBold className="text-base text-gray-400" />
+              Phương thức vận chuyển
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { value: "Tmdt", label: "TMĐT", desc: "Tiêu chuẩn" },
+                { value: "Bm", label: "Biên mậu", desc: "Tiết kiệm" },
+                { value: "OfficialQuota", label: "Chính ngạch", desc: "Hóa đơn VAT" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setShippingLine(opt.value);
+                    setPreview(null);
+                  }}
+                  className={`flex flex-col items-center justify-center p-2 rounded border text-center transition-all ${shippingLine === opt.value
+                    ? "border-black bg-neutral-50 text-black font-semibold"
+                    : "border-gray-200 hover:bg-gray-50 text-gray-500"
+                    }`}
+                >
+                  <span className="text-xs">{opt.label}</span>
+                  <span className="text-[9px] opacity-75 mt-0.5">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+            {shippingLine === "OfficialQuota" && (
+              <p className="text-[10px] text-amber-600 mt-2 bg-amber-50 p-1.5 rounded">
+                * Lưu ý: Hàng chính ngạch sẽ phát sinh Phí ủy thác nhập khẩu, Thuế VAT và Thuế nhập khẩu.
+              </p>
+            )}
+          </div>
+
           {/* Insurance Option */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
             <h2 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1">
@@ -504,8 +543,8 @@ export default function CartPage({
                     setPreview(null); // Clear preview when changing option to force refresh
                   }}
                   className={`flex flex-col items-center justify-center p-2 rounded border text-center transition-all ${insuranceOption === opt.value
-                      ? "border-black bg-neutral-50 text-black font-semibold"
-                      : "border-gray-200 hover:bg-gray-50 text-gray-500"
+                    ? "border-black bg-neutral-50 text-black font-semibold"
+                    : "border-gray-200 hover:bg-gray-50 text-gray-500"
                     }`}
                 >
                   <span className="text-xs">{opt.label}</span>
@@ -575,6 +614,24 @@ export default function CartPage({
                   <div className="flex justify-between text-gray-600">
                     <span>Phí bảo hiểm ({insuranceOption})</span>
                     <span className="font-mono">{formatVND(preview.insuranceFeeVnd)}</span>
+                  </div>
+                )}
+                {preview.importEntrustmentFeeVnd > 0 && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>Phí ủy thác nhập khẩu</span>
+                    <span className="font-mono">{formatVND(preview.importEntrustmentFeeVnd)}</span>
+                  </div>
+                )}
+                {preview.importDutyVnd > 0 && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>Thuế nhập khẩu</span>
+                    <span className="font-mono">{formatVND(preview.importDutyVnd)}</span>
+                  </div>
+                )}
+                {preview.importVatVnd > 0 && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>Thuế VAT</span>
+                    <span className="font-mono">{formatVND(preview.importVatVnd)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-gray-400 italic">
@@ -669,8 +726,8 @@ export default function CartPage({
                         setIsSelectModalOpen(false);
                       }}
                       className={`p-4 rounded border text-left cursor-pointer transition-all relative ${isCurrent
-                          ? "border-black bg-neutral-50"
-                          : "border-gray-200 hover:border-gray-400 bg-white"
+                        ? "border-black bg-neutral-50"
+                        : "border-gray-200 hover:border-gray-400 bg-white"
                         }`}
                     >
                       <div className="flex items-center gap-2 flex-wrap mb-1">

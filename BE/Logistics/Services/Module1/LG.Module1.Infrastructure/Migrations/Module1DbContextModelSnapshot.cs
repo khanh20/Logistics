@@ -290,6 +290,9 @@ namespace LG.Module1.Infrastructure.Migrations
                     b.Property<decimal>("ShippingFeeVnd")
                         .HasColumnType("numeric");
 
+                    b.Property<int>("ShippingLine")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("ShopId")
                         .HasColumnType("uuid");
 

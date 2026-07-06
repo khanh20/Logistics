@@ -5,6 +5,8 @@ import type { Route } from "./+types/orders._index";
 import { manageOrdersApi } from "~/lib/api/orders";
 import { StatusBadge } from "~/components/shared/StatusBadge";
 import { Button } from "~/components/ui/Button";
+import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
 import { formatCNY, formatVND, formatDate } from "~/lib/utils/format";
 import { ORDER_STATUSES } from "~/lib/constants/orderStatus";
 import type { StaffOrderListItemResponse, OrderStatus } from "~/lib/types/order";
@@ -102,11 +104,10 @@ export default function AdminOrdersPage({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Status */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">{t("common.status")}</label>
-            <select
+            <Select
+              label={t("common.status")}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as OrderStatus | "")}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">{t("order.all_statuses")}</option>
               {ORDER_STATUSES.map((s) => (
@@ -114,28 +115,26 @@ export default function AdminOrdersPage({
                   {t(`order.status.${s}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {/* From date */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">{t("order.from_date")}</label>
-            <input
+            <Input
+              label={t("order.from_date")}
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           {/* To date */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">{t("order.to_date")}</label>
-            <input
+            <Input
+              label={t("order.to_date")}
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
         </div>
@@ -203,7 +202,7 @@ export default function AdminOrdersPage({
                   <td className="px-4 py-3 text-center">
                     <Link
                       to={`/admin/orders/${order.id}`}
-                      className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary-dark transition-colors"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors px-3 py-1.5 text-sm bg-primary text-white hover:bg-primary-dark"
                     >
                       {t("order.process_btn")}
                     </Link>

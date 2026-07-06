@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { PiPlusBold, PiPencilSimpleBold, PiTrashBold, PiStarBold, PiXBold } from "react-icons/pi";
+import { Input } from "~/components/ui/Input";
+import { Button } from "~/components/ui/Button";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import {
   fetchVipTiers,
@@ -146,13 +148,13 @@ export default function AdminVipTiersPage() {
             <p className="text-sm text-gray-500">Cấu hình cấp độ, hạn mức chi tiêu và đặc quyền của khách hàng</p>
           </div>
         </div>
-        <button
+        <Button
           onClick={handleCreate}
-          className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4.5 py-2.5 rounded transition-colors"
+          className="px-4.5 py-2.5"
         >
           <PiPlusBold />
           Thêm hạng VIP
-        </button>
+        </Button>
       </div>
 
       {/* Alert Messages */}
@@ -299,57 +301,45 @@ export default function AdminVipTiersPage() {
             <form onSubmit={handleModalSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Tên hạng VIP *
-                  </label>
-                  <input
+                  <Input
+                    label="Tên hạng VIP *"
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="VD: Bạc, Vàng, Kim Cương..."
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Cấp độ (1, 2, 3...) *
-                  </label>
-                  <input
+                  <Input
+                    label="Cấp độ (1, 2, 3...) *"
                     type="number"
                     required
                     min={0}
                     value={level}
                     onChange={(e) => setLevel(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Chi tiêu tối thiểu (VND) *
-                  </label>
-                  <input
+                  <Input
+                    label="Chi tiêu tối thiểu (VND) *"
                     type="number"
                     required
                     min={0}
                     value={minSpendVnd}
                     onChange={(e) => setMinSpendVnd(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Mã màu (Hex)
-                  </label>
-                  <input
+                  <Input
+                    label="Mã màu (Hex)"
                     type="text"
                     value={colorHex}
                     onChange={(e) => setColorHex(e.target.value)}
                     placeholder="VD: #FFD700"
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
@@ -361,45 +351,36 @@ export default function AdminVipTiersPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                      Giảm phí dịch vụ (%)
-                    </label>
-                    <input
+                    <Input
+                      label="Giảm phí dịch vụ (%)"
                       type="number"
                       min={0}
                       max={100}
                       value={serviceFeeDiscountPct}
                       onChange={(e) => setServiceFeeDiscountPct(Number(e.target.value))}
-                      className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                      Tỷ lệ hoàn tiền (%)
-                    </label>
-                    <input
+                    <Input
+                      label="Tỷ lệ hoàn tiền (%)"
                       type="number"
                       min={0}
                       max={100}
                       value={cashbackPct}
                       onChange={(e) => setCashbackPct(Number(e.target.value))}
-                      className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Tỷ lệ đặt cọc riêng (%)
-                  </label>
-                  <input
+                  <Input
+                    label="Tỷ lệ đặt cọc riêng (%)"
                     type="number"
                     min={0}
                     max={100}
                     value={depositPctOverride ?? ""}
                     onChange={(e) => setDepositPctOverride(e.target.value ? Number(e.target.value) : undefined)}
                     placeholder="Để trống nếu theo mặc định"
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
 
@@ -439,20 +420,19 @@ export default function AdminVipTiersPage() {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalVisible(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  loading={loading}
                 >
                   {editingTier ? "Lưu Thay Đổi" : "Tạo Mới"}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

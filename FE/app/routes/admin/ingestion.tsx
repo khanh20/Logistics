@@ -4,6 +4,7 @@ import type { Route } from "./+types/ingestion";
 import { ingestionApi, categoriesApi } from "~/lib/api/categories";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
 import { Badge } from "~/components/ui/Badge";
 import { cn } from "~/lib/utils/cn";
 import type { CategoryTree, CrawlResultResponse, CrawlUrlResultResponse } from "~/lib/types/category";
@@ -50,14 +51,10 @@ function CategorySelect({
 
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-gray-700">
-        {t("ingestion.category_label")}
-      </label>
-      <select
+      <Select
+        label={t("ingestion.category_label")}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none
-                   focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white"
       >
         <option value="">{t("ingestion.category_placeholder")}</option>
         {flat.map((cat) => (
@@ -65,7 +62,7 @@ function CategorySelect({
             {"—".repeat(cat.depth)} {cat.nameVn}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   );
 }
@@ -157,16 +154,15 @@ function KeywordCrawlForm({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex gap-4 flex-wrap">
             <div className="flex flex-col gap-1 min-w-40">
-              <label className="text-sm font-medium text-gray-700">{t("ingestion.platform_label")}</label>
-              <select
+              <Select
+                label={t("ingestion.platform_label")}
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 {platforms.map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="flex-1 min-w-56">
               <Input

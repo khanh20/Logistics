@@ -315,7 +315,7 @@ const FinancePage: React.FC = () => {
               </div>
               <div
                 className="font-serif text-3xl font-bold tracking-tight mb-2"
-                style={{ color: "var(--mu-text)" }}
+                style={{ color: "var(--mu-pastel-green-text)" }}
               >
                 {wallet ? formatVND(wallet.availableBalance) : "0₫"}
               </div>
@@ -477,7 +477,6 @@ const FinancePage: React.FC = () => {
                       type="number"
                       placeholder="0"
                       min={10000}
-                      step={50000}
                       value={topupAmount}
                       onChange={(e) => setTopupAmount(e.target.value === "" ? "" : Number(e.target.value))}
                       className="block w-full rounded-md border border-[#EAEAEA] bg-white pl-3 pr-12 py-2 text-base text-black focus:border-black focus:outline-none"

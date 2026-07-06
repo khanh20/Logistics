@@ -50,6 +50,8 @@ namespace LG.Core.Domain.Finance
 
         public int TotalOrders { get; set; } = 0;
 
+        public DateTime? LastOrderAt { get; set; }
+
         public DateTime? DeletedDate { get; set; }
         public bool Deleted { get; set; }
         public Guid? DeletedBy { get; set; }

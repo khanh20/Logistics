@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { staffAssignmentsApi } from "~/lib/api/orders";
 import { SlaCountdown } from "~/components/admin/SlaCountdown";
 import { Button } from "~/components/ui/Button";
+import { Input } from "~/components/ui/Input";
 import { formatDate } from "~/lib/utils/format";
 import type { StaffWorkloadDto, OverdueAssignmentDto } from "~/lib/types/order";
 import type { Route } from "./+types/staff-dashboard";
@@ -141,11 +142,11 @@ export default function StaffDashboardPage({
                     <td className="px-4 py-3">
                       {reassignOrderId === a.orderId ? (
                         <div className="flex items-center gap-2">
-                          <input
+                          <Input
                             value={newStaffId}
                             onChange={(e) => setNewStaffId(e.target.value)}
                             placeholder={t("staff.staff_uuid_placeholder")}
-                            className="w-48 rounded border border-gray-300 px-2 py-1 text-xs"
+                            className="w-48 py-1.5"
                           />
                           <Button size="sm" loading={loading} onClick={() => handleReassign(a.orderId, a.orderCode)}>
                             {t("staff.confirm_reassign")}

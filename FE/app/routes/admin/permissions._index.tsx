@@ -3,6 +3,9 @@ import { useRevalidator } from "react-router";
 import { useTranslation } from "react-i18next";
 import { permissionsApi } from "~/lib/api/auth";
 import { Button } from "~/components/ui/Button";
+import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
+import { Textarea } from "~/components/ui/Textarea";
 import { cn } from "~/lib/utils/cn";
 import type {
   CreatePermissionRequest,
@@ -72,52 +75,38 @@ function PermModal({ mode, form, submitting, error, onChange, onSubmit, onClose 
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("permissions.field_name")} <span className="text-red-500">*</span>
-            </label>
-            <input
+            <Input
               ref={nameRef}
+              label={t("permissions.field_name") + " *"}
               type="text"
               value={form.name}
               onChange={(e) => onChange("name", e.target.value)}
               placeholder={t("permissions.field_name_placeholder")}
               required
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none
-                         focus:ring-2 focus:ring-primary"
             />
           </div>
 
           {/* Code — disabled in edit mode */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("permissions.field_code")} <span className="text-red-500">*</span>
-            </label>
-            <input
+            <Input
+              label={t("permissions.field_code") + " *"}
               type="text"
               value={form.code}
               onChange={(e) => onChange("code", e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ""))}
               placeholder={t("permissions.field_code_placeholder")}
               required
               disabled={mode === "edit"}
-              className={cn(
-                "w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary",
-                mode === "edit" && "bg-gray-50 text-gray-500 cursor-not-allowed"
-              )}
+              hint={t("permissions.field_code_hint")}
             />
-            <p className="mt-1 text-xs text-gray-400">{t("permissions.field_code_hint")}</p>
           </div>
 
           {/* Module */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("permissions.field_module")} <span className="text-red-500">*</span>
-            </label>
-            <select
+            <Select
+              label={t("permissions.field_module") + " *"}
               value={form.moduleName}
               onChange={(e) => onChange("moduleName", e.target.value)}
               required
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none
-                         focus:ring-2 focus:ring-primary bg-white"
             >
               <option value="" disabled>{t("permissions.field_module_placeholder")}</option>
               <option value="auth">auth</option>
@@ -125,21 +114,17 @@ function PermModal({ mode, form, submitting, error, onChange, onSubmit, onClose 
               <option value="mod2">mod2</option>
               <option value="mod3">mod3</option>
               <option value="shared">shared</option>
-            </select>
+            </Select>
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("permissions.field_description")}
-            </label>
-            <textarea
+            <Textarea
+              label={t("permissions.field_description")}
               value={form.description}
               onChange={(e) => onChange("description", e.target.value)}
               placeholder={t("permissions.field_description_placeholder")}
               rows={2}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none
-                         focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 
@@ -305,29 +290,28 @@ export default function PermissionsIndexPage({ loaderData }: Route.ComponentProp
       {/* Search + Module filter */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1 max-w-xs">
-          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm z-10">
             🔍
           </span>
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("permissions.search_placeholder")}
-            className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-9 pr-3 text-sm
-                       outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="pl-9"
           />
         </div>
-        <select
-          value={moduleFilter}
-          onChange={(e) => setModuleFilter(e.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm
-                     outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-        >
-          <option value="">{t("permissions.all_modules")}</option>
-          {modules.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
+        <div className="w-48">
+          <Select
+            value={moduleFilter}
+            onChange={(e) => setModuleFilter(e.target.value)}
+          >
+            <option value="">{t("permissions.all_modules")}</option>
+            {modules.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </Select>
+        </div>
         <span className="text-sm text-gray-500 self-center">
           {t("permissions.total", { count: visible.length })}
         </span>

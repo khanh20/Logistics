@@ -10,5 +10,6 @@ namespace LG.Core.ApplicationServices.Finance.Interfaces
         Task<List<FraudDetectionDto>> GetAllAsync();
         Task<FraudDetectionDto?> GetByIdAsync(Guid id);
         Task<bool> ReviewAsync(Guid id, ReviewFraudDto dto, Guid adminId);
+        Task<EvaluateFraudResultDto> EvaluateTransactionAsync(Guid customerId, decimal amount, string transactionType, string contextInfo);
     }
 }

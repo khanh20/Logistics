@@ -25,6 +25,8 @@ public enum OrderStatus
 
 public enum PlacementMode { Manual = 1, AutoApi = 2 }
 
+public enum ShippingLine { Tmdt = 1, Bm = 2, OfficialQuota = 3 }
+
 // ── CustomerOrder ─────────────────────────────────────────────────────────────
 public class CustomerOrder
 {
@@ -37,6 +39,7 @@ public class CustomerOrder
 
     public OrderStatus   Status        { get; private set; } = OrderStatus.PendingPayment;
     public PlacementMode PlacementMode { get; private set; } = PlacementMode.Manual;
+    public ShippingLine  ShippingLine  { get; private set; } = ShippingLine.Tmdt;
 
     // ── Pricing (khóa tại thời điểm checkout) ────────────────────────────────
     /// Tổng giá gốc CNY (sum of items).
@@ -92,6 +95,7 @@ public class CustomerOrder
         decimal      rateVndPerCny,
         decimal      depositPct,
         PlacementMode placementMode,
+        ShippingLine shippingLine = ShippingLine.Tmdt,
         string?      deliveryAddressNote = null,
         string?      customerNote = null)
     {
@@ -104,6 +108,7 @@ public class CustomerOrder
             RateVndPerCny       = rateVndPerCny,
             DepositPct          = depositPct,
             PlacementMode       = placementMode,
+            ShippingLine        = shippingLine,
             DeliveryAddressNote = deliveryAddressNote?.Trim(),
             CustomerNote        = customerNote?.Trim(),
             PaymentDeadline     = DateTime.UtcNow.AddMinutes(30),
@@ -128,16 +133,20 @@ public class CustomerOrder
     }
 
     /// Tính DepositVnd + FinalAmountVnd sau khi đã add xong items và fees.
-    public void CalculateDeposit(decimal serviceFee = 0, decimal inspectionFee = 0, decimal insuranceFee = 0)
+    public void CalculateDeposit(decimal serviceFee = 0, decimal inspectionFee = 0, decimal insuranceFee = 0, 
+                                 decimal importEntrustmentFee = 0, decimal importVatFee = 0, decimal importDutyFee = 0)
     {
         var itemsTotalVnd = Math.Round(TotalCny * RateVndPerCny, 0);
-        FinalAmountVnd = itemsTotalVnd + serviceFee + inspectionFee + insuranceFee;
+        FinalAmountVnd = itemsTotalVnd + serviceFee + inspectionFee + insuranceFee + importEntrustmentFee + importVatFee + importDutyFee;
         DepositVnd     = Math.Round(FinalAmountVnd * DepositPct, 0);
 
         // Lưu vết phí vào bảng chi tiết phí
         if (serviceFee > 0) AddFee("service", serviceFee, "Phí dịch vụ mua hộ");
         if (inspectionFee > 0) AddFee("inspection", inspectionFee, "Phí kiểm hàng");
         if (insuranceFee > 0) AddFee("insurance", insuranceFee, "Phí bảo hiểm");
+        if (importEntrustmentFee > 0) AddFee("import_entrustment", importEntrustmentFee, "Phí ủy thác nhập khẩu");
+        if (importVatFee > 0) AddFee("import_vat", importVatFee, "Thuế VAT");
+        if (importDutyFee > 0) AddFee("import_duty", importDutyFee, "Thuế nhập khẩu");
     }
 
     /// Gắn PlatformOrder sau khi tạo (dùng khi ghi nhận đặt hàng thủ công).
@@ -189,7 +198,8 @@ public class CustomerOrder
     public void MarkArrivedVietnam(Guid? changedBy = null, string? note = null) =>
         TransitionTo(OrderStatus.ArrivedVietnam, changedBy, note ?? "Hàng về kho VN");
 
-    public void UpdateShippingInfo(decimal actualWeightKg, decimal? volumeCm3, int storageDaysOverFree, decimal shippingFeeVnd)
+    public void UpdateShippingInfo(decimal actualWeightKg, decimal? volumeCm3, int storageDaysOverFree, 
+                                   decimal shippingIntlFeeVnd, decimal storageFeeVnd, decimal chargeableWeightKg)
     {
         // Trừ đi phí ship cũ nếu có để tránh cộng dồn
         FinalAmountVnd -= ShippingFeeVnd;
@@ -197,18 +207,29 @@ public class CustomerOrder
         ActualWeightKg = actualWeightKg;
         VolumeCm3 = volumeCm3;
         StorageDaysOverFree = storageDaysOverFree;
-        ShippingFeeVnd = shippingFeeVnd;
+        ShippingFeeVnd = shippingIntlFeeVnd + storageFeeVnd;
 
-        FinalAmountVnd += shippingFeeVnd;
+        FinalAmountVnd += ShippingFeeVnd;
 
         var existingShippingFee = Fees.FirstOrDefault(f => f.FeeType == "shipping_cn_to_vn");
         if (existingShippingFee != null)
         {
             Fees.Remove(existingShippingFee);
         }
-        if (shippingFeeVnd > 0)
+        
+        var existingStorageFee = Fees.FirstOrDefault(f => f.FeeType == "storage");
+        if (existingStorageFee != null)
         {
-            AddFee("shipping_cn_to_vn", shippingFeeVnd, $"Phí vận chuyển quốc tế ({actualWeightKg} kg)");
+            Fees.Remove(existingStorageFee);
+        }
+
+        if (shippingIntlFeeVnd > 0)
+        {
+            AddFee("shipping_cn_to_vn", shippingIntlFeeVnd, $"Tính cước theo {chargeableWeightKg} kg");
+        }
+        if (storageFeeVnd > 0)
+        {
+            AddFee("storage", storageFeeVnd, $"Lưu kho vượt {storageDaysOverFree} ngày");
         }
         Touch();
     }
@@ -222,7 +243,7 @@ public class CustomerOrder
     public void MarkDelivering(Guid changedBy, string? note = null)
     {
         if (!IsFinalPaid)
-            throw new Exception("Đơn hàng chưa được thanh toán cuối kỳ. Không thể chuyển sang trạng thái Đang giao hàng.");
+            throw new InvalidOrderTransitionException(Status.ToString(), OrderStatus.Delivering.ToString());
         TransitionTo(OrderStatus.Delivering, changedBy, note ?? "Đang giao hàng");
     }
 
@@ -491,7 +512,7 @@ public class StaffAssignment
 // ── OrderFeeDetail — Breakdown chi tiết phí ──────────────────────────────────
 public class OrderFeeDetail
 {
-    public Guid     Id        { get; private set; } = Guid.NewGuid();
+    public Guid     Id        { get; private set; }
     public Guid     OrderId   { get; private set; }
     /// "service" | "shipping_cn_to_vn" | "ship_local" | "insurance"
     public string   FeeType   { get; private set; } = default!;

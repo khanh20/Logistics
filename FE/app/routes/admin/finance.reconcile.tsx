@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
 import { PiPlusBold, PiCheckCircleBold, PiXBold, PiWarningCircleBold } from "react-icons/pi";
+import { Input } from "~/components/ui/Input";
+import { Textarea } from "~/components/ui/Textarea";
+import { Button } from "~/components/ui/Button";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { 
   fetchReconciles, 
@@ -131,13 +134,13 @@ export default function ReconcilePage() {
           <h1 className="text-2xl font-serif font-bold text-black mb-1">Quản lý đối soát nền tảng</h1>
           <p className="text-sm text-gray-500">Đồng bộ hóa dữ liệu tài chính với các bên nền tảng trung gian</p>
         </div>
-        <button
+        <Button
           onClick={() => setIsModalVisible(true)}
-          className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4.5 py-2.5 rounded transition-colors"
+          className="px-4.5 py-2.5"
         >
           <PiPlusBold />
           Tạo đối soát mới
-        </button>
+        </Button>
       </div>
 
 
@@ -190,13 +193,13 @@ export default function ReconcilePage() {
                       <td className="py-3.5 px-6 text-right">
                         <div className="inline-flex gap-3 justify-end items-center">
                           {record.status === ReconcileStatusEnum.Pending && (
-                            <button
+                            <Button
+                              size="sm"
                               onClick={() => handleConfirm(record.id)}
-                              className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded transition-colors"
                             >
                               <PiCheckCircleBold />
                               Khớp
-                            </button>
+                            </Button>
                           )}
                           {record.alipayStatementUrl && (
                             <a
@@ -268,130 +271,105 @@ export default function ReconcilePage() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Ngày đối soát *
-                  </label>
-                  <input
+                  <Input
+                    label="Ngày đối soát *"
                     type="date"
                     required
                     value={reconcileDate}
                     onChange={(e) => setReconcileDate(e.target.value)}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Mã nền tảng *
-                  </label>
-                  <input
+                  <Input
+                    label="Mã nền tảng *"
                     type="text"
                     required
                     value={platformId}
                     onChange={(e) => setPlatformId(e.target.value)}
                     placeholder="VD: 1688, Taobao..."
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Tài khoản nền tảng *
-                  </label>
-                  <input
+                  <Input
+                    label="Tài khoản nền tảng *"
                     type="text"
                     required
                     value={platformAccountId}
                     onChange={(e) => setPlatformAccountId(e.target.value)}
                     placeholder="Tài khoản mua hàng..."
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Đường dẫn sao kê
-                  </label>
-                  <input
+                  <Input
+                    label="Đường dẫn sao kê"
                     type="text"
                     value={alipayStatementUrl}
                     onChange={(e) => setAlipayStatementUrl(e.target.value)}
                     placeholder="URL file sao kê..."
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Chi tiêu CNY *
-                  </label>
-                  <input
+                  <Input
+                    label="Chi tiêu CNY *"
                     type="number"
                     required
                     min={0}
                     value={cnySpent}
                     onChange={(e) => setCnySpent(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Tương đương VND *
-                  </label>
-                  <input
+                  <Input
+                    label="Tương đương VND *"
                     type="number"
                     required
                     min={0}
                     value={vndEquivalent}
                     onChange={(e) => setVndEquivalent(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Phí dịch vụ VND *
-                  </label>
-                  <input
+                  <Input
+                    label="Phí dịch vụ VND *"
                     type="number"
                     required
                     min={0}
                     value={serviceFeeCollectedVnd}
                     onChange={(e) => setServiceFeeCollectedVnd(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Ghi chú
-                </label>
-                <textarea
+                <Textarea
+                  label="Ghi chú"
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Ghi chú thêm nếu có..."
-                  className="w-full rounded border border-[#EAEAEA] p-3 text-sm text-black focus:border-black focus:outline-none"
-                ></textarea>
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalVisible(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  loading={loading}
                 >
-                  {loading ? "Đang xử lý..." : "Tạo đối soát"}
-                </button>
+                  Tạo đối soát
+                </Button>
               </div>
             </form>
           </div>
@@ -412,20 +390,20 @@ export default function ReconcilePage() {
               </p>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA] mt-5">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => setConfirmingReconcileId(null)}
-                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
               >
                 Hủy
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="primary"
                 onClick={() => executeConfirmReconcile(confirmingReconcileId)}
-                className="bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-4 py-2 rounded transition-colors"
               >
                 Xác nhận
-              </button>
+              </Button>
             </div>
           </div>
         </div>

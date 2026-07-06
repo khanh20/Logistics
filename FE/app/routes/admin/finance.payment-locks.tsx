@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { PiMagnifyingGlassBold, PiLockOpenBold, PiXBold, PiCopyBold, PiCheckBold } from "react-icons/pi";
-import dayjs from "dayjs";
 import { financeApi } from "~/lib/api/finance";
+import { Button } from "~/components/ui/Button";
+import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
 import { PaymentLockStatusEnum, ReleaseReasonEnum } from "~/lib/enums/finance";
 import {
   PAYMENT_LOCK_STATUS_COLORS,
@@ -10,6 +12,7 @@ import {
   RELEASE_REASON_LABELS,
 } from "~/lib/constants/finance";
 import type { PaymentLockDto } from "~/lib/types/finance";
+import dayjs from "dayjs";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -154,26 +157,26 @@ export default function AdminPaymentLocksPage() {
 
       {/* Search Bar & Table Card */}
       <div className="bg-white border border-[#EAEAEA] rounded-lg p-6 shadow-sm mb-8">
-        <form onSubmit={handleSearch} className="flex gap-3 mb-6 items-center">
+        <form onSubmit={handleSearch} className="flex gap-3 mb-6 items-end">
           <div className="relative flex-1 max-w-md">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none mt-[0.15rem]">
               <PiMagnifyingGlassBold className="text-sm" />
             </span>
-            <input
+            <Input
               type="text"
               placeholder="Nhập mã đơn hàng..."
               value={orderId}
               onChange={(e) => setOrderId(e.target.value)}
-              className="w-full rounded border border-[#EAEAEA] bg-white pl-9 pr-3 py-2 text-sm text-black focus:border-black focus:outline-none placeholder-gray-400"
+              className="pl-9"
             />
           </div>
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-5 py-2.5 rounded transition-colors disabled:opacity-50"
+            loading={loading}
           >
-            {loading ? "Đang tìm..." : "Tìm kiếm"}
-          </button>
+            Tìm kiếm
+          </Button>
         </form>
 
         {loading && locks.length === 0 ? (
@@ -284,37 +287,34 @@ export default function AdminPaymentLocksPage() {
 
             <form onSubmit={handleReleaseSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Lý do giải phóng *
-                </label>
-                <select
+                <Select
+                  label="Lý do giải phóng *"
                   value={releaseReason}
                   onChange={(e) => setReleaseReason(e.target.value as ReleaseReasonEnum)}
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none bg-white font-medium"
                 >
                   {Object.entries(RELEASE_REASON_LABELS).map(([key, label]) => (
                     <option key={key} value={key}>
                       {label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalOpen(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={releasing}
-                  className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  loading={releasing}
                 >
-                  {releasing ? "Đang xử lý..." : "Xác nhận giải phóng"}
-                </button>
+                  Xác nhận giải phóng
+                </Button>
               </div>
             </form>
           </div>

@@ -7,6 +7,7 @@ import { categoriesApi } from "~/lib/api/categories";
 import { platformsApi } from "~/lib/api/platforms";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
 import { Badge } from "~/components/ui/Badge";
 import { cn } from "~/lib/utils/cn";
 import { formatCNY } from "~/lib/utils/format";
@@ -150,13 +151,10 @@ export default function ProductsPage({ loaderData }: { loaderData: LoaderData })
             className="md:col-span-2"
           />
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">
-              {t("product.filter_category")}
-            </label>
-            <select
+            <Select
+              label={t("product.filter_category")}
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">{t("product.all_categories")}</option>
               {flatCategories.map((c) => (
@@ -165,16 +163,13 @@ export default function ProductsPage({ loaderData }: { loaderData: LoaderData })
                   {c.nameVn}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">
-              {t("product.filter_platform")}
-            </label>
-            <select
+            <Select
+              label={t("product.filter_platform")}
               value={platformId}
               onChange={(e) => setPlatformId(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">{t("product.all_platforms")}</option>
               {loaderData.platforms.map((p) => (
@@ -182,7 +177,7 @@ export default function ProductsPage({ loaderData }: { loaderData: LoaderData })
                   {p.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 

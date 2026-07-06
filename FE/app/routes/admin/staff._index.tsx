@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { usersApi, rolesApi } from "~/lib/api/auth";
 import { staffAssignmentsApi } from "~/lib/api/orders";
 import { Button } from "~/components/ui/Button";
+import { Input } from "~/components/ui/Input";
 import { formatDate } from "~/lib/utils/format";
 import { cn } from "~/lib/utils/cn";
 import type { RoleResponse, StaffUserDto, UserStatus } from "~/lib/types/auth";
@@ -114,18 +115,14 @@ function StaffModal({
 
           {/* FullName */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              {t("staff_mgmt.field_name")} <span className="text-red-500">*</span>
-            </label>
-            <input
+            <Input
               ref={firstRef}
+              label={t("staff_mgmt.field_name") + " *"}
               type="text"
               required
               value={form.fullName}
               onChange={(e) => onChange("fullName", e.target.value)}
               placeholder={t("staff_mgmt.field_name_placeholder")}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none
-                         focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -133,51 +130,38 @@ function StaffModal({
           {mode === "create" && (
             <>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("staff_mgmt.field_email")} <span className="text-red-500">*</span>
-                </label>
-                <input
+                <Input
+                  label={t("staff_mgmt.field_email") + " *"}
                   type="email"
                   required
                   value={form.email}
                   onChange={(e) => onChange("email", e.target.value)}
                   placeholder="user@muaho.vn"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none
-                             focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  {t("staff_mgmt.field_password")} <span className="text-red-500">*</span>
-                </label>
-                <input
+                <Input
+                  label={t("staff_mgmt.field_password") + " *"}
                   type="password"
                   required
                   minLength={8}
                   value={form.password}
                   onChange={(e) => onChange("password", e.target.value)}
                   placeholder="••••••••"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none
-                             focus:border-primary focus:ring-1 focus:ring-primary"
+                  hint={t("staff_mgmt.password_hint")}
                 />
-                <p className="mt-1 text-xs text-gray-400">{t("staff_mgmt.password_hint")}</p>
               </div>
             </>
           )}
 
           {/* Phone */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              {t("staff_mgmt.field_phone")}{" "}
-              <span className="font-normal text-gray-400">({t("common.optional")})</span>
-            </label>
-            <input
+            <Input
+              label={`${t("staff_mgmt.field_phone")} (${t("common.optional")})`}
               type="tel"
               value={form.phone}
               onChange={(e) => onChange("phone", e.target.value)}
               placeholder="0912 345 678"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none
-                         focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -456,16 +440,15 @@ export default function StaffIndexPage({ loaderData }: Route.ComponentProps) {
       {/* Search + Filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
-          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400 z-10">
             🔍
           </span>
-          <input
+          <Input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("staff_mgmt.search_placeholder")}
-            className="w-full rounded-lg border border-gray-200 bg-white py-1.5 pl-9 pr-3 text-sm
-                       outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            className="pl-9"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -66,6 +66,9 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SnapshotDate")
+                        .IsUnique();
+
                     b.ToTable("BalanceSnapshot", "finance");
                 });
 
@@ -131,8 +134,8 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal?>("AmountVnd")
                         .HasColumnType("decimal(18,0)");
 
-                    b.Property<int>("BankAccountId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("BankAccountId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("BankRef")
                         .HasMaxLength(100)
@@ -169,6 +172,13 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BankAccountId");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("MatchedTopupId");
 
                     b.ToTable("BankWebhookLog", "finance");
                 });
@@ -216,6 +226,9 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerId")
+                        .IsUnique();
 
                     b.ToTable("CreditLimit", "finance");
                 });
@@ -287,6 +300,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
 
                     b.ToTable("CustomerAddress", "finance");
                 });
@@ -375,6 +390,12 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CustomerId")
+                        .IsUnique();
+
+                    b.HasIndex("IdNumber")
+                        .IsUnique();
+
                     b.ToTable("CustomerKYC", "finance");
                 });
 
@@ -415,6 +436,9 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<int?>("Gender")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("LastOrderAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<decimal>("LifetimeValueVnd")
                         .HasColumnType("numeric");
 
@@ -448,6 +472,17 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerCode")
+                        .IsUnique();
+
+                    b.HasIndex("ReferralCode")
+                        .IsUnique();
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.HasIndex("VipTierId");
 
                     b.ToTable("CustomerProfile", "finance");
                 });
@@ -502,6 +537,9 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ReportDate")
+                        .IsUnique();
+
                     b.ToTable("DailyRevenueReport", "finance");
                 });
 
@@ -554,6 +592,10 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("smallint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreditLimitId");
+
+                    b.HasIndex("CustomerId");
 
                     b.ToTable("DebtRecord", "finance");
                 });
@@ -609,6 +651,8 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CustomerId");
+
                     b.ToTable("EmailNotification", "finance");
                 });
 
@@ -629,6 +673,15 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.Property<DateOnly?>("EffectiveTo")
                         .HasColumnType("date");
+
+                    b.Property<decimal>("ImportDutyPct")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<decimal>("ImportEntrustmentMinVnd")
+                        .HasColumnType("decimal(10,0)");
+
+                    b.Property<decimal>("ImportVatPct")
+                        .HasColumnType("decimal(5,4)");
 
                     b.Property<decimal>("InspectionFeePct")
                         .HasColumnType("decimal(5,4)");
@@ -675,6 +728,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("VipTierId");
 
                     b.ToTable("FeeRule", "finance");
                 });
@@ -729,6 +784,10 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("WalletId");
+
                     b.ToTable("FraudDetection", "finance");
                 });
 
@@ -775,6 +834,8 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("WalletId");
 
                     b.ToTable("PaymentLock", "finance");
                 });
@@ -885,6 +946,8 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("WalletId");
+
                     b.ToTable("RefundProcess", "finance");
                 });
 
@@ -945,6 +1008,13 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BankAccountId");
+
+                    b.HasIndex("TransferContent")
+                        .IsUnique();
+
+                    b.HasIndex("WalletId");
+
                     b.ToTable("TopupRequest", "finance");
                 });
 
@@ -977,6 +1047,9 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
 
                     b.ToTable("TransactionType", "finance");
                 });
@@ -1027,6 +1100,12 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("decimal(5,4)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Level")
+                        .IsUnique();
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("VipTier", "finance");
                 });
@@ -1080,6 +1159,9 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CustomerId")
+                        .IsUnique();
+
                     b.ToTable("Wallet", "finance");
                 });
 
@@ -1123,6 +1205,10 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TypeId");
+
+                    b.HasIndex("WalletId");
 
                     b.ToTable("WalletTransaction", "finance");
                 });
@@ -1196,7 +1282,187 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("WalletId");
+
                     b.ToTable("WithdrawRequest", "finance");
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.BankWebhookLog", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.BankAccount", null)
+                        .WithMany()
+                        .HasForeignKey("BankAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LG.Core.Domain.Finance.TopupRequest", null)
+                        .WithMany()
+                        .HasForeignKey("MatchedTopupId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.CreditLimit", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.CustomerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.CustomerAddress", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.CustomerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.CustomerKYC", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.CustomerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.CustomerProfile", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.VipTier", null)
+                        .WithMany()
+                        .HasForeignKey("VipTierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.DebtRecord", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.CreditLimit", null)
+                        .WithMany()
+                        .HasForeignKey("CreditLimitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LG.Core.Domain.Finance.CustomerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.EmailNotification", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.CustomerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.FeeRule", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.VipTier", null)
+                        .WithMany()
+                        .HasForeignKey("VipTierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.FraudDetection", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.CustomerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LG.Core.Domain.Finance.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.PaymentLock", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.RefundProcess", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.TopupRequest", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.BankAccount", null)
+                        .WithMany()
+                        .HasForeignKey("BankAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LG.Core.Domain.Finance.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.Wallet", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.CustomerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.WalletTransaction", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.TransactionType", null)
+                        .WithMany()
+                        .HasForeignKey("TypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LG.Core.Domain.Finance.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LG.Core.Domain.Finance.WithdrawRequest", b =>
+                {
+                    b.HasOne("LG.Core.Domain.Finance.CustomerProfile", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LG.Core.Domain.Finance.Wallet", null)
+                        .WithMany()
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

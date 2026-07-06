@@ -13,6 +13,9 @@ import {
 import { FraudStatusEnum } from "~/lib/enums/finance";
 import type { FraudDetectionDto } from "~/lib/types/adminFinance";
 import dayjs from "dayjs";
+import { Button } from "~/components/ui/Button";
+import { Select } from "~/components/ui/Select";
+import { Textarea } from "~/components/ui/Textarea";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -130,14 +133,15 @@ export default function AdminFraudPage() {
             <p className="text-sm text-gray-500">Giám sát các cảnh báo rủi ro giao dịch của hệ thống</p>
           </div>
         </div>
-        <button
+        <Button
           onClick={() => dispatch(fetchFraudCases())}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 bg-white border border-[#EAEAEA] hover:bg-gray-50 text-black text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+          variant="secondary"
+          className="inline-flex items-center gap-1.5"
         >
           <PiArrowClockwiseBold className={loading ? "animate-spin" : ""} />
           Làm mới
-        </button>
+        </Button>
       </div>
 
       {/* Alert Messages */}
@@ -199,12 +203,12 @@ export default function AdminFraudPage() {
                         {dayjs(record.createdDate).format("DD/MM/YYYY HH:mm")}
                       </td>
                       <td className="py-3.5 px-6 text-right">
-                        <button
+                        <Button
                           onClick={() => handleReview(record)}
-                          className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-3 py-1.5 rounded transition-colors"
+                          size="sm"
                         >
                           Kiểm tra
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -272,49 +276,43 @@ export default function AdminFraudPage() {
 
             <form onSubmit={handleModalSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Trạng thái xử lý *
-                </label>
-                <select
+                <Select
+                  label="Trạng thái xử lý *"
                   value={caseStatus}
                   onChange={(e) => setCaseStatus(Number(e.target.value) as FraudStatusEnum)}
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none bg-white font-medium"
                 >
                   <option value={FraudStatusEnum.Open}>{FRAUD_STATUS_LABELS[FraudStatusEnum.Open]}</option>
                   <option value={FraudStatusEnum.Investigating}>{FRAUD_STATUS_LABELS[FraudStatusEnum.Investigating]}</option>
                   <option value={FraudStatusEnum.Confirmed}>{FRAUD_STATUS_LABELS[FraudStatusEnum.Confirmed]}</option>
                   <option value={FraudStatusEnum.FalsePositive}>{FRAUD_STATUS_LABELS[FraudStatusEnum.FalsePositive]}</option>
-                </select>
+                </Select>
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Ghi chú giải quyết
-                </label>
-                <textarea
+                <Textarea
+                  label="Ghi chú giải quyết"
                   rows={4}
                   value={resolutionNote}
                   onChange={(e) => setResolutionNote(e.target.value)}
                   placeholder="Nhập ghi chú chi tiết về cách giải quyết..."
-                  className="w-full rounded border border-[#EAEAEA] p-3 text-sm text-black focus:border-black focus:outline-none"
-                ></textarea>
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalVisible(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  loading={loading}
                 >
-                  {loading ? "Đang xử lý..." : "Cập nhật trạng thái"}
-                </button>
+                  Cập nhật trạng thái
+                </Button>
               </div>
             </form>
           </div>

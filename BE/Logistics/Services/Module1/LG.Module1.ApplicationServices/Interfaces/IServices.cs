@@ -209,16 +209,22 @@ public record WalletCalculateFeesResponse(
     decimal ServiceFeeVnd,
     decimal InspectionFeeVnd,
     decimal InsuranceFeeVnd,
+    decimal ImportEntrustmentFeeVnd,
+    decimal ImportVatVnd,
+    decimal ImportDutyVnd,
     string  InsuranceOption,
     decimal TotalCheckoutFeeVnd,
-    Guid?   FeeRuleId
+    Guid?   FeeRuleId,
+    decimal ServiceFeeDiscountVnd,
+    decimal InspectionFeeDiscountVnd
 );
 
 public record WalletCalculateShippingFeesResponse(
     decimal ShippingIntlFeeVnd,
     decimal StorageFeeVnd,
     decimal ChargeableWeightKg,
-    decimal TotalShippingFeeVnd
+    decimal TotalShippingFeeVnd,
+    int     StorageDaysOverFree
 );
 
 // ── Wallet Service Integration ──────────────────────────────────────
@@ -234,7 +240,7 @@ public interface IWalletService
     Task RefundAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId, string description, CancellationToken ct = default);
 
     /// Tính toán các khoản phí checkout (dịch vụ, kiểm hàng, bảo hiểm).
-    Task<WalletCalculateFeesResponse> CalculateCheckoutFeesAsync(Guid customerId, decimal subtotalVnd, string insuranceOption, CancellationToken ct = default);
+    Task<WalletCalculateFeesResponse> CalculateCheckoutFeesAsync(Guid customerId, decimal subtotalVnd, string insuranceOption, string shippingLine = "Tmdt", CancellationToken ct = default);
 
     /// Tính toán phí vận chuyển quốc tế và lưu kho.
     Task<WalletCalculateShippingFeesResponse> CalculateShippingFeesAsync(Guid customerId, decimal actualWeightKg, decimal? volumeCm3, int storageDaysOverFree, CancellationToken ct = default);

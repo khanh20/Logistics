@@ -3,11 +3,13 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { manageOrdersApi, staffAssignmentsApi } from "~/lib/api/orders";
-import { PiWarningCircleBold } from "react-icons/pi";
+import { PiWarningCircleBold, PiPackageBold, PiCheckCircleBold } from "react-icons/pi";
 import { StatusBadge } from "~/components/shared/StatusBadge";
 import { OrderTimeline } from "~/components/customer/OrderTimeline";
 import { SlaCountdown } from "~/components/admin/SlaCountdown";
 import { Button } from "~/components/ui/Button";
+import { Input } from "~/components/ui/Input";
+import { Textarea } from "~/components/ui/Textarea";
 import { formatCNY, formatVND, formatDate } from "~/lib/utils/format";
 import type { OrderDetailResponse, OrderStatus, StaffAssignmentDto } from "~/lib/types/order";
 import type { Route } from "./+types/orders.$id";
@@ -160,18 +162,16 @@ export default function AdminOrderDetailPage({
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <p className="text-xs font-semibold text-gray-600 mb-2">Phân tích phí</p>
                 <div className="space-y-1">
-                  {order.fees.map((f) => (
-                    <div key={f.feeType} className="flex justify-between text-xs text-gray-600">
-                      <span>{feeLabel(f.feeType)}</span>
-                      <span className="font-medium">{formatVND(f.amountVnd)}</span>
-                    </div>
-                  ))}
-                  {order.shippingFeeVnd > 0 && (
-                    <div className="flex justify-between text-xs text-gray-600">
-                      <span>Phí ship quốc tế</span>
-                      <span className="font-medium">{formatVND(order.shippingFeeVnd)}</span>
-                    </div>
-                  )}
+                  {order.fees.map((f) => {
+                    const label = feeLabel(f.feeType, t);
+                    const showNote = f.note && f.note.toLowerCase() !== label.toLowerCase();
+                    return (
+                      <div key={f.feeType} className="flex justify-between text-xs text-gray-600">
+                        <span>{label}{showNote ? ` (${f.note})` : ""}</span>
+                        <span className="font-medium">{formatVND(f.amountVnd)}</span>
+                      </div>
+                    );
+                  })}
                   <div className="flex justify-between text-xs font-bold text-gray-900 border-t border-gray-100 pt-1 mt-1">
                     <span>Tổng đơn hàng</span>
                     <span>{formatVND(order.finalAmountVnd)}</span>
@@ -183,7 +183,7 @@ export default function AdminOrderDetailPage({
             {/* Shipping info if recorded */}
             {order.actualWeightKg != null && (
               <div className="mt-4 pt-3 border-t border-gray-100">
-                <p className="text-xs font-semibold text-blue-700 mb-2">📦 Thông tin vận chuyển thực tế</p>
+                <p className="text-xs font-semibold text-blue-700 mb-2 flex items-center gap-1.5"><PiPackageBold className="text-sm" /> Thông tin vận chuyển thực tế</p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   <span className="text-gray-500">Cân nặng:</span>
                   <span className="font-medium">{order.actualWeightKg} kg</span>
@@ -256,7 +256,7 @@ export default function AdminOrderDetailPage({
                     {item.imageUrl ? (
                       <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300">📦</div>
+                      <div className="w-full h-full flex items-center justify-center text-gray-300"><PiPackageBold className="text-xl" /></div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -287,11 +287,10 @@ export default function AdminOrderDetailPage({
           {/* Assign staff */}
           {actions.canAssign && (
             <ActionCard title={t("order.action_assign")}>
-              <input
+              <Input
                 value={assignStaffId}
                 onChange={(e) => setAssignStaffId(e.target.value)}
                 placeholder={t("order.staff_id_placeholder")}
-                className="action-input"
               />
               <Button
                 size="sm"
@@ -313,18 +312,17 @@ export default function AdminOrderDetailPage({
           {/* Manual place */}
           {actions.canPlaceManual && (
             <ActionCard title={t("order.action_manual_place")}>
-              <input
+              <Input
                 value={platformOrderId}
                 onChange={(e) => setPlatformOrderId(e.target.value)}
                 placeholder={t("order.platform_id_placeholder")}
-                className="action-input"
               />
-              <textarea
+              <Textarea
                 value={placeNote}
                 onChange={(e) => setPlaceNote(e.target.value)}
                 placeholder={t("order.note_optional_placeholder")}
                 rows={2}
-                className="action-textarea mt-2"
+                className="mt-2"
               />
               <Button
                 size="sm"
@@ -350,17 +348,16 @@ export default function AdminOrderDetailPage({
           {/* Update tracking */}
           {actions.canUpdateTracking && (
             <ActionCard title={t("order.action_update_tracking")}>
-              <input
+              <Input
                 value={trackingNumber}
                 onChange={(e) => setTrackingNumber(e.target.value)}
                 placeholder={t("order.tracking_placeholder")}
-                className="action-input"
               />
-              <input
+              <Input
                 value={trackingCarrier}
                 onChange={(e) => setTrackingCarrier(e.target.value)}
                 placeholder={t("order.carrier_placeholder")}
-                className="action-input mt-2"
+                className="mt-2"
               />
               <Button
                 size="sm"
@@ -391,12 +388,12 @@ export default function AdminOrderDetailPage({
             actions.canComplete ||
             actions.canReturn) && (
             <ActionCard title={t("order.action_transition")}>
-              <textarea
+              <Textarea
                 value={transitionNote}
                 onChange={(e) => setTransitionNote(e.target.value)}
                 placeholder={t("order.note_optional_placeholder")}
                 rows={2}
-                className="action-textarea mb-2"
+                className="mb-2"
               />
 
               {actions.canArrivedChina && (
@@ -425,43 +422,34 @@ export default function AdminOrderDetailPage({
               )}
               {actions.canArrivedVN && (
                 <div className="border border-blue-100 bg-blue-50 rounded-xl p-3 mb-2">
-                  <p className="text-xs font-semibold text-blue-800 mb-2">📦 Nhập thông tin hàng về kho VN</p>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-[11px] text-gray-500">Cân nặng thực (kg) *</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={weightKg}
-                        onChange={(e) => setWeightKg(e.target.value)}
-                        placeholder="VD: 1.5"
-                        className="action-input mt-0.5"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-gray-500">Thể tích (cm³) — tuỳ chọn</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={volumeCm3}
-                        onChange={(e) => setVolumeCm3(e.target.value)}
-                        placeholder="VD: 3000"
-                        className="action-input mt-0.5"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-gray-500">Ngày lưu kho vượt miễn phí</label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={storageDays}
-                        onChange={(e) => setStorageDays(e.target.value)}
-                        className="action-input mt-0.5"
-                      />
-                    </div>
+                  <p className="text-xs font-semibold text-blue-800 mb-2 flex items-center gap-1.5"><PiPackageBold className="text-sm" /> Nhập thông tin hàng về kho VN</p>
+                  <div className="space-y-3">
+                    <Input
+                      label="Cân nặng thực (kg) *"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={weightKg}
+                      onChange={(e) => setWeightKg(e.target.value)}
+                      placeholder="VD: 1.5"
+                    />
+                    <Input
+                      label="Thể tích (cm³) — tuỳ chọn"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={volumeCm3}
+                      onChange={(e) => setVolumeCm3(e.target.value)}
+                      placeholder="VD: 3000"
+                    />
+                    <Input
+                      label="Tổng số ngày lưu kho (ngày)"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={storageDays}
+                      onChange={(e) => setStorageDays(e.target.value)}
+                    />
                   </div>
                   <Button
                     size="sm"
@@ -481,7 +469,8 @@ export default function AdminOrderDetailPage({
                       )
                     }
                   >
-                    ✅ Xác nhận hàng về kho VN
+                    {!loading && <PiCheckCircleBold className="text-lg" />}
+                    Xác nhận hàng về kho VN
                   </Button>
                 </div>
               )}
@@ -528,12 +517,11 @@ export default function AdminOrderDetailPage({
           {/* Record issue */}
           {actions.canRecordIssue && (
             <ActionCard title={t("order.action_record_issue")}>
-              <textarea
+              <Textarea
                 value={issueNote}
                 onChange={(e) => setIssueNote(e.target.value)}
                 placeholder={t("order.issue_placeholder")}
                 rows={3}
-                className="action-textarea"
               />
               <Button
                 variant="secondary"
@@ -560,11 +548,10 @@ export default function AdminOrderDetailPage({
                 NV hiện tại:{" "}
                 <span className="font-mono">{assignment.staffId.slice(0, 12)}…</span>
               </p>
-              <input
+              <Input
                 value={reassignStaffId}
                 onChange={(e) => setReassignStaffId(e.target.value)}
                 placeholder="Staff UUID mới"
-                className="action-input"
               />
               <Button
                 variant="secondary"
@@ -599,11 +586,10 @@ export default function AdminOrderDetailPage({
           {/* Cancel by staff */}
           {actions.canCancelByStaff && (
             <ActionCard title={t("order.action_cancel_staff")} danger>
-              <input
+              <Input
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder={t("order.cancel_reason_placeholder")}
-                className="action-input"
               />
               <Button
                 variant="danger"
@@ -685,21 +671,6 @@ function ActionCard({
         {title}
       </h3>
       {children}
-
-      <style>{`
-        .action-input {
-          width: 100%; font-size: 0.875rem;
-          border: 1px solid #d1d5db; border-radius: 0.5rem;
-          padding: 0.375rem 0.75rem; background: white;
-        }
-        .action-input:focus { outline: none; box-shadow: 0 0 0 2px var(--color-primary); }
-        .action-textarea {
-          width: 100%; font-size: 0.875rem; resize: none;
-          border: 1px solid #d1d5db; border-radius: 0.5rem;
-          padding: 0.375rem 0.75rem;
-        }
-        .action-textarea:focus { outline: none; box-shadow: 0 0 0 2px var(--color-primary); }
-      `}</style>
     </div>
   );
 }
@@ -728,12 +699,23 @@ function TransitionBtn({
   );
 }
 
-function feeLabel(feeType: string): string {
+function feeLabel(feeType: string, t: any): string {
+  const normalizedKey = feeType.trim().toLowerCase();
+  const translationKey = `order.fees.${normalizedKey}`;
+  const translated = t(translationKey);
+  if (translated !== translationKey) {
+    return translated;
+  }
   const labels: Record<string, string> = {
-    ServiceFee: "Phí dịch vụ",
-    InspectionFee: "Phí kiểm hàng",
-    InsuranceFee: "Phí bảo hiểm",
-    ShippingFee: "Phí vận chuyển",
+    service: "Phí dịch vụ mua hộ",
+    inspection: "Phí kiểm hàng",
+    insurance: "Phí bảo hiểm",
+    import_duty: "Thuế nhập khẩu",
+    import_vat: "Thuế VAT nhập khẩu",
+    import_entrustment: "Phí ủy thác nhập khẩu",
+    shipping_cn_to_vn: "Phí vận chuyển TQ-VN",
+    storage: "Phí lưu kho vượt",
+    ship_local: "Phí giao hàng nội địa",
   };
-  return labels[feeType] ?? feeType;
+  return labels[normalizedKey] ?? feeType;
 }

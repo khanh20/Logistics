@@ -28,12 +28,51 @@ public class CustomerOrderService(
         return (items.Select(MapToListItem).ToList(), total);
     }
 
+    internal static async Task SyncStorageFeeIfNeededAsync(
+        CustomerOrder order, 
+        IWalletService walletService, 
+        ICustomerOrderRepository orderRepo, 
+        IModule1UnitOfWork uow, 
+        CancellationToken ct)
+    {
+        if (order.Status == OrderStatus.ArrivedVietnam)
+        {
+            var arrivedHistory = order.History.FirstOrDefault(h => h.ToStatus == OrderStatus.ArrivedVietnam);
+            if (arrivedHistory != null)
+            {
+                var arrivedAt = arrivedHistory.ChangedAt;
+                var totalStorageDays = Math.Max(0, (DateTime.UtcNow.Date - arrivedAt.Date).Days);
+                
+                // Chỉ tính toán lại nếu ngày hiện tại khác với ngày cập nhật cuối của Order
+                if (order.UpdatedAt.Date < DateTime.UtcNow.Date)
+                {
+                    var shippingFeeCalc = await walletService.CalculateShippingFeesAsync(
+                        order.CustomerId, order.ActualWeightKg ?? 0m, order.VolumeCm3, totalStorageDays, ct);
+                    
+                    order.UpdateShippingInfo(
+                        order.ActualWeightKg ?? 0m, 
+                        order.VolumeCm3, 
+                        shippingFeeCalc.StorageDaysOverFree, 
+                        shippingFeeCalc.ShippingIntlFeeVnd,
+                        shippingFeeCalc.StorageFeeVnd,
+                        shippingFeeCalc.ChargeableWeightKg);
+                        
+                    await orderRepo.UpdateAsync(order, ct);
+                    await uow.SaveChangesAsync(ct);
+                }
+            }
+        }
+    }
+
     public async Task<OrderDetailResponse> GetMyOrderDetailAsync(Guid customerId, Guid orderId, CancellationToken ct = default)
     {
         var order = await orderRepo.GetByIdWithDetailsAsync(orderId, ct)
                     ?? throw new OrderNotFoundException(orderId);
         if (order.CustomerId != customerId)
             throw new OrderNotFoundException(orderId);   // không lộ id của người khác
+
+        await SyncStorageFeeIfNeededAsync(order, walletService, orderRepo, uow, ct);
+
         return MapToDetail(order);
     }
 
@@ -128,6 +167,27 @@ public class CustomerOrderService(
 
         if (order.IsFinalPaid)
             throw new Exception("Đơn hàng đã thanh toán cuối kỳ.");
+
+        // Đồng bộ phí lưu kho thực tế tới thời điểm hiện tại trước khi trừ ví thanh toán cuối kỳ
+        var arrivedHistory = order.History.FirstOrDefault(h => h.ToStatus == OrderStatus.ArrivedVietnam);
+        if (arrivedHistory != null)
+        {
+            var arrivedAt = arrivedHistory.ChangedAt;
+            var totalStorageDays = Math.Max(0, (DateTime.UtcNow.Date - arrivedAt.Date).Days);
+            var shippingFeeCalc = await walletService.CalculateShippingFeesAsync(
+                order.CustomerId, order.ActualWeightKg ?? 0m, order.VolumeCm3, totalStorageDays, ct);
+            
+            order.UpdateShippingInfo(
+                order.ActualWeightKg ?? 0m, 
+                order.VolumeCm3, 
+                shippingFeeCalc.StorageDaysOverFree, 
+                shippingFeeCalc.ShippingIntlFeeVnd,
+                shippingFeeCalc.StorageFeeVnd,
+                shippingFeeCalc.ChargeableWeightKg);
+                
+            await orderRepo.UpdateAsync(order, ct);
+            await uow.SaveChangesAsync(ct);
+        }
 
         var remainingAmount = order.FinalAmountVnd - order.DepositVnd;
 
@@ -277,6 +337,9 @@ public class OrderManagementService(
     {
         var order = await orderRepo.GetByIdWithDetailsAsync(orderId, ct)
                     ?? throw new OrderNotFoundException(orderId);
+        
+        await CustomerOrderService.SyncStorageFeeIfNeededAsync(order, walletService, orderRepo, uow, ct);
+
         return CustomerOrderService.MapToDetail(order);
     }
 
@@ -353,27 +416,33 @@ public class OrderManagementService(
     public async Task<OrderDetailResponse> MarkArrivedVietnamAsync(Guid orderId, Guid staffId,
         ArrivedVietnamRequest req, CancellationToken ct = default)
     {
-        var orderPre = await orderRepo.GetByIdWithDetailsAsync(orderId, ct)
-                       ?? throw new OrderNotFoundException(orderId);
-
-        var shippingFeeCalc = await walletService.CalculateShippingFeesAsync(
-            orderPre.CustomerId, req.ActualWeightKg, req.VolumeCm3, req.StorageDaysOverFree, ct);
-
-        return await uow.ExecuteInTransactionAsync(async innerCt =>
+        try
         {
-            var order = await RequireOrderAsync(orderId, innerCt);
-            
-            order.UpdateShippingInfo(req.ActualWeightKg, req.VolumeCm3, req.StorageDaysOverFree, shippingFeeCalc.TotalShippingFeeVnd);
-            order.MarkArrivedVietnam(staffId, req.Note);
+            return await uow.ExecuteInTransactionAsync(async innerCt =>
+            {
+                var order = await RequireOrderAsync(orderId, innerCt);
+                
+                var shippingFeeCalc = await walletService.CalculateShippingFeesAsync(
+                    order.CustomerId, req.ActualWeightKg, req.VolumeCm3, req.StorageDaysOverFree, innerCt);
 
-            await historyRepo.AddAsync(order.History.Last(), innerCt);
-            await orderRepo.UpdateAsync(order, innerCt);
+                order.UpdateShippingInfo(req.ActualWeightKg, req.VolumeCm3, shippingFeeCalc.StorageDaysOverFree, 
+                                         shippingFeeCalc.ShippingIntlFeeVnd, shippingFeeCalc.StorageFeeVnd, shippingFeeCalc.ChargeableWeightKg);
+                order.MarkArrivedVietnam(staffId, req.Note);
 
-            logger.LogInformation("Order {OrderCode} marked ArrivedVietnam by staff {StaffId}. Shipping Fee: {ShippingFee}", 
-                order.OrderCode, staffId, shippingFeeCalc.TotalShippingFeeVnd);
+                await historyRepo.AddAsync(order.History.Last(), innerCt);
+                await orderRepo.UpdateAsync(order, innerCt);
 
-            return CustomerOrderService.MapToDetail(order);
-        }, ct);
+                logger.LogInformation("Order {OrderCode} marked ArrivedVietnam by staff {StaffId}. Shipping Fee: {ShippingFee}", 
+                    order.OrderCode, staffId, shippingFeeCalc.TotalShippingFeeVnd);
+
+                return CustomerOrderService.MapToDetail(order);
+            }, ct);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
+        {
+            var entityNames = string.Join(", ", ex.Entries.Select(e => $"{e.Entity.GetType().Name} (State: {e.State})"));
+            throw new Exception($"Concurrency error on entities: {entityNames}. Exception: {ex.Message}");
+        }
     }
 
     public Task<OrderDetailResponse> MarkDeliveringAsync(Guid orderId, Guid staffId,

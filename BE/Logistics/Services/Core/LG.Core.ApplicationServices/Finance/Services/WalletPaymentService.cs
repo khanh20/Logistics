@@ -94,6 +94,24 @@ namespace LG.Core.ApplicationServices.Finance.Services
                     };
                     await _db.WalletTransactions.AddAsync(walletTx);
 
+                    // 3. Cập nhật LifetimeValueVnd và xét thăng hạng VIP
+                    var profile = await _db.CustomerProfiles.FirstOrDefaultAsync(p => p.UserId == request.CustomerId);
+                    if (profile != null)
+                    {
+                        profile.LifetimeValueVnd += request.AmountVnd;
+                        
+                        var newTier = await _db.VipTiers
+                            .Where(t => t.MinSpendVnd <= profile.LifetimeValueVnd)
+                            .OrderByDescending(t => t.MinSpendVnd)
+                            .FirstOrDefaultAsync();
+
+                        if (newTier != null && profile.VipTierId != newTier.Id)
+                        {
+                            profile.VipTierId = newTier.Id;
+                            _logger.LogInformation("Khách hàng {CustomerId} được thăng hạng lên {TierName}", request.CustomerId, newTier.Name);
+                        }
+                    }
+
                     await _db.SaveChangesAsync();
                     await transaction.CommitAsync();
 
@@ -152,6 +170,25 @@ namespace LG.Core.ApplicationServices.Finance.Services
                     };
                     await _db.WalletTransactions.AddAsync(walletTx);
 
+                    // Giảm LifetimeValueVnd và xét giáng hạng VIP
+                    var profile = await _db.CustomerProfiles.FirstOrDefaultAsync(p => p.UserId == request.CustomerId);
+                    if (profile != null)
+                    {
+                        profile.LifetimeValueVnd -= request.AmountVnd;
+                        if (profile.LifetimeValueVnd < 0) profile.LifetimeValueVnd = 0;
+                        
+                        var newTier = await _db.VipTiers
+                            .Where(t => t.MinSpendVnd <= profile.LifetimeValueVnd)
+                            .OrderByDescending(t => t.MinSpendVnd)
+                            .FirstOrDefaultAsync();
+
+                        if (newTier != null && profile.VipTierId != newTier.Id)
+                        {
+                            profile.VipTierId = newTier.Id;
+                            _logger.LogInformation("Khách hàng {CustomerId} bị giảm hạng xuống {TierName}", request.CustomerId, newTier.Name);
+                        }
+                    }
+
                     await _db.SaveChangesAsync();
                     await transaction.CommitAsync();
 
@@ -186,6 +223,12 @@ namespace LG.Core.ApplicationServices.Finance.Services
                 vipTierId = profile?.VipTierId;
             }
 
+            VipTier? vipTier = null;
+            if (vipTierId.HasValue)
+            {
+                vipTier = await _db.VipTiers.FirstOrDefaultAsync(t => t.Id == vipTierId.Value);
+            }
+
             var rule = await FindApplicableFeeRuleAsync(vipTierId, request.PlatformId);
 
             if (rule == null)
@@ -196,19 +239,37 @@ namespace LG.Core.ApplicationServices.Finance.Services
                     ServiceFeeVnd = 0,
                     InspectionFeeVnd = 0,
                     InsuranceFeeVnd = 0,
+                    ImportEntrustmentFeeVnd = 0,
+                    ImportVatVnd = 0,
+                    ImportDutyVnd = 0,
                     InsuranceOption = request.InsuranceOption,
                     TotalCheckoutFeeVnd = 0,
                     FeeRuleId = null,
+                    ServiceFeeDiscountVnd = 0,
+                    InspectionFeeDiscountVnd = 0
                 };
             }
 
             // Phí dịch vụ = SubtotalVnd × ServiceFeePct
             var serviceFee = Math.Round(request.SubtotalVnd * rule.ServiceFeePct, 0);
+            decimal serviceFeeDiscount = 0;
+            if (vipTier != null && vipTier.ServiceFeeDiscountPct > 0)
+            {
+                var discountedServiceFee = Math.Round(serviceFee * (1 - vipTier.ServiceFeeDiscountPct), 0);
+                serviceFeeDiscount = serviceFee - discountedServiceFee;
+                serviceFee = discountedServiceFee;
+            }
 
             // Phí kiểm hàng = clamp(SubtotalVnd × InspectionFeePct, Min, Max)
             var inspectionFee = Math.Round(request.SubtotalVnd * rule.InspectionFeePct, 0);
             inspectionFee = Math.Max(inspectionFee, rule.InspectionMinVnd);
             inspectionFee = Math.Min(inspectionFee, rule.InspectionMaxVnd);
+            decimal inspectionFeeDiscount = 0;
+            if (vipTier != null && vipTier.FreeInspection)
+            {
+                inspectionFeeDiscount = inspectionFee;
+                inspectionFee = 0;
+            }
 
             // Bảo hiểm (tùy chọn)
             decimal insuranceFee = 0;
@@ -217,16 +278,33 @@ namespace LG.Core.ApplicationServices.Finance.Services
             else if (request.InsuranceOption == "full")
                 insuranceFee = Math.Round(request.SubtotalVnd * rule.InsuranceFullPct, 0);
 
-            var totalFee = serviceFee + inspectionFee + insuranceFee;
+            // Hàng chính ngạch
+            decimal importEntrustmentFee = 0;
+            decimal importVatFee = 0;
+            decimal importDutyFee = 0;
+            
+            if (request.ShippingLine == "OfficialQuota")
+            {
+                importDutyFee = Math.Round(request.SubtotalVnd * rule.ImportDutyPct, 0);
+                importVatFee = Math.Round((request.SubtotalVnd + importDutyFee) * rule.ImportVatPct, 0);
+                importEntrustmentFee = rule.ImportEntrustmentMinVnd;
+            }
+
+            var totalFee = serviceFee + inspectionFee + insuranceFee + importEntrustmentFee + importVatFee + importDutyFee;
 
             return new CalculateFeesResponse
             {
                 ServiceFeeVnd = serviceFee,
                 InspectionFeeVnd = inspectionFee,
                 InsuranceFeeVnd = insuranceFee,
+                ImportEntrustmentFeeVnd = importEntrustmentFee,
+                ImportVatVnd = importVatFee,
+                ImportDutyVnd = importDutyFee,
                 InsuranceOption = request.InsuranceOption,
                 TotalCheckoutFeeVnd = totalFee,
                 FeeRuleId = rule.Id,
+                ServiceFeeDiscountVnd = serviceFeeDiscount,
+                InspectionFeeDiscountVnd = inspectionFeeDiscount
             };
         }
 
@@ -244,6 +322,12 @@ namespace LG.Core.ApplicationServices.Finance.Services
                 }
             }
 
+            VipTier? vipTier = null;
+            if (vipTierId.HasValue)
+            {
+                vipTier = await _db.VipTiers.FirstOrDefaultAsync(t => t.Id == vipTierId.Value);
+            }
+
             var rule = await FindApplicableFeeRuleAsync(vipTierId, request.PlatformId);
 
             if (rule == null)
@@ -254,6 +338,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
                     StorageFeeVnd = 0,
                     ChargeableWeightKg = request.ActualWeightKg,
                     TotalShippingFeeVnd = 0,
+                    StorageDaysOverFree = 0
                 };
             }
 
@@ -270,9 +355,13 @@ namespace LG.Core.ApplicationServices.Finance.Services
             var shippingFee = Math.Round(chargeableKg * rule.IntlShipPerKgVnd, 0);
 
             // Phí lưu kho = daysOverFree × actualKg × StorageDailyPerKgVnd
+            // request.StorageDaysOverFree bây giờ đóng vai trò là tổng số ngày lưu kho thực tế
+            var freeStorageDays = vipTier?.FreeStorageDays ?? 7;
+            var storageDaysOverFree = Math.Max(0, request.StorageDaysOverFree - freeStorageDays);
+
             var storageFee = 0m;
-            if (request.StorageDaysOverFree > 0)
-                storageFee = Math.Round(request.StorageDaysOverFree * request.ActualWeightKg * rule.StorageDailyPerKgVnd, 0);
+            if (storageDaysOverFree > 0)
+                storageFee = Math.Round(storageDaysOverFree * request.ActualWeightKg * rule.StorageDailyPerKgVnd, 0);
 
             return new CalculateShippingFeesResponse
             {
@@ -280,6 +369,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
                 StorageFeeVnd = storageFee,
                 ChargeableWeightKg = chargeableKg,
                 TotalShippingFeeVnd = shippingFee + storageFee,
+                StorageDaysOverFree = storageDaysOverFree
             };
         }
 
@@ -314,6 +404,26 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
             if (wallet == null)
             {
+                // Đảm bảo CustomerProfile tồn tại trước khi tạo Wallet (FK constraint)
+                var profileExists = await _db.CustomerProfiles.AnyAsync(p => p.UserId == customerId);
+                if (!profileExists)
+                {
+                    var standardTier = await _db.VipTiers
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(t => t.Level == 0);
+
+                    var profile = new CustomerProfile
+                    {
+                        UserId = customerId,
+                        CustomerCode = "KH" + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + new Random().Next(100, 999),
+                        FullName = GetCurrentUserFullName() ?? "Khách hàng mới",
+                        VipTierId = standardTier?.Id,
+                        CreatedDate = DateTime.UtcNow
+                    };
+                    _db.CustomerProfiles.Add(profile);
+                    await _db.SaveChangesAsync();
+                }
+
                 wallet = new Wallet
                 {
                     CustomerId = customerId,

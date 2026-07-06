@@ -9,6 +9,9 @@ import {
   PiCopyBold,
   PiCheckBold as PiCheckIcon
 } from "react-icons/pi";
+import { Input } from "~/components/ui/Input";
+import { Textarea } from "~/components/ui/Textarea";
+import { Button } from "~/components/ui/Button";
 
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import {
@@ -243,20 +246,21 @@ export default function AdminFinanceWithdraws() {
                     </td>
                     <td className="py-3.5 px-6 text-right">
                       <div className="inline-flex gap-2">
-                        <button
+                        <Button
+                          size="sm"
                           onClick={() => openApproveModal(record)}
-                          className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded transition-colors"
                         >
                           <PiCheckBold />
                           Duyệt
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
                           onClick={() => openRejectModal(record)}
-                          className="inline-flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded transition-colors"
                         >
                           <PiXBold />
                           Từ chối
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -302,34 +306,30 @@ export default function AdminFinanceWithdraws() {
 
             <form onSubmit={handleApprove}>
               <div className="mb-4">
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-2">
-                  Mã giao dịch chuyển khoản
-                </label>
-                <input
+                <Input
+                  label="Mã giao dịch chuyển khoản"
                   type="text"
                   required
                   value={transferRef}
                   onChange={(e) => setTransferRef(e.target.value)}
                   placeholder="Nhập mã giao dịch của ngân hàng (FT...)"
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                 />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setApproveModalVisible(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={actionLoading}
-                  className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  loading={actionLoading}
                 >
-                  {actionLoading ? "Đang xử lý..." : "Xác nhận duyệt"}
-                </button>
+                  Xác nhận duyệt
+                </Button>
               </div>
             </form>
           </div>
@@ -364,34 +364,31 @@ export default function AdminFinanceWithdraws() {
 
             <form onSubmit={handleReject}>
               <div className="mb-4">
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-2">
-                  Lý do từ chối
-                </label>
-                <textarea
+                <Textarea
+                  label="Lý do từ chối"
                   rows={3}
                   required
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Ví dụ: Thông tin tài khoản không hợp lệ..."
-                  className="w-full rounded border border-[#EAEAEA] p-3 text-sm text-black focus:border-black focus:outline-none"
-                ></textarea>
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setRejectModalVisible(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={actionLoading}
-                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  variant="danger"
+                  loading={actionLoading}
                 >
-                  {actionLoading ? "Đang xử lý..." : "Xác nhận từ chối"}
-                </button>
+                  Xác nhận từ chối
+                </Button>
               </div>
             </form>
           </div>

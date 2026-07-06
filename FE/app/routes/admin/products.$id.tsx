@@ -7,6 +7,8 @@ import { categoriesApi } from "~/lib/api/categories";
 import { Button } from "~/components/ui/Button";
 import { Badge } from "~/components/ui/Badge";
 import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
+import { Textarea } from "~/components/ui/Textarea";
 import { cn } from "~/lib/utils/cn";
 import { formatDate, formatCNY } from "~/lib/utils/format";
 import type {
@@ -246,11 +248,10 @@ function InfoTab({
     {
       label: t("product.seo_desc"),
       value: editing ? (
-        <textarea
+        <Textarea
           value={seoDesc}
           onChange={(e) => setSeoDesc(e.target.value)}
           rows={3}
-          className="w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       ) : (
         product.seoDescription ?? "—"
@@ -272,10 +273,9 @@ function InfoTab({
     {
       label: t("product.filter_category"),
       value: editing ? (
-        <select
+        <Select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          className="h-9 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
         >
           {flatCategories.map((c) => (
             <option key={c.id} value={c.id}>
@@ -283,7 +283,7 @@ function InfoTab({
               {c.nameVn}
             </option>
           ))}
-        </select>
+        </Select>
       ) : (
         `${product.category.nameVn} (${product.category.slug})`
       ),

@@ -54,7 +54,7 @@
     "all": "Tất cả",
     "prev_page": "← Trước",
     "next_page": "Tiếp →",
-    "browse_products": "Tìm sản phẩm →",
+    "browse_products": "Tìm sản phẩm",
     "optional": "tuỳ chọn"
   },
   "auth": {
@@ -113,6 +113,16 @@
       "CancelledByCustomer": "KH hủy",
       "CancelledByStaff": "NV hủy",
       "Returned": "Hoàn hàng"
+    },
+    "fees": {
+      "service": "Phí dịch vụ mua hộ",
+      "inspection": "Phí kiểm hàng",
+      "insurance": "Phí bảo hiểm",
+      "import_duty": "Thuế nhập khẩu",
+      "import_vat": "Thuế VAT nhập khẩu",
+      "import_entrustment": "Phí ủy thác nhập khẩu",
+      "shipping_cn_to_vn": "Phí vận chuyển TQ-VN",
+      "ship_local": "Phí giao hàng nội địa"
     },
     "deposit_cta": "Đặt cọc ngay ({{amount}})",
     "my_orders": "Đơn mua hộ của tôi",
@@ -231,7 +241,7 @@
     "confirm_dialog": "Xác nhận đặt hàng? Số tiền cọc sẽ được trừ từ ví của bạn.",
     "preview_error": "Không thể tính tổng",
     "checkout_error": "Đặt hàng thất bại",
-    "browse_products": "Tìm sản phẩm →"
+    "browse_products": "Tìm sản phẩm"
   },
   "product": {
     "title": "Sản phẩm",
@@ -506,7 +516,7 @@
     "overdue_section": "Đơn quá SLA",
     "overdue_title": "Đơn quá SLA",
     "overdue_count": "{{count}} đơn đã vượt quá thời hạn xử lý",
-    "view_all": "Xem tất cả →",
+    "view_all": "Xem tất cả",
     "back_to_dashboard": "← Staff Dashboard",
     "no_overdue": "Không có đơn nào quá SLA ✓",
     "no_overdue_subtitle": "Tất cả đơn đang được xử lý đúng hạn.",
@@ -645,10 +655,10 @@
     "hero_title": "Mua hộ hàng nước ngoài",
     "hero_highlight": "uy tín",
     "hero_subtitle": "Tỉ giá minh bạch, phí rõ ràng, theo dõi đơn thời gian thực từ kho TQ về tận tay bạn.",
-    "cta_browse": "Tìm sản phẩm →",
+    "cta_browse": "Tìm sản phẩm",
     "cta_register": "Đăng ký miễn phí",
     "rate_today": "Tỉ giá hôm nay:",
-    "see_all": "Xem tất cả →",
+    "see_all": "Xem tất cả",
     "supported_by": "Hỗ trợ mua hàng từ",
     "feature_1_title": "Đa dạng sàn TMĐT",
     "feature_1_desc": "Taobao, 1688, AliExpress, eBay, Rakuten — một tài khoản, mua từ khắp nơi.",

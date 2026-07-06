@@ -97,13 +97,14 @@ namespace LG.Module1.ApplicationServices.Services
                 throw new Exception(result?.Message ?? "Hoàn tiền ví thất bại.");
             }
         }
-        public async Task<WalletCalculateFeesResponse> CalculateCheckoutFeesAsync(Guid customerId, decimal subtotalVnd, string insuranceOption, CancellationToken ct = default)
+        public async Task<WalletCalculateFeesResponse> CalculateCheckoutFeesAsync(Guid customerId, decimal subtotalVnd, string insuranceOption, string shippingLine = "Tmdt", CancellationToken ct = default)
         {
             var req = new
             {
                 CustomerId = customerId,
                 SubtotalVnd = subtotalVnd,
-                InsuranceOption = insuranceOption
+                InsuranceOption = insuranceOption,
+                ShippingLine = shippingLine
             };
 
             var response = await _httpClient.PostAsJsonAsync("api/wallet-payment/calculate-checkout-fees", req, ct);

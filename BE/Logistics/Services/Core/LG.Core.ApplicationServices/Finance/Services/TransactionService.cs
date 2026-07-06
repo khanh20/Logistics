@@ -57,6 +57,26 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
                 if (wallets.Count == 0)
                 {
+                    // Đảm bảo CustomerProfile tồn tại trước khi tạo Wallet (FK constraint)
+                    var profileExists = await _db.CustomerProfiles.AnyAsync(p => p.UserId == userId);
+                    if (!profileExists)
+                    {
+                        var standardTier = await _db.VipTiers
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(t => t.Level == 0);
+
+                        var profile = new CustomerProfile
+                        {
+                            UserId = userId,
+                            CustomerCode = "KH" + DateTime.UtcNow.ToString("yyyyMMddHHmmss") + new Random().Next(100, 999),
+                            FullName = GetCurrentUserFullName() ?? "Khách hàng mới",
+                            VipTierId = standardTier?.Id,
+                            CreatedDate = DateTime.UtcNow
+                        };
+                        _db.CustomerProfiles.Add(profile);
+                        await _db.SaveChangesAsync();
+                    }
+
                     var wallet = new Wallet
                     {
                         CustomerId = userId,

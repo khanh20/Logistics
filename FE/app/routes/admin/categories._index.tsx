@@ -4,6 +4,7 @@ import type { Route } from "./+types/categories._index";
 import { categoriesApi, forbiddenCategoriesApi } from "~/lib/api/categories";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
 import { Badge } from "~/components/ui/Badge";
 import { cn } from "~/lib/utils/cn";
 import type {
@@ -232,13 +233,10 @@ function CategoriesTab({
             />
             {editingId === "new" && (
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">
-                  {t("category.parent")}
-                </label>
-                <select
+                <Select
+                  label={t("category.parent")}
                   value={form.parentId}
                   onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
-                  className="h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="">{t("category.no_parent")}</option>
                   {flatAll.map((c) => (
@@ -247,7 +245,7 @@ function CategoriesTab({
                       {c.nameVn}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
             {editingId !== "new" && (
@@ -440,17 +438,14 @@ function ForbiddenTab({
               required
             />
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-gray-600">
-                {t("forbidden.severity")}
-              </label>
-              <select
+              <Select
+                label={t("forbidden.severity")}
                 value={form.severity}
                 onChange={(e) => setForm((f) => ({ ...f, severity: e.target.value }))}
-                className="h-10 rounded-lg border border-gray-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="Block">{t("forbidden.severity_block")}</option>
                 <option value="Warn">{t("forbidden.severity_warn")}</option>
-              </select>
+              </Select>
             </div>
             <Input
               label={t("forbidden.reason")}
