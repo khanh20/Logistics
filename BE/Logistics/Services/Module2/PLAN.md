@@ -94,7 +94,7 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 
 **B. Độ bền / production:**
 - [x] B4 — Tách HTTP khỏi transaction ✅ (2026-07-07): `CreateAsync` cấu trúc lại — validate (chỉ đọc) → quote (HTTP, không side-effect) → **Tx1** chốt request → **HTTP** tạo vận đơn → **Tx2** waybill + xuất kho + tracking + notify. Fail sau Tx1 → compensation: huỷ carrier theo partner code (`ICarrierGateway.CancelByPartnerCodeAsync` mới, GHTK dùng prefix `partner_id:`) + request → `Cancelled`, chạy với `CancellationToken.None` (best-effort, log error nếu chính compensation fail → đối soát tay)
-- [ ] B5 — Chống webhook trùng lặp (bỏ qua khi trạng thái không tiến → tránh double-transition/double-notify)
+- [x] B5 — Chống webhook trùng/đi lùi ✅ (2026-07-07): `DomesticWaybill.CanApplyStatus` — trạng thái kết thúc (Delivered/Returned/Cancelled) khoá vĩnh viễn; trùng trạng thái bỏ qua (trừ DeliveryFailed: mỗi webhook failed = 1 lần thử mới); pha tuyến tính Created→PickedUp→InTransit→OutForDelivery không đi lùi, riêng DeliveryFailed được quay lại InTransit/OutForDelivery (hoãn giao → giao lại). `UpdateFromWebhook` trả bool, TrackingService bỏ qua sớm + log khi guard từ chối. `SetCarrierFee` mới cho fee lúc tạo đơn (không đi qua guard)
 - [ ] B6 — Unit test: map status, tính phí, luồng webhook
 
 **C. Phụ thuộc phase/module khác:**

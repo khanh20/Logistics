@@ -172,9 +172,48 @@ public class DomesticWaybill
         LastStatusAt = DateTime.UtcNow;
     }
 
-    public void UpdateFromWebhook(DomesticWaybillStatus newStatus, decimal? carrierFee = null,
+    public void SetCarrierFee(decimal? fee)
+    {
+        if (!fee.HasValue) return;
+        CarrierFeeVnd = fee;
+        LastStatusAt  = DateTime.UtcNow;
+    }
+
+    /// Webhook có thể đến trùng (carrier retry) hoặc đến trễ (sau trạng thái mới hơn) —
+    /// chỉ nhận cập nhật "tiến lên":
+    /// - Trạng thái kết thúc (Delivered/Returned/Cancelled) không thay đổi được nữa
+    /// - Trùng trạng thái → bỏ qua, trừ DeliveryFailed (mỗi webhook failed = 1 lần thử mới)
+    /// - Pha tuyến tính Created→PickedUp→InTransit→OutForDelivery không đi lùi;
+    ///   riêng từ DeliveryFailed được quay lại InTransit/OutForDelivery (hoãn giao → giao lại)
+    public bool CanApplyStatus(DomesticWaybillStatus newStatus)
+    {
+        if (Status is DomesticWaybillStatus.Delivered
+                   or DomesticWaybillStatus.Returned
+                   or DomesticWaybillStatus.Cancelled)
+            return false;
+
+        if (Status == DomesticWaybillStatus.DeliveryFailed)
+            return newStatus is not (DomesticWaybillStatus.Created or DomesticWaybillStatus.PickedUp);
+
+        return Rank(newStatus) > Rank(Status);
+    }
+
+    private static int Rank(DomesticWaybillStatus s) => s switch
+    {
+        DomesticWaybillStatus.Created        => 1,
+        DomesticWaybillStatus.PickedUp       => 2,
+        DomesticWaybillStatus.InTransit      => 3,
+        DomesticWaybillStatus.OutForDelivery => 4,
+        DomesticWaybillStatus.DeliveryFailed => 5,
+        _                                    => 6,   // Delivered / Returned / Cancelled
+    };
+
+    /// Áp dụng trạng thái từ webhook/đối soát. false = bị bỏ qua (trùng hoặc đi lùi).
+    public bool UpdateFromWebhook(DomesticWaybillStatus newStatus, decimal? carrierFee = null,
                                    string? failedReason = null)
     {
+        if (!CanApplyStatus(newStatus)) return false;
+
         Status       = newStatus;
         CarrierFeeVnd = carrierFee ?? CarrierFeeVnd;
         FailedReason  = failedReason;
@@ -182,5 +221,6 @@ public class DomesticWaybill
 
         if (newStatus == DomesticWaybillStatus.DeliveryFailed)
             DeliveryAttemptCount++;
+        return true;
     }
 }

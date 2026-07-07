@@ -67,7 +67,14 @@ public class TrackingService(
                 throw new InvalidWebhookSignatureException(carrierName);
 
             var newStatus = gateway.MapStatus(req.Status);
-            waybill.UpdateFromWebhook(newStatus, req.FeeVnd, req.Reason);
+
+            // Webhook trùng (carrier retry) hoặc đến trễ → bỏ qua, tránh double-transition/notify
+            if (!waybill.UpdateFromWebhook(newStatus, req.FeeVnd, req.Reason))
+            {
+                logger.LogInformation("Webhook {Carrier} {TrackingNo}: bỏ qua trạng thái trùng/đi lùi {Current} ← {New}",
+                    carrierName, req.TrackingNo, waybill.Status, newStatus);
+                return new WebhookResult(req.TrackingNo, waybill.Status.ToString(), false, 0);
+            }
             await waybillRepo.UpdateAsync(waybill, innerCt);
 
             var request  = await deliveryRepo.GetByIdAsync(waybill.DeliveryRequestId, innerCt);

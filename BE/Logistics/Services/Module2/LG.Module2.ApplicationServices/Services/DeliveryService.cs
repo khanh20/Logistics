@@ -114,8 +114,7 @@ public class DeliveryService(
             {
                 var trackingNo = waybillResult.TrackingNo;
                 var waybill    = DomesticWaybill.Create(request.Id, carrier.Id, trackingNo);
-                if (waybillResult.FeeVnd.HasValue)
-                    waybill.UpdateFromWebhook(DomesticWaybillStatus.Created, waybillResult.FeeVnd);
+                waybill.SetCarrierFee(waybillResult.FeeVnd);
                 await waybillRepo.AddAsync(waybill, innerCt);
 
                 request.MarkShipping();
