@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 
 namespace LG.Module2.ApplicationServices.Services.Carrier;
 
-/// Gateway mặc định (fallback) — mô phỏng carrier chưa tích hợp API thật (GHN, Viettel Post, J&T,
-/// hoặc GHTK khi chưa cấu hình Token). Phí/vận đơn sinh theo công thức tham chiếu.
+/// Gateway mặc định (fallback) — mô phỏng GHTK khi chưa cấu hình Token (dev).
+/// Phí/vận đơn sinh theo công thức tham chiếu. Scope Phase 6: chỉ tích hợp GHTK.
 public class StubCarrierGateway(ILogger<StubCarrierGateway> logger) : ICarrierGateway
 {
     private const decimal BaseFeeVnd = 15_000m;
@@ -34,14 +34,8 @@ public class StubCarrierGateway(ILogger<StubCarrierGateway> logger) : ICarrierGa
 
     public Task<CarrierWaybillResult> CreateWaybillAsync(CarrierShipmentContext ctx, CancellationToken ct = default)
     {
-        var prefix = ctx.CarrierName.ToUpperInvariant() switch
-        {
-            "GHTK"         => "GHTK",
-            "GHN"          => "GHN",
-            "VIETTEL POST" => "VTP",
-            "J&T EXPRESS"  => "JT",
-            _              => "DOM",
-        };
+        var prefix = ctx.CarrierName.Trim().Equals("GHTK", StringComparison.OrdinalIgnoreCase)
+            ? "GHTK" : "DOM";
         var trackingNo = $"{prefix}{DateTime.UtcNow:yyyyMMdd}{Random.Shared.Next(0, 1_000_000):D6}";
         logger.LogInformation("[CARRIER-STUB] {Carrier} created waybill {TrackingNo}", ctx.CarrierName, trackingNo);
         return Task.FromResult(new CarrierWaybillResult(trackingNo, null, null));

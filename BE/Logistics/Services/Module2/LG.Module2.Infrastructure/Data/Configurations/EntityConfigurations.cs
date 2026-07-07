@@ -309,14 +309,11 @@ public class DomesticCarrierConfig : IEntityTypeConfiguration<DomesticCarrier>
         b.Property(x => x.MaxWeightKg).HasPrecision(8, 3);
         b.Property(x => x.MaxValueVnd).HasPrecision(14, 0);
 
-        // Seed carriers — scope Phase 6: CHỈ tích hợp GHTK; các bên khác tắt
-        // (IsActive=false → khách chọn sẽ nhận 422 CARRIER_INACTIVE, không tạo được vận đơn stub giả)
+        // Seed carrier — scope Phase 6: CHỈ tích hợp GHTK, các carrier khác đã xoá hẳn
+        // (migration RemoveNonGhtkCarriers dọn cả waybill demo tham chiếu chúng)
         var now = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         b.HasData(
-            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000001"), Name = "GHTK",         ApiEndpoint = "https://services.giaohangtietkiem.vn", MaxWeightKg = 30m, MaxValueVnd = 20_000_000m, IsActive = true,  CreatedAt = now },
-            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000002"), Name = "GHN",          ApiEndpoint = "https://online-gateway.ghn.vn",         MaxWeightKg = 30m, MaxValueVnd = 20_000_000m, IsActive = false, CreatedAt = now },
-            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000003"), Name = "Viettel Post", ApiEndpoint = "https://partner.viettelpost.vn",        MaxWeightKg = 50m, MaxValueVnd = 50_000_000m, IsActive = false, CreatedAt = now },
-            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000004"), Name = "J&T Express",  ApiEndpoint = "https://api.jtexpress.vn",              MaxWeightKg = 50m, MaxValueVnd = 30_000_000m, IsActive = false, CreatedAt = now }
+            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000001"), Name = "GHTK", ApiEndpoint = "https://services.giaohangtietkiem.vn", MaxWeightKg = 30m, MaxValueVnd = 20_000_000m, IsActive = true, CreatedAt = now }
         );
     }
 }

@@ -12,7 +12,7 @@ public class StubCarrierGatewayTests
     private static StubCarrierGateway NewGateway() => new(Mock.Of<ILogger<StubCarrierGateway>>());
 
     private static CarrierShipmentContext Ctx(decimal weightKg, decimal valueVnd = 0m, decimal? cod = null) =>
-        new("GHN", Guid.NewGuid(), "code", "Nguyễn Văn A", "0900000000",
+        new("GHTK", Guid.NewGuid(), "code", "Nguyễn Văn A", "0900000000",
             "Hà Nội", "Cầu Giấy", "Dịch Vọng", "1 Trần Thái Tông",
             weightKg, valueVnd, cod, new List<CarrierItem>());
 
@@ -57,15 +57,15 @@ public class StubCarrierGatewayTests
     public async Task CreateWaybill_PrefixTheoCarrier()
     {
         var result = await NewGateway().CreateWaybillAsync(Ctx(1m));
-        Assert.StartsWith("GHN", result.TrackingNo);
+        Assert.StartsWith("GHTK", result.TrackingNo);
     }
 
     [Fact]
     public async Task Cancel_VaTrace_HoatDongNhuStub()
     {
         var gw = NewGateway();
-        Assert.True(await gw.CancelWaybillAsync("GHN123"));
+        Assert.True(await gw.CancelWaybillAsync("GHTK123"));
         Assert.True(await gw.CancelByPartnerCodeAsync("abc"));
-        Assert.Null(await gw.GetWaybillStatusAsync("GHN123"));   // không có API thật → null
+        Assert.Null(await gw.GetWaybillStatusAsync("GHTK123"));   // không có API thật → null
     }
 }

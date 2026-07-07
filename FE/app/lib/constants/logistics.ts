@@ -186,8 +186,8 @@ export const WAYBILL_STATUS_COLOR: Record<WaybillStatus, string> = {
 };
 
 // ── Domestic carriers (BE không có endpoint list → seed theo EntityConfigurations) ─
-// Scope Phase 6: CHỈ tích hợp GHTK. GHN/Viettel Post/J&T đã tắt ở BE (IsActive=false,
-// migration DeactivateNonGhtkCarriers) — chọn sẽ nhận 422 CARRIER_INACTIVE nên không hiển thị.
+// Scope Phase 6: CHỈ tích hợp GHTK. GHN/Viettel Post/J&T đã XOÁ hẳn khỏi BE
+// (migration RemoveNonGhtkCarriers) — hệ thống chỉ còn 1 carrier.
 export interface CarrierOption {
   id: string;
   name: string;

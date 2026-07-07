@@ -23,7 +23,7 @@ public class TrackingServiceWebhookTests
 
     public TrackingServiceWebhookTests()
     {
-        _carrier = DomesticCarrier.Create("GHN", "https://stub", 20m, 20_000_000m);
+        _carrier = DomesticCarrier.Create("GHTK", "https://stub", 20m, 20_000_000m);
 
         _package = Package.Create(_customerId, Guid.NewGuid(), "PKG001");
         _package.TransitionTo(PackageStatus.InCnWarehouse);
@@ -36,10 +36,10 @@ public class TrackingServiceWebhookTests
         _request.Packages.Add(DeliveryPackage.Create(_request.Id, _package.Id));
         _request.MarkShipping();
 
-        _waybill = DomesticWaybill.Create(_request.Id, _carrier.Id, "GHN-TEST-01");
+        _waybill = DomesticWaybill.Create(_request.Id, _carrier.Id, "GHTK-TEST-01");
 
         var waybillRepo = new Mock<IDomesticWaybillRepository>();
-        waybillRepo.Setup(r => r.GetByTrackingNoAsync("GHN-TEST-01", It.IsAny<CancellationToken>()))
+        waybillRepo.Setup(r => r.GetByTrackingNoAsync("GHTK-TEST-01", It.IsAny<CancellationToken>()))
                    .ReturnsAsync(_waybill);
 
         var carrierRepo = new Mock<IDomesticCarrierRepository>();
@@ -70,7 +70,7 @@ public class TrackingServiceWebhookTests
     }
 
     private Task<WebhookResult> Send(string rawStatus, string? reason = null) =>
-        _service.ProcessWebhookAsync("GHN", new CarrierWebhookRequest("GHN-TEST-01", rawStatus, Reason: reason));
+        _service.ProcessWebhookAsync("GHTK", new CarrierWebhookRequest("GHTK-TEST-01", rawStatus, Reason: reason));
 
     [Fact]
     public async Task Delivered_CapNhatWaybillPackageRequest_VaNotify()
@@ -82,7 +82,7 @@ public class TrackingServiceWebhookTests
         Assert.Equal(DomesticWaybillStatus.Delivered, _waybill.Status);
         Assert.Equal(PackageStatus.Delivered, _package.Status);
         Assert.Equal(DeliveryRequestStatus.Delivered, _request.Status);
-        _notify.Verify(n => n.SendDeliveredAsync(_customerId, "GHN-TEST-01", It.IsAny<CancellationToken>()), Times.Once);
+        _notify.Verify(n => n.SendDeliveredAsync(_customerId, "GHTK-TEST-01", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class TrackingServiceWebhookTests
 
         Assert.Equal(3, _waybill.DeliveryAttemptCount);
         Assert.Equal(DeliveryRequestStatus.Failed, _request.Status);
-        _notify.Verify(n => n.SendDeliveryFailedAlertAsync("GHN-TEST-01", 3, "lần 3",
+        _notify.Verify(n => n.SendDeliveryFailedAlertAsync("GHTK-TEST-01", 3, "lần 3",
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -136,6 +136,6 @@ public class TrackingServiceWebhookTests
     public async Task KhongTimThayWaybill_NemNotFound()
     {
         await Assert.ThrowsAsync<DomesticWaybillNotFoundException>(() =>
-            _service.ProcessWebhookAsync("GHN", new CarrierWebhookRequest("KHONG-TON-TAI", "delivered")));
+            _service.ProcessWebhookAsync("GHTK", new CarrierWebhookRequest("KHONG-TON-TAI", "delivered")));
     }
 }
