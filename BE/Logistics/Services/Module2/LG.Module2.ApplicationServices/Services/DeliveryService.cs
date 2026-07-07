@@ -16,6 +16,7 @@ public class DeliveryService(
     ITrackingEventRepository   trackingRepo,
     ICarrierGatewayResolver    gatewayResolver,
     IWalletService             walletService,
+    ICustomerAddressService    addressService,
     INotificationService       notifyService,
     IModule2UnitOfWork         uow,
     ILogger<DeliveryService>   logger
@@ -56,8 +57,14 @@ public class DeliveryService(
         if (totalWeight > carrier.MaxWeightKg)
             throw new PackageWeightExceededException(carrier.Name, carrier.MaxWeightKg, totalWeight);
 
+        // Reconcile sổ địa chỉ (Core Finance): DeliveryAddressId phải là địa chỉ active
+        // trong sổ của chính khách. Tên/SĐT/địa chỉ chi tiết lấy từ sổ làm chuẩn;
+        // tỉnh/huyện/xã vẫn theo body vì sổ chỉ lưu mã code còn carrier cần tên chữ.
+        var address = await addressService.GetMyAddressAsync(req.DeliveryAddressId, ct)
+                      ?? throw new DeliveryAddressNotFoundException(req.DeliveryAddressId);
+
         // Tạo yêu cầu giao + gắn package
-        var request = DeliveryRequest.Create(customerId, req.DeliveryAddressId, req.PreferredTimeSlot, req.CodAmount);
+        var request = DeliveryRequest.Create(customerId, address.Id, req.PreferredTimeSlot, req.CodAmount);
         foreach (var pkg in packages)
             request.Packages.Add(DeliveryPackage.Create(request.Id, pkg.Id));
 
@@ -67,12 +74,12 @@ public class DeliveryService(
             CarrierName:       carrier.Name,
             DeliveryRequestId: request.Id,
             PartnerOrderCode:  request.Id.ToString("N"),
-            RecipientName:     req.RecipientName,
-            RecipientTel:      req.RecipientTel,
+            RecipientName:     Prefer(address.RecipientName, req.RecipientName),
+            RecipientTel:      Prefer(address.Phone,         req.RecipientTel),
             Province:          req.Province,
             District:          req.District,
             Ward:              req.Ward,
-            Address:           req.Address,
+            Address:           Prefer(address.AddressLine, req.Address),
             WeightKg:          totalWeight,
             ValueVnd:          totalValue,
             CodAmount:         req.CodAmount,
@@ -299,6 +306,10 @@ public class DeliveryService(
 
         return response;
     }
+
+    // Ưu tiên giá trị từ sổ địa chỉ, fallback body request khi sổ để trống.
+    private static string Prefer(string fromAddressBook, string fromRequest) =>
+        string.IsNullOrWhiteSpace(fromAddressBook) ? fromRequest : fromAddressBook;
 
     // ── Helpers ──────────────────────────────────────────────────────────────────
     private async Task<DeliveryRequestResponse> BuildResponseAsync(DeliveryRequest request, CancellationToken ct)

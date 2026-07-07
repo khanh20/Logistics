@@ -124,6 +124,21 @@ public interface ICarrierGatewayResolver
     ICarrierGateway Resolve(string carrierName);
 }
 
+/// Token JWT của request hiện tại — forward sang Core khi gọi API [Authorize] theo user.
+/// Implement ở API project (HttpUserTokenAccessor, dùng IHttpContextAccessor).
+public interface IUserTokenAccessor
+{
+    string? BearerToken { get; }
+}
+
+// ── ICustomerAddressService (sổ địa chỉ khách — Core Finance) ─────────────────
+public interface ICustomerAddressService
+{
+    /// Địa chỉ trong sổ của khách hiện tại (Core lọc theo JWT forward — không lộ sổ người khác).
+    /// null = không tồn tại / không thuộc khách / đã ngừng dùng.
+    Task<CustomerAddressInfo?> GetMyAddressAsync(Guid addressId, CancellationToken ct = default);
+}
+
 // ── IWalletService (ví khách — gọi Core Finance, cùng pattern Module1) ────────
 public interface IWalletService
 {

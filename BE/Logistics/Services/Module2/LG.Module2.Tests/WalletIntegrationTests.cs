@@ -18,6 +18,7 @@ public class WalletIntegrationTests
     private readonly DomesticCarrier _carrier = DomesticCarrier.Create("GHTK", "https://x", 30m, 20_000_000m);
     private readonly Package _package;
     private readonly Mock<IWalletService> _wallet = new();
+    private readonly Mock<ICustomerAddressService> _addressBook = new();
     private readonly Mock<ICarrierGateway> _gateway = new();
     private readonly Mock<IDeliveryRequestRepository> _deliveryRepo = new();
 
@@ -37,6 +38,11 @@ public class WalletIntegrationTests
                 .ReturnsAsync(true);
         _gateway.Setup(g => g.CancelWaybillAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
+
+        // Mặc định: địa chỉ tồn tại trong sổ của khách
+        _addressBook.Setup(a => a.GetMyAddressAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((Guid id, CancellationToken _) =>
+                        new CustomerAddressInfo(id, "Trần Thị B (sổ)", "0911111111", "5 Duy Tân"));
     }
 
     private DeliveryService NewService()
@@ -63,7 +69,8 @@ public class WalletIntegrationTests
         return new DeliveryService(_deliveryRepo.Object, carrierRepo.Object,
             Mock.Of<IDomesticWaybillRepository>(), packageRepo.Object,
             Mock.Of<ITrackingEventRepository>(), resolver.Object, _wallet.Object,
-            Mock.Of<INotificationService>(), uow.Object, Mock.Of<ILogger<DeliveryService>>());
+            _addressBook.Object, Mock.Of<INotificationService>(), uow.Object,
+            Mock.Of<ILogger<DeliveryService>>());
     }
 
     private CreateDeliveryRequest NewRequest() => new(
@@ -127,6 +134,38 @@ public class WalletIntegrationTests
         Assert.Equal(DeliveryRequestStatus.Cancelled, request.Status);
         _wallet.Verify(w => w.RefundAsync(_customerId, 30_000m, "DeliveryRequest", request.Id,
             It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── Reconcile sổ địa chỉ ──────────────────────────────────────────────────────
+    [Fact]
+    public async Task DiaChiKhongCoTrongSo_Tra404_KhongTruVi_KhongTaoDon()
+    {
+        _addressBook.Setup(a => a.GetMyAddressAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                    .ReturnsAsync((CustomerAddressInfo?)null);
+
+        await Assert.ThrowsAsync<DeliveryAddressNotFoundException>(() =>
+            NewService().CreateAsync(_customerId, NewRequest()));
+
+        _wallet.Verify(w => w.DeductAsync(It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<string>(),
+            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _gateway.Verify(g => g.CreateWaybillAsync(It.IsAny<CarrierShipmentContext>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ThongTinNguoiNhan_LayTuSoDiaChi_LamChuan()
+    {
+        CarrierShipmentContext? sent = null;
+        _gateway.Setup(g => g.CreateWaybillAsync(It.IsAny<CarrierShipmentContext>(), It.IsAny<CancellationToken>()))
+                .Callback<CarrierShipmentContext, CancellationToken>((c, _) => sent = c)
+                .ReturnsAsync(new CarrierWaybillResult("GHTK-TEST-99", null, null));
+
+        await NewService().CreateAsync(_customerId, NewRequest());
+
+        Assert.NotNull(sent);
+        Assert.Equal("Trần Thị B (sổ)", sent!.RecipientName);   // sổ thắng body
+        Assert.Equal("0911111111", sent.RecipientTel);
+        Assert.Equal("5 Duy Tân", sent.Address);
+        Assert.Equal("Hà Nội", sent.Province);                   // tỉnh/huyện/xã vẫn theo body
     }
 
     [Fact]

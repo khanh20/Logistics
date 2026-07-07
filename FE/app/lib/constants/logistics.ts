@@ -299,6 +299,8 @@ export const DELIVERY_ERROR_MESSAGE: Record<string, string> = {
   DELIVERY_NOT_CANCELLABLE:       "Yêu cầu không thể huỷ ở trạng thái hiện tại.",
   CARRIER_CANCEL_FAILED:          "Hãng vận chuyển từ chối huỷ — đơn có thể đã được lấy hàng.",
   WALLET_OPERATION_FAILED:        "Thao tác với ví thất bại — kiểm tra số dư hoặc thử lại sau.",
+  DELIVERY_ADDRESS_NOT_FOUND:     "Địa chỉ nhận không có trong sổ địa chỉ của bạn.",
+  ADDRESS_LOOKUP_FAILED:          "Không kiểm tra được sổ địa chỉ, vui lòng thử lại sau.",
 };
 
 // ── Map errorCode BE → message (UC-2.03/2.04/2.05) ────────────────────────────

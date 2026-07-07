@@ -16,6 +16,15 @@ public record CreateDeliveryRequest(
     decimal?   CodAmount         = null
 );
 
+/// Địa chỉ từ sổ địa chỉ Core Finance. Sổ chỉ lưu MÃ tỉnh/huyện/xã (không có tên chữ)
+/// nên tên khu vực cho carrier vẫn lấy từ body request.
+public record CustomerAddressInfo(
+    Guid    Id,
+    string  RecipientName,
+    string  Phone,
+    string  AddressLine
+);
+
 /// Payload chuẩn hoá từ webhook carrier (GHTK/GHN). `Status` là mã trạng thái raw của carrier.
 public record CarrierWebhookRequest(
     string   TrackingNo,

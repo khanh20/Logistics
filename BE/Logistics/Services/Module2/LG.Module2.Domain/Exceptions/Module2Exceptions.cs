@@ -92,6 +92,12 @@ public class CarrierCancelFailedException(string trackingNo)
 public class WalletOperationFailedException(string message)
     : Module2DomainException(message, "WALLET_OPERATION_FAILED");
 
+public class DeliveryAddressNotFoundException(Guid id)
+    : Module2DomainException($"Không tìm thấy địa chỉ giao '{id}' trong sổ địa chỉ của bạn.", "DELIVERY_ADDRESS_NOT_FOUND");
+
+public class AddressLookupFailedException()
+    : Module2DomainException("Không kiểm tra được sổ địa chỉ, vui lòng thử lại sau.", "ADDRESS_LOOKUP_FAILED");
+
 // ── Phase 7 — Claims & Insurance ──────────────────────────────────────────────
 public class InvalidClaimStateException(string currentStatus, string action)
     : Module2DomainException($"Không thể '{action}' khi khiếu nại đang ở trạng thái '{currentStatus}'.", "INVALID_CLAIM_STATE");

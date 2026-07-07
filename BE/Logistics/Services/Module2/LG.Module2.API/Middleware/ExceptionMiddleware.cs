@@ -33,6 +33,7 @@ public class Module2ExceptionMiddleware(
             CustomsClearanceNotFoundException e => (404, e.Code, e.Message),
             DomesticWaybillNotFoundException e  => (404, e.Code, e.Message),
             BorderAlertNotFoundException e      => (404, e.Code, e.Message),
+            DeliveryAddressNotFoundException e  => (404, e.Code, e.Message),
 
             DuplicateBarcodeException e         => (409, e.Code, e.Message),
             PackageAlreadyInSackException e     => (409, e.Code, e.Message),
@@ -51,6 +52,7 @@ public class Module2ExceptionMiddleware(
             DeliveryNotCancellableException e   => (422, e.Code, e.Message),
             CarrierCancelFailedException e      => (422, e.Code, e.Message),
             WalletOperationFailedException e    => (422, e.Code, e.Message),
+            AddressLookupFailedException e      => (422, e.Code, e.Message),
             InvalidClaimStateException e        => (422, e.Code, e.Message),
             PackageNotInsuredException e        => (422, e.Code, e.Message),
             BorderAlertAlreadyResolvedException e => (422, e.Code, e.Message),
