@@ -68,7 +68,7 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 | Phase 3 | Warehouse + Package services (UC-2.01, UC-2.06) — core flow | ✅ Done |
 | Phase 4 | Sack + ContainerTrip services (UC-2.03, UC-2.04) | ✅ Done |
 | Phase 5 | Customs + FeeCalculation (UC-2.05, UC-2.07) | ✅ Done |
-| Phase 6 | Delivery + Carrier integration GHTK/GHN (UC-2.08, UC-2.09) | 🚧 Dở dang (luồng lõi + GHTK create/fee/webhook xong; còn cancel/query/idempotency) |
+| Phase 6 | Delivery + Carrier integration GHTK/GHN (UC-2.08, UC-2.09) | ✅ Done (2026-07-07 — A1-A3, B4-B6 xong; còn mục C phụ thuộc Module3/carrier khác) |
 | Phase 7 | Claims + Insurance (UC-2.10) | ✅ Done |
 | Phase 8 | AI forecast entities + stub service | ✅ Done |
 
@@ -84,9 +84,9 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 - Phase 1 → Phase 5, Phase 7, Phase 8 (xem chi tiết phần Ghi chú)
 
 ### Đang triển khai
-- **Phase 6 — CHƯA XONG, sẽ quay lại sau.** Luồng lõi UC-2.08/2.09 + tích hợp GHTK (báo giá/tạo đơn/webhook) đã chạy được. Còn các hạng mục dưới đây.
+- Không còn — **Phase 6 đã hoàn thành 2026-07-07** (mục A+B dưới đây). Chỉ còn nhóm C chờ phụ thuộc ngoài (Module3 Finance, API carrier khác).
 
-### Phase 6 — việc còn lại (TODO khi quay lại)
+### Phase 6 — checklist hoàn thiện (A+B xong 2026-07-07)
 **A. Hoàn thiện GHTK (functional):**
 - [x] A1 — Huỷ đơn trên GHTK ✅ (2026-07-07): `ICarrierGateway.CancelWaybillAsync` mới; GHTK gọi `POST /services/shipment/cancel/{label}`, stub trả true. `DeliveryService.CancelAsync` viết lại: cho huỷ cả `Shipping` khi mọi waybill còn `Created` (trước đó đơn có waybill không bao giờ huỷ được vì luôn ở Shipping); gọi carrier **trước** khi mở DB transaction (không giữ tx qua HTTP — cùng tinh thần B4); carrier từ chối → `CarrierCancelFailedException` (422, `CARRIER_CANCEL_FAILED`, FE đã map message); huỷ xong: waybill → `Cancelled` (method `DomesticWaybill.Cancel()` mới), package `Dispatched → InVnWarehouse` + TrackingEvent trả về kho
 - [x] A2 — Query trạng thái chủ động ✅ (2026-07-07): `ICarrierGateway.GetWaybillStatusAsync` mới — GHTK gọi `GET /services/shipment/v2/{label}`, stub trả null. `TrackingService` refactor: webhook + đối soát dùng chung pipeline `ApplyStatusUpdateAsync` (đối soát bỏ qua verify signature vì mình chủ động gọi carrier); `SyncWaybillAsync` query ngoài transaction, bỏ qua khi trạng thái không đổi (tránh ghi trùng TrackingEvent). Endpoint staff mới: `POST /api/domestic-waybills/{trackingNo}/sync` (`shipment.manage`)
@@ -95,7 +95,7 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 **B. Độ bền / production:**
 - [x] B4 — Tách HTTP khỏi transaction ✅ (2026-07-07): `CreateAsync` cấu trúc lại — validate (chỉ đọc) → quote (HTTP, không side-effect) → **Tx1** chốt request → **HTTP** tạo vận đơn → **Tx2** waybill + xuất kho + tracking + notify. Fail sau Tx1 → compensation: huỷ carrier theo partner code (`ICarrierGateway.CancelByPartnerCodeAsync` mới, GHTK dùng prefix `partner_id:`) + request → `Cancelled`, chạy với `CancellationToken.None` (best-effort, log error nếu chính compensation fail → đối soát tay)
 - [x] B5 — Chống webhook trùng/đi lùi ✅ (2026-07-07): `DomesticWaybill.CanApplyStatus` — trạng thái kết thúc (Delivered/Returned/Cancelled) khoá vĩnh viễn; trùng trạng thái bỏ qua (trừ DeliveryFailed: mỗi webhook failed = 1 lần thử mới); pha tuyến tính Created→PickedUp→InTransit→OutForDelivery không đi lùi, riêng DeliveryFailed được quay lại InTransit/OutForDelivery (hoãn giao → giao lại). `UpdateFromWebhook` trả bool, TrackingService bỏ qua sớm + log khi guard từ chối. `SetCarrierFee` mới cho fee lúc tạo đơn (không đi qua guard)
-- [ ] B6 — Unit test: map status, tính phí, luồng webhook
+- [x] B6 — Unit test ✅ (2026-07-07): project mới `LG.Module2.Tests` (xUnit + Moq, đã thêm vào solution) — **57 test, pass 100%**: bảng map status_id GHTK đầy đủ, verify webhook token (DB secret ưu tiên config), `GhtkOptions.Enabled`, công thức phí stub (bậc thang + COD + bảo hiểm + tối thiểu 0.5kg), guard B5 trên `DomesticWaybill` (trùng/đi lùi/kết thúc/failed-lặp), luồng webhook end-to-end qua `TrackingService` (delivered/duplicate/đến trễ/failed >2 lần alert CSKH/returned/not-found). Chạy: `dotnet test Services/Module2/LG.Module2.Tests/LG.Module2.Tests.csproj`
 
 **C. Phụ thuộc phase/module khác:**
 - [ ] Trừ ví khách (PaymentLock) — chờ Module3 Finance (hiện log stub)
@@ -103,8 +103,9 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 - [ ] Reconcile `DeliveryAddressId` với sổ địa chỉ (hiện địa chỉ lấy trực tiếp từ body request)
 
 ### Còn pending
-- Phase 6 (phần còn lại ở trên)
+- Phase 6 nhóm C (chờ phụ thuộc ngoài, xem checklist trên)
 - Phase 8 nâng cấp sau (không chặn): thay heuristic bằng ML.NET khi đủ dữ liệu; nguồn NewsScrape cho border alert (Claude API structured outputs); chuyển scan tắc biên từ endpoint thủ công sang BackgroundService định kỳ
+- FE: chưa có UI cho endpoint đối soát A2 (`POST /api/domestic-waybills/{trackingNo}/sync`) — có thể thêm nút "Đối soát carrier" ở màn admin
 
 ### Ghi chú
 - Module1 (Catalog + Ordering) đã hoàn thành và là pattern tham chiếu
