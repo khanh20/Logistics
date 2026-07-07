@@ -102,6 +102,9 @@ public interface ICarrierGateway
     /// Tạo vận đơn bên carrier, trả về mã tracking + phí carrier báo về.
     Task<CarrierWaybillResult> CreateWaybillAsync(CarrierShipmentContext ctx, CancellationToken ct = default);
 
+    /// Huỷ vận đơn bên carrier. false = carrier từ chối huỷ (đơn đã được lấy/đang giao).
+    Task<bool> CancelWaybillAsync(string trackingNo, CancellationToken ct = default);
+
     /// Map mã trạng thái raw của carrier → enum nội bộ.
     DomesticWaybillStatus MapStatus(string rawStatus);
 

@@ -88,7 +88,7 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 
 ### Phase 6 — việc còn lại (TODO khi quay lại)
 **A. Hoàn thiện GHTK (functional):**
-- [ ] A1 — Huỷ đơn trên GHTK: `CancelAsync` mới chỉ update DB, chưa gọi `POST /services/shipment/cancel/{label}`
+- [x] A1 — Huỷ đơn trên GHTK ✅ (2026-07-07): `ICarrierGateway.CancelWaybillAsync` mới; GHTK gọi `POST /services/shipment/cancel/{label}`, stub trả true. `DeliveryService.CancelAsync` viết lại: cho huỷ cả `Shipping` khi mọi waybill còn `Created` (trước đó đơn có waybill không bao giờ huỷ được vì luôn ở Shipping); gọi carrier **trước** khi mở DB transaction (không giữ tx qua HTTP — cùng tinh thần B4); carrier từ chối → `CarrierCancelFailedException` (422, `CARRIER_CANCEL_FAILED`, FE đã map message); huỷ xong: waybill → `Cancelled` (method `DomesticWaybill.Cancel()` mới), package `Dispatched → InVnWarehouse` + TrackingEvent trả về kho
 - [ ] A2 — Query trạng thái chủ động `GET /services/shipment/v2/{label}` để đối soát khi webhook miss (GHTK chỉ retry 1 lần)
 - [ ] A3 — Idempotency tạo đơn theo `PartnerOrderCode` (= request.Id) để tránh tạo trùng
 

@@ -115,6 +115,29 @@ public class GhtkCarrierGateway(
         return new CarrierWaybillResult(dto.Order.Label!, fee, dto.Order.EstimatedDeliverTime);
     }
 
+    // ── Huỷ đơn: POST /services/shipment/cancel/{label} ──────────────────────────
+    // GHTK chỉ cho huỷ khi đơn chưa được lấy hàng; quá thời điểm đó trả success=false.
+    public async Task<bool> CancelWaybillAsync(string trackingNo, CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post,
+            $"/services/shipment/cancel/{Uri.EscapeDataString(trackingNo)}");
+        AddAuthHeaders(req);
+
+        var res  = await httpClient.SendAsync(req, ct);
+        var body = await res.Content.ReadAsStringAsync(ct);
+        var dto  = Deserialize<GhtkBaseResponse>(body);
+
+        if (dto is { Success: true })
+        {
+            logger.LogInformation("[GHTK] cancelled waybill {TrackingNo}", trackingNo);
+            return true;
+        }
+
+        logger.LogWarning("[GHTK] cancel waybill {TrackingNo} refused: {Message}",
+            trackingNo, dto?.Message ?? body);
+        return false;
+    }
+
     // ── Map status_id GHTK → enum nội bộ ─────────────────────────────────────────
     // Bảng mã GHTK: -1 huỷ, 1-2 tiếp nhận, 3 đã lấy, 4 đang giao, 5-6 đã giao,
     // 7-8 lỗi lấy hàng, 9 giao thất bại, 10 hoãn giao, 11/13/20/21 trả hàng, 12 đang lấy.
@@ -163,6 +186,12 @@ public class GhtkCarrierGateway(
     }
 
     // ── GHTK JSON models ─────────────────────────────────────────────────────────
+    private sealed class GhtkBaseResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+    }
+
     private sealed class GhtkFeeResponse
     {
         public bool Success { get; set; }

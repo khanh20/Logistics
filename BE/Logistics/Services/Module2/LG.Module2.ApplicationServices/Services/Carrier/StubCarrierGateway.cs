@@ -47,6 +47,12 @@ public class StubCarrierGateway(ILogger<StubCarrierGateway> logger) : ICarrierGa
         return Task.FromResult(new CarrierWaybillResult(trackingNo, null, null));
     }
 
+    public Task<bool> CancelWaybillAsync(string trackingNo, CancellationToken ct = default)
+    {
+        logger.LogInformation("[CARRIER-STUB] cancelled waybill {TrackingNo}", trackingNo);
+        return Task.FromResult(true);
+    }
+
     public DomesticWaybillStatus MapStatus(string rawStatus)
     {
         var s = rawStatus.Trim().ToLowerInvariant().Replace("_", "").Replace("-", "").Replace(" ", "");

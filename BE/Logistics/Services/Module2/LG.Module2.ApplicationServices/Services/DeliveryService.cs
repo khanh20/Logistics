@@ -132,23 +132,52 @@ public class DeliveryService(
         return result;
     }
 
-    // ── Huỷ yêu cầu (chỉ khi chưa giao cho carrier) ──────────────────────────────
+    // ── Huỷ yêu cầu (trước khi carrier lấy hàng) ─────────────────────────────────
+    // Huỷ được khi: chưa có vận đơn (Pending/Confirmed), hoặc đã có vận đơn (Shipping)
+    // nhưng mọi vận đơn còn ở Created (carrier chưa lấy hàng) — khi đó huỷ trên carrier trước.
     public async Task<DeliveryRequestResponse> CancelAsync(Guid id, Guid customerId, CancellationToken ct = default)
     {
+        var request = await deliveryRepo.GetByIdAsync(id, ct)
+                      ?? throw new DeliveryRequestNotFoundException(id);
+        if (request.CustomerId != customerId)
+            throw new DeliveryRequestNotFoundException(id);
+
+        var activeWaybills = request.Waybills
+            .Where(w => w.Status != DomesticWaybillStatus.Cancelled)
+            .ToList();
+
+        var cancellable = request.Status is DeliveryRequestStatus.Pending or DeliveryRequestStatus.Confirmed
+                          || (request.Status == DeliveryRequestStatus.Shipping
+                              && activeWaybills.All(w => w.Status == DomesticWaybillStatus.Created));
+        if (!cancellable)
+            throw new DeliveryNotCancellableException(request.Status.ToString());
+
+        // Huỷ trên carrier TRƯỚC khi đụng DB — không giữ transaction qua HTTP call.
+        // Nếu DB fail sau đó: đơn đã huỷ bên carrier nhưng DB còn active → đối soát bù (A2),
+        // an toàn hơn chiều ngược lại (DB huỷ mà carrier vẫn giao).
+        if (activeWaybills.Count > 0 && request.DomesticCarrierId.HasValue)
+        {
+            var carrier = await carrierRepo.GetByIdAsync(request.DomesticCarrierId.Value, ct)
+                          ?? throw new DomesticCarrierNotFoundException(request.DomesticCarrierId.Value);
+            var gateway = gatewayResolver.Resolve(carrier.Name);
+            foreach (var waybill in activeWaybills)
+            {
+                if (!await gateway.CancelWaybillAsync(waybill.TrackingNo, ct))
+                    throw new CarrierCancelFailedException(waybill.TrackingNo);
+            }
+        }
+
         return await uow.ExecuteInTransactionAsync(async innerCt =>
         {
-            var request = await deliveryRepo.GetByIdAsync(id, innerCt)
-                          ?? throw new DeliveryRequestNotFoundException(id);
-            if (request.CustomerId != customerId)
-                throw new DeliveryRequestNotFoundException(id);
-
-            if (request.Status is not (DeliveryRequestStatus.Pending or DeliveryRequestStatus.Confirmed))
-                throw new DeliveryNotCancellableException(request.Status.ToString());
-
             request.Cancel();
+            foreach (var waybill in activeWaybills)
+            {
+                waybill.Cancel();
+                await waybillRepo.UpdateAsync(waybill, innerCt);
+            }
             await deliveryRepo.UpdateAsync(request, innerCt);
 
-            // Trả package về kho (nếu đã chuyển Dispatched do flow tạo waybill)
+            // Trả package về kho (đã chuyển Dispatched trong flow tạo waybill)
             foreach (var dp in request.Packages)
             {
                 var pkg = await packageRepo.GetByIdAsync(dp.PackageId, innerCt);
@@ -156,10 +185,14 @@ public class DeliveryService(
                 {
                     pkg.TransitionTo(PackageStatus.InVnWarehouse);
                     await packageRepo.UpdateAsync(pkg, innerCt);
+                    await trackingRepo.AddAsync(TrackingEvent.Record(pkg.Id, TrackingEventType.VnWarehouseIn,
+                        location: "Kho VN",
+                        note: "Khách huỷ yêu cầu giao — kiện trả về kho"), innerCt);
                 }
             }
 
-            logger.LogInformation("DeliveryRequest {Id} cancelled by customer {CustomerId}", id, customerId);
+            logger.LogInformation("DeliveryRequest {Id} cancelled by customer {CustomerId} ({WaybillCount} waybill huỷ trên carrier)",
+                id, customerId, activeWaybills.Count);
             return await BuildResponseAsync(request, innerCt);
         }, ct);
     }

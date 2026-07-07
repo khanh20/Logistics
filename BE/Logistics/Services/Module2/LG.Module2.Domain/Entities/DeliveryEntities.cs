@@ -166,6 +166,12 @@ public class DomesticWaybill
             TrackingNo        = trackingNo.Trim(),
         };
 
+    public void Cancel()
+    {
+        Status       = DomesticWaybillStatus.Cancelled;
+        LastStatusAt = DateTime.UtcNow;
+    }
+
     public void UpdateFromWebhook(DomesticWaybillStatus newStatus, decimal? carrierFee = null,
                                    string? failedReason = null)
     {

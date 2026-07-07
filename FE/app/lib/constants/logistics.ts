@@ -299,6 +299,7 @@ export const DELIVERY_ERROR_MESSAGE: Record<string, string> = {
   DOMESTIC_CARRIER_NOT_FOUND:     "Không tìm thấy đơn vị vận chuyển.",
   DELIVERY_REQUEST_NOT_FOUND:     "Không tìm thấy yêu cầu giao hàng.",
   DELIVERY_NOT_CANCELLABLE:       "Yêu cầu không thể huỷ ở trạng thái hiện tại.",
+  CARRIER_CANCEL_FAILED:          "Hãng vận chuyển từ chối huỷ — đơn có thể đã được lấy hàng.",
 };
 
 // ── Map errorCode BE → message (UC-2.03/2.04/2.05) ────────────────────────────

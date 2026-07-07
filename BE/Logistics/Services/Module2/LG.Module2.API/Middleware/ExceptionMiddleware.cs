@@ -49,6 +49,7 @@ public class Module2ExceptionMiddleware(
             PackageNotReadyForDeliveryException e => (422, e.Code, e.Message),
             CarrierInactiveException e          => (422, e.Code, e.Message),
             DeliveryNotCancellableException e   => (422, e.Code, e.Message),
+            CarrierCancelFailedException e      => (422, e.Code, e.Message),
             InvalidClaimStateException e        => (422, e.Code, e.Message),
             PackageNotInsuredException e        => (422, e.Code, e.Message),
             BorderAlertAlreadyResolvedException e => (422, e.Code, e.Message),
