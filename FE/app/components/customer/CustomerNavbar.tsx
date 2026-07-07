@@ -22,6 +22,9 @@ export function CustomerNavbar() {
     { to: "/products", label: t("nav.products") },
     { to: "/favorites", label: t("nav.favorites") },
     { to: "/orders", label: t("nav.user_orders") },
+    { to: "/packages", label: t("nav.user_packages") },
+    { to: "/delivery-requests", label: t("nav.user_deliveries") },
+    { to: "/claims", label: t("nav.user_claims") },
     { to: "/finance", label: "Tài chính" },
     { to: "/cart", label: t("nav.cart") },
   ];

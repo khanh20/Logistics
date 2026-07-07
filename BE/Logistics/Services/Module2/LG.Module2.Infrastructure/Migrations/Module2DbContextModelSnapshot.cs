@@ -483,11 +483,19 @@ namespace LG.Module2.Infrastructure.Migrations
                         .HasPrecision(14)
                         .HasColumnType("numeric(14,0)");
 
+                    b.Property<decimal?>("ClaimedAmountVnd")
+                        .HasPrecision(14)
+                        .HasColumnType("numeric(14,0)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DamagePhotos")
                         .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<Guid?>("MissingClaimId")
                         .HasColumnType("uuid");
@@ -528,6 +536,13 @@ namespace LG.Module2.Infrastructure.Migrations
 
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("EvidenceUrls")
+                        .HasColumnType("text");
 
                     b.Property<decimal?>("InsuranceCoveragePct")
                         .HasPrecision(4, 2)
@@ -590,9 +605,24 @@ namespace LG.Module2.Infrastructure.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("DeclaredValueVnd")
+                        .HasPrecision(16)
+                        .HasColumnType("numeric(16,0)");
+
+                    b.Property<DateTime?>("FeeCalculatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("FeeRatePerKgVnd")
+                        .HasPrecision(12)
+                        .HasColumnType("numeric(12,0)");
+
                     b.Property<decimal?>("HeightCm")
                         .HasPrecision(8, 1)
                         .HasColumnType("numeric(8,1)");
+
+                    b.Property<decimal?>("InsuranceFeeVnd")
+                        .HasPrecision(16)
+                        .HasColumnType("numeric(16,0)");
 
                     b.Property<string>("InsuranceLevel")
                         .HasMaxLength(10)
@@ -615,6 +645,10 @@ namespace LG.Module2.Infrastructure.Migrations
 
                     b.Property<Guid?>("SackId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("ShipIntlVnd")
+                        .HasPrecision(16)
+                        .HasColumnType("numeric(16,0)");
 
                     b.Property<string>("Status")
                         .IsRequired()

@@ -35,7 +35,14 @@ import {
   FaComments,
   FaUserGear,
   FaUserShield,
-  FaKey
+  FaKey,
+  FaWarehouse,
+  FaBoxesStacked,
+  FaTruckFast,
+  FaBoxOpen,
+  FaTruckRampBox,
+  FaPassport,
+  FaFileCircleQuestion
 } from "react-icons/fa6";
 
 interface AdminSidebarProps {
@@ -104,6 +111,18 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
         { to: "/admin/finance/transaction-types", label: t("nav.finance_transaction_types"), icon: <FaGear className="text-base text-gray-400" /> },
         { to: "/admin/finance/bank-accounts", label: t("nav.finance_bank_accounts"), icon: <FaCreditCard className="text-base text-blue-300" /> },
         { to: "/admin/finance/webhook-logs", label: t("nav.finance_webhook_logs"), icon: <FaSatelliteDish className="text-base text-emerald-300" /> },
+      ]
+    },
+    {
+      label: t("nav.logistics"),
+      icon: <FaTruckFast className="text-base text-orange-400" />,
+      children: [
+        { to: "/admin/warehouses", label: t("nav.warehouses"), icon: <FaWarehouse className="text-base text-amber-400" /> },
+        { to: "/admin/packages", label: t("nav.admin_packages"), icon: <FaBoxesStacked className="text-base text-indigo-400" />, end: true },
+        { to: "/admin/sacks", label: t("nav.sacks"), icon: <FaBoxOpen className="text-base text-blue-400" /> },
+        { to: "/admin/container-trips", label: t("nav.container_trips"), icon: <FaTruckRampBox className="text-base text-violet-400" /> },
+        { to: "/admin/customs", label: t("nav.customs"), icon: <FaPassport className="text-base text-rose-400" /> },
+        { to: "/admin/claims", label: t("nav.claims"), icon: <FaFileCircleQuestion className="text-base text-teal-400" /> },
       ]
     },
     {
