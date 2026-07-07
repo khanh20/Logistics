@@ -122,6 +122,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
         { to: "/admin/sacks", label: t("nav.sacks"), icon: <FaBoxOpen className="text-base text-blue-400" /> },
         { to: "/admin/container-trips", label: t("nav.container_trips"), icon: <FaTruckRampBox className="text-base text-violet-400" /> },
         { to: "/admin/customs", label: t("nav.customs"), icon: <FaPassport className="text-base text-rose-400" /> },
+        { to: "/admin/border-alerts", label: t("nav.border_alerts"), icon: <FaTriangleExclamation className="text-base text-orange-400" /> },
         { to: "/admin/claims", label: t("nav.claims"), icon: <FaFileCircleQuestion className="text-base text-teal-400" /> },
       ]
     },

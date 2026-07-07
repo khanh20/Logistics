@@ -18,6 +18,8 @@ import type {
   MissingClaimStatus,
   MissingClaimResolution,
   InsuranceClaimStatus,
+  AlertSeverity,
+  AlertSource,
 } from "~/lib/types/logistics";
 
 // ── Package status ────────────────────────────────────────────────────────────
@@ -382,3 +384,34 @@ export const CLAIM_ERROR_MESSAGE: Record<string, string> = {
   PACKAGE_NOT_INSURED:       "Kiện không mua bảo hiểm nên không thể bồi thường.",
   PACKAGE_NOT_FOUND:         "Không tìm thấy kiện hàng.",
 };
+
+// ── AI Phase 8 — Border alerts & forecast ─────────────────────────────────────
+export const ALERT_SEVERITIES: AlertSeverity[] = ["Low", "Medium", "High", "Critical"];
+
+export const ALERT_SEVERITY_LABEL: Record<AlertSeverity, string> = {
+  Low:      "Thấp",
+  Medium:   "Trung bình",
+  High:     "Cao",
+  Critical: "Nghiêm trọng",
+};
+
+export const ALERT_SEVERITY_COLOR: Record<AlertSeverity, string> = {
+  Low:      "bg-blue-100 text-blue-700",
+  Medium:   "bg-yellow-100 text-yellow-700",
+  High:     "bg-orange-100 text-orange-700",
+  Critical: "bg-red-100 text-red-700",
+};
+
+export const ALERT_SOURCE_LABEL: Record<AlertSource, string> = {
+  NewsScrape:   "Tin tức",
+  InternalData: "Dữ liệu vận hành",
+};
+
+// Season cho forecast — bỏ trống BE tự suy từ tháng hiện tại
+export const SEASON_OPTIONS = [
+  { value: "spring", label: "Xuân" },
+  { value: "summer", label: "Hè" },
+  { value: "autumn", label: "Thu" },
+  { value: "winter", label: "Đông" },
+  { value: "tet",    label: "Cận Tết (cao điểm)" },
+];

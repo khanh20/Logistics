@@ -111,7 +111,7 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 - Phase 6 nhóm C (chờ phụ thuộc ngoài, xem checklist trên)
 - ~~3 lỗ hổng ownership FE phát hiện~~ ✅ ĐÃ FIX (2026-07-07): tracking/missing-claim/insurance-claim check chủ sở hữu (khác chủ → 404); thêm `GET /api/my/insurance-claims`; 8 unit test ownership trong `OwnershipGuardTests`
 - Phase 8 nâng cấp sau (không chặn): thay heuristic bằng ML.NET khi đủ dữ liệu; nguồn NewsScrape cho border alert (Claude API structured outputs); chuyển scan tắc biên từ endpoint thủ công sang BackgroundService định kỳ
-- FE: chưa có UI cho endpoint đối soát A2 (`POST /api/domestic-waybills/{trackingNo}/sync`) — có thể thêm nút "Đối soát carrier" ở màn admin
+- ~~FE: chưa có UI cho endpoint đối soát A2~~ ✅ (2026-07-08): FE đã có đủ — tool đối soát vận đơn trong `admin/packages`, trang `customer/forecast` + `admin/border-alerts` cho Phase 8 (xem FE/docs/module2/PLAN.md)
 
 ### Ghi chú
 - Module1 (Catalog + Ordering) đã hoàn thành và là pattern tham chiếu

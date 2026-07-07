@@ -10,9 +10,10 @@ BE đã xong; FE bắt đầu từ 0. Tài liệu này chia công việc theo **
 
 ---
 
-## Trạng thái (cập nhật 2026-07-02)
+## Trạng thái (cập nhật 2026-07-08)
 
 - ✅ **Phase 0–5 đã build xong toàn bộ** (Foundation, Customer tracking, Customer delivery, Staff warehouse/fee, Staff sack/container/customs, Claims & bảo hiểm). Verify bằng `tsc` + `typegen` (0 lỗi); **chưa chạy app thật** với BE.
+- ✅ **Phase 6 (AI + đối soát) xong 2026-07-08**: `customer/forecast` (dự báo lead time + banner cảnh báo tắc biên đang active), `admin/border-alerts` (list/tạo/gỡ cảnh báo, nút "Quét dữ liệu vận hành", bảng 20 dự báo gần nhất — action gated `shipment.manage`), tool "Đối soát vận đơn carrier" trong `admin/packages` (`POST /api/domestic-waybills/{trackingNo}/sync`). API: `aiApi` + `domesticWaybillsApi` trong `logistics.ts`; nav customer "Dự báo" + sidebar admin "Cảnh báo tắc biên".
 
 ### Đính chính so với tài liệu ban đầu (verify từ controller/DTO BE thật)
 
