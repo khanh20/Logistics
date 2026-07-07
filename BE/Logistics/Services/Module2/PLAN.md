@@ -90,10 +90,10 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 **A. Hoàn thiện GHTK (functional):**
 - [x] A1 — Huỷ đơn trên GHTK ✅ (2026-07-07): `ICarrierGateway.CancelWaybillAsync` mới; GHTK gọi `POST /services/shipment/cancel/{label}`, stub trả true. `DeliveryService.CancelAsync` viết lại: cho huỷ cả `Shipping` khi mọi waybill còn `Created` (trước đó đơn có waybill không bao giờ huỷ được vì luôn ở Shipping); gọi carrier **trước** khi mở DB transaction (không giữ tx qua HTTP — cùng tinh thần B4); carrier từ chối → `CarrierCancelFailedException` (422, `CARRIER_CANCEL_FAILED`, FE đã map message); huỷ xong: waybill → `Cancelled` (method `DomesticWaybill.Cancel()` mới), package `Dispatched → InVnWarehouse` + TrackingEvent trả về kho
 - [x] A2 — Query trạng thái chủ động ✅ (2026-07-07): `ICarrierGateway.GetWaybillStatusAsync` mới — GHTK gọi `GET /services/shipment/v2/{label}`, stub trả null. `TrackingService` refactor: webhook + đối soát dùng chung pipeline `ApplyStatusUpdateAsync` (đối soát bỏ qua verify signature vì mình chủ động gọi carrier); `SyncWaybillAsync` query ngoài transaction, bỏ qua khi trạng thái không đổi (tránh ghi trùng TrackingEvent). Endpoint staff mới: `POST /api/domestic-waybills/{trackingNo}/sync` (`shipment.manage`)
-- [ ] A3 — Idempotency tạo đơn theo `PartnerOrderCode` (= request.Id) để tránh tạo trùng
+- [x] A3 — Idempotency tạo đơn ✅ (2026-07-07): `GhtkCarrierGateway.CreateWaybillAsync` khi GHTK báo trùng id (message chứa "tồn tại"/"exist"/"trùng") → trace `GET /services/shipment/v2/partner_id:{code}` lấy lại label thay vì fail. Đi kèm B4 (PartnerOrderCode ổn định nhờ chốt request vào DB trước khi gọi carrier)
 
 **B. Độ bền / production:**
-- [ ] B4 — Tách HTTP call GHTK ra ngoài DB transaction (tránh đơn GHTK mồ côi nếu commit DB fail)
+- [x] B4 — Tách HTTP khỏi transaction ✅ (2026-07-07): `CreateAsync` cấu trúc lại — validate (chỉ đọc) → quote (HTTP, không side-effect) → **Tx1** chốt request → **HTTP** tạo vận đơn → **Tx2** waybill + xuất kho + tracking + notify. Fail sau Tx1 → compensation: huỷ carrier theo partner code (`ICarrierGateway.CancelByPartnerCodeAsync` mới, GHTK dùng prefix `partner_id:`) + request → `Cancelled`, chạy với `CancellationToken.None` (best-effort, log error nếu chính compensation fail → đối soát tay)
 - [ ] B5 — Chống webhook trùng lặp (bỏ qua khi trạng thái không tiến → tránh double-transition/double-notify)
 - [ ] B6 — Unit test: map status, tính phí, luồng webhook
 

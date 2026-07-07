@@ -105,6 +105,9 @@ public interface ICarrierGateway
     /// Huỷ vận đơn bên carrier. false = carrier từ chối huỷ (đơn đã được lấy/đang giao).
     Task<bool> CancelWaybillAsync(string trackingNo, CancellationToken ct = default);
 
+    /// Huỷ đơn theo mã đơn phía mình (compensation khi tạo đơn fail mà chưa có label).
+    Task<bool> CancelByPartnerCodeAsync(string partnerOrderCode, CancellationToken ct = default);
+
     /// Tra cứu trạng thái vận đơn chủ động (đối soát khi webhook miss). null = carrier không hỗ trợ/tra không được.
     Task<CarrierWaybillStatus?> GetWaybillStatusAsync(string trackingNo, CancellationToken ct = default);
 

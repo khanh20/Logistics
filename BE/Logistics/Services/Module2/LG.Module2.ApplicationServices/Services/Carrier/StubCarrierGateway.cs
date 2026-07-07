@@ -53,6 +53,12 @@ public class StubCarrierGateway(ILogger<StubCarrierGateway> logger) : ICarrierGa
         return Task.FromResult(true);
     }
 
+    public Task<bool> CancelByPartnerCodeAsync(string partnerOrderCode, CancellationToken ct = default)
+    {
+        logger.LogInformation("[CARRIER-STUB] cancelled order by partner code {PartnerCode}", partnerOrderCode);
+        return Task.FromResult(true);
+    }
+
     public Task<CarrierWaybillStatus?> GetWaybillStatusAsync(string trackingNo, CancellationToken ct = default)
     {
         logger.LogInformation("[CARRIER-STUB] trace {TrackingNo}: không có API thật, bỏ qua đối soát", trackingNo);
