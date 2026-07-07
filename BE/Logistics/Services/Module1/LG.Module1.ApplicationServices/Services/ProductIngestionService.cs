@@ -66,14 +66,20 @@ public class ProductIngestionService(
             if (id is not null) { adapter = a; platformProductId = id; break; }
         }
 
-        // Không adapter nào nhận → sàn cần extension (1688/Taobao/Tmall) nhưng thiếu ScrapedData.
+        // Không adapter nào nhận → sàn TQ (1688/Taobao/Tmall) thiếu ScrapedData.
+        // Nhưng nếu sản phẩm ĐÃ có sẵn trong DB (đã fetch trước) thì trả luôn, khỏi cần extension.
         if (adapter is null || platformProductId is null)
+        {
+            var existing = await TryResolveExistingCnAsync(req.Url, ct);
+            if (existing is not null) return existing;
+
             return new ResolveUrlResponse(
                 PlatformName: "",
                 ProductId:    null,
                 Status:       "NeedExtension",
                 Reason:       "URL này cần MuaHo Extension để lấy thông tin sản phẩm.",
                 Product:      null);
+        }
 
         var platforms = await platformRepo.GetAllActiveAsync(ct);
         var platform  = platforms.FirstOrDefault(p =>
@@ -100,6 +106,58 @@ public class ProductIngestionService(
             Status:       result.Status == "Forbidden" ? "Forbidden" : "Resolved",
             Reason:       result.Reason,
             Product:      detail);
+    }
+
+    // Thử tìm sản phẩm TQ (Taobao/1688/Tmall) đã có sẵn trong DB theo URL,
+    // để không bắt buộc cài extension khi mình đã fetch sản phẩm này trước đó.
+    private async Task<ResolveUrlResponse?> TryResolveExistingCnAsync(string url, CancellationToken ct)
+    {
+        var parsed = ExtractCnPlatformProduct(url);
+        if (parsed is null) return null;
+        var (platformName, productId) = parsed.Value;
+
+        var platforms = await platformRepo.GetAllActiveAsync(ct);
+        var platform  = platforms.FirstOrDefault(p =>
+            p.Name.Equals(platformName, StringComparison.OrdinalIgnoreCase));
+        if (platform is null) return null;
+
+        var existing = await productRepo.GetByPlatformAndProductIdAsync(platform.Id, productId, ct);
+        if (existing is null) return null;
+
+        var detail = await productService.GetByIdAsync(existing.Id, ct);
+        if (detail is null) return null;
+
+        return new ResolveUrlResponse(
+            PlatformName: platform.Name,
+            ProductId:    existing.Id,
+            Status:       "Resolved",
+            Reason:       null,
+            Product:      detail);
+    }
+
+    // Bóc (platformName, idTrênSàn) từ URL sàn TQ. Trả null nếu không nhận dạng được.
+    private static (string PlatformName, string ProductId)? ExtractCnPlatformProduct(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+
+        // 1688: detail.1688.com/offer/{id}.html
+        var m1688 = System.Text.RegularExpressions.Regex.Match(
+            url, @"1688\.com/offer/(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (m1688.Success) return ("1688", m1688.Groups[1].Value);
+
+        // Taobao/Tmall: ...?id=12345 hoặc &id=12345
+        var mId = System.Text.RegularExpressions.Regex.Match(
+            url, @"[?&]id=(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (mId.Success)
+        {
+            if (System.Text.RegularExpressions.Regex.IsMatch(url, @"tmall\.(com|hk)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                return ("Tmall", mId.Groups[1].Value);
+            if (System.Text.RegularExpressions.Regex.IsMatch(url, @"taobao\.com",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                return ("Taobao", mId.Groups[1].Value);
+        }
+        return null;
     }
 
     // ── Crawl by keyword ──────────────────────────────────────────────────────
@@ -310,7 +368,17 @@ public class ProductIngestionService(
         Platform platform, RawProductResult raw, CancellationToken ct)
     {
         var shop = await shopRepo.GetByExternalIdAsync(platform.Id, raw.ShopIdOnPlatform, ct);
-        if (shop is not null) return shop;
+        if (shop is not null)
+        {
+            // Gỡ "đóng băng" tên shop: cập nhật khi tên mới hợp lệ và khác tên cũ.
+            if (ExtensionProductUpserter.ShouldUpdateShopName(shop.ShopName, raw.ShopName))
+            {
+                shop.UpdateInfo(raw.ShopName, raw.ShopUrl);
+                await shopRepo.UpdateAsync(shop, ct);
+                await uow.SaveChangesAsync(ct);
+            }
+            return shop;
+        }
 
         // Auto-create shop khi gặp lần đầu
         shop = PlatformShop.Create(platform.Id, raw.ShopIdOnPlatform, raw.ShopName, raw.ShopUrl);

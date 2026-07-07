@@ -77,6 +77,14 @@ public class UserRepository(AppDbContext db) : IUserRepository
 
         return await q.OrderBy(u => u.FullName).ToListAsync(ct);
     }
+
+    public async Task<List<User>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var idList = ids.Distinct().ToList();
+        if (idList.Count == 0) return [];
+        return await db.Users.Where(u => idList.Contains(u.Id))
+                             .OrderBy(u => u.FullName).ToListAsync(ct);
+    }
 }
 
 // ── Role ─────────────────────────────────────────────────────────────────────

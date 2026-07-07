@@ -6,6 +6,9 @@
   --font-serif: "Newsreader", "Lyon Text", "Playfair Display", serif;
   --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
 
+  /* Display font cho heading (Staff portal + admin staff) */
+  --font-heading: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+
   /* Brand colors — MuaHo đỏ */
   --color-primary: #ef4444;
   --color-primary-dark: #dc2626;

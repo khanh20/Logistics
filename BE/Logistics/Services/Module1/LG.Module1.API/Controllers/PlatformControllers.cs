@@ -3,6 +3,7 @@ using LG.Module1.ApplicationServices.Interfaces;
 using LG.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LG.Module1.API.Controllers;
 
@@ -24,10 +25,9 @@ public class PlatformController(IPlatformService platformService) : Module1BaseC
 
     /// Danh sách platform đang active (slim — không có count).
     [HttpGet("active")]
-    [Authorize(Policy = Permissions.PlatformRead)]
+    [AllowAnonymous]
+    [EnableRateLimiting("public")]
     [ProducesResponseType(typeof(ApiResponse<List<PlatformSlimResponse>>), 200)]
-    [ProducesResponseType(401)]
-    [ProducesResponseType(403)]
     public async Task<IActionResult> GetActive(CancellationToken ct)
     {
         var result = await platformService.GetAllActiveAsync(ct);

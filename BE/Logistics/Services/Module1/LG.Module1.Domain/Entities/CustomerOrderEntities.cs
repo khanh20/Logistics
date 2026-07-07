@@ -445,14 +445,28 @@ public class OrderStatusHistory
         };
 }
 
+// ── AssignmentStatus — vòng đời xử lý của 1 assignment ───────────────────────
+public enum AssignmentStatus
+{
+    Assigned   = 1,   // Vừa được gán, NV chưa xác nhận
+    Accepted   = 2,   // NV đã nhận đơn (đồng hồ xử lý bắt đầu tính)
+    InProgress = 3,   // NV đang xử lý (đã bắt đầu thao tác đặt hàng)
+    Done       = 4,   // NV hoàn thành phần việc của mình
+    Reassigned = 5,   // Bị chuyển sang NV khác (soft-close)
+    Cancelled  = 6,   // Đơn bị huỷ nên assignment đóng lại
+}
+
 // ── StaffAssignment — Lịch sử phân công NV cho đơn hàng ──────────────────────
 public class StaffAssignment
 {
     public Guid      Id               { get; private set; } = Guid.NewGuid();
     public Guid      OrderId          { get; private set; }
     public Guid      StaffId          { get; private set; }
+    public AssignmentStatus Status    { get; private set; } = AssignmentStatus.Assigned;
     public DateTime  AssignedAt       { get; private set; } = DateTime.UtcNow;
     public DateTime  SlaDeadline      { get; private set; }
+    public DateTime? AcceptedAt       { get; private set; }
+    public DateTime? StartedAt        { get; private set; }
     public DateTime? CompletedAt      { get; private set; }
     public bool      IsOverdue        { get; private set; }
     /// null = auto-assign bởi job; có giá trị = admin tự chọn.
@@ -475,9 +489,46 @@ public class StaffAssignment
             Note              = note?.Trim(),
         };
 
+    /// NV xác nhận nhận đơn — bắt đầu tính thời gian xử lý.
+    public void Accept()
+    {
+        if (Status != AssignmentStatus.Assigned)
+            throw new InvalidOperationException($"Không thể nhận đơn ở trạng thái {Status}.");
+        Status     = AssignmentStatus.Accepted;
+        AcceptedAt = DateTime.UtcNow;
+    }
+
+    /// NV bắt đầu thao tác (đặt hàng trên sàn...).
+    public void Start()
+    {
+        if (Status is AssignmentStatus.Done or AssignmentStatus.Reassigned or AssignmentStatus.Cancelled)
+            throw new InvalidOperationException($"Không thể bắt đầu ở trạng thái {Status}.");
+        // Cho phép start trực tiếp từ Assigned (auto-accept) hoặc Accepted.
+        AcceptedAt ??= DateTime.UtcNow;
+        Status     = AssignmentStatus.InProgress;
+        StartedAt  = DateTime.UtcNow;
+    }
+
     /// Đánh dấu đơn đã xử lý xong (staff hoàn thành công việc của mình).
     public void MarkCompleted()
     {
+        if (Status is AssignmentStatus.Reassigned or AssignmentStatus.Cancelled)
+            throw new InvalidOperationException($"Assignment đã đóng ({Status}).");
+        Status      = AssignmentStatus.Done;
+        CompletedAt = DateTime.UtcNow;
+    }
+
+    /// Đóng assignment do reassign sang NV khác.
+    public void MarkReassigned()
+    {
+        Status      = AssignmentStatus.Reassigned;
+        CompletedAt = DateTime.UtcNow;
+    }
+
+    /// Đóng assignment do đơn bị huỷ.
+    public void Cancel()
+    {
+        Status      = AssignmentStatus.Cancelled;
         CompletedAt = DateTime.UtcNow;
     }
 
@@ -486,6 +537,16 @@ public class StaffAssignment
     {
         IsOverdue = true;
     }
+
+    /// Số phút xử lý thực tế (Accepted → Completed). null nếu chưa đủ mốc.
+    public int? HandlingMinutes =>
+        AcceptedAt.HasValue && CompletedAt.HasValue
+            ? (int)(CompletedAt.Value - AcceptedAt.Value).TotalMinutes
+            : null;
+
+    /// Đúng hạn = hoàn thành trước SlaDeadline.
+    public bool? IsOnTime =>
+        CompletedAt.HasValue ? CompletedAt.Value <= SlaDeadline : null;
 }
 
 // ── OrderFeeDetail — Breakdown chi tiết phí ──────────────────────────────────

@@ -25,6 +25,8 @@ public interface IUserService
     Task                DeleteAsync(Guid userId, Guid adminId, CancellationToken ct = default);
     Task<List<StaffRosterItemResponse>> GetStaffRosterAsync(string roleName, bool activeOnly,
                                                              CancellationToken ct = default);
+    Task<List<StaffDirectoryItemResponse>> GetUsersByIdsAsync(IEnumerable<Guid> ids,
+                                                              CancellationToken ct = default);
     Task<List<UserListResponse>> GetStaffManagementListAsync(CancellationToken ct = default);
     Task<UserListResponse> CreateStaffAsync(CreateStaffRequest req, Guid adminId, CancellationToken ct = default);
     Task<UserListResponse> CreateUserAsync(CreateUserRequest req, Guid adminId, CancellationToken ct = default);

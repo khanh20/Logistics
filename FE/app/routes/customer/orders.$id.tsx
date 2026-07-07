@@ -5,6 +5,7 @@ import { store } from "~/lib/feature/store";
 import { customerOrdersApi } from "~/lib/api/orders";
 import { StatusBadge } from "~/components/shared/StatusBadge";
 import { OrderTimeline } from "~/components/customer/OrderTimeline";
+import { ComplaintButton } from "~/components/customer/ComplaintButton";
 import { Button } from "~/components/ui/Button";
 import { formatCNY, formatVND, formatDate } from "~/lib/utils/format";
 import { CUSTOMER_CANCELLABLE_STATUSES } from "~/lib/constants/orderStatus";
@@ -236,6 +237,7 @@ export default function CustomerOrderDetailPage({
               Hủy đơn
             </Button>
           )}
+          <ComplaintButton order={order} />
         </div>
       </div>
 

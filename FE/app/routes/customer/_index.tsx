@@ -5,6 +5,7 @@ import type { Route } from "./+types/_index";
 import { productsApi } from "~/lib/api/products";
 import { exchangeRatesApi } from "~/lib/api/categories";
 import { ProductCard } from "~/components/customer/ProductCard";
+import { RecommendationSections } from "~/components/customer/RecommendationSections";
 import { formatVND } from "~/lib/utils/format";
 import type { ProductListItem } from "~/lib/types/product";
 import type { ExchangeRate } from "~/lib/types/category";
@@ -401,6 +402,11 @@ export default function CustomerHomePage({
             </div>
           </div>
         </section>
+
+        {/* ────────────────────────────────────────────
+            SECTION 2.5: GỢI Ý CÁ NHÂN HOÁ (recommendation)
+        ──────────────────────────────────────────── */}
+        <RecommendationSections className="py-12" />
 
         {/* ────────────────────────────────────────────
             SECTION 3: FEATURED PRODUCTS

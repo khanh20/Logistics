@@ -3,6 +3,17 @@ using LG.Module1.Domain.Exceptions;
 
 namespace LG.Module1.Domain.Entities;
 
+// Cách sắp xếp kết quả tìm kiếm sản phẩm (do khách chọn trên FE).
+public enum ProductSort
+{
+    Relevance,    // mặc định: nổi bật → lượt xem
+    PriceAsc,
+    PriceDesc,
+    Newest,
+    BestSelling,
+    MostViewed,
+}
+
 // ─── ProductMaster ────────────────────────────────────────────────────────────
 public class ProductMaster
 {

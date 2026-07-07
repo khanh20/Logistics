@@ -132,6 +132,15 @@ public class UserService(
         return users.Select(u => new StaffRosterItemResponse(u.Id, u.FullName, u.Email)).ToList();
     }
 
+    public async Task<List<StaffDirectoryItemResponse>> GetUsersByIdsAsync(
+        IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var users = await userRepo.GetByIdsAsync(ids, ct);
+        return users
+            .Select(u => new StaffDirectoryItemResponse(u.Id, u.FullName, u.Email, u.Status.ToString()))
+            .ToList();
+    }
+
     public async Task<List<UserListResponse>> GetStaffManagementListAsync(CancellationToken ct = default)
     {
         var paged = await GetAllAsync(page: 1, pageSize: 200, ct);

@@ -155,30 +155,12 @@
       }
 
       // 5. React shopName class-hash
+     
       if (!shop_name) {
-        try {
-          var s1 = document.querySelector(".ShopHeader--shopName--zZ3913d");
-          if (s1 != null) shop_name = s1.innerHTML;
-          else {
-            s1 = document.querySelector(".shopName--mTDZGIPO");
-            if (s1 != null) shop_name = s1.innerHTML;
-            else {
-              s1 = document.querySelector('[class*="shopName--ccf81bdd"]');
-              if (s1 != null) shop_name = s1.innerHTML;
-              else {
-                s1 = document.querySelector('[class*="shopName--cSjM9uKk"]');
-                if (s1 != null) shop_name = s1.innerHTML;
-                else {
-                  // mở rộng: bất kỳ class shopName--/ShopHeader--title nào (layout mới hash khác)
-                  s1 = document.querySelector(
-                    '[class*="shopName--"], [class*="ShopHeader--title"], [class*="ShopHeader--shopName"]'
-                  );
-                  if (s1 != null) shop_name = s1.textContent;
-                }
-              }
-            }
-          }
-        } catch (ex) {}
+        var s1 = document.querySelector(
+          '[class*="shopName--"], [class*="ShopHeader--shopName"], [class*="ShopHeader--title"]'
+        );
+        if (s1) shop_name = s1.getAttribute("title") || s1.textContent;
       }
 
       // 6. mở rộng: ShopHeader link[title] (layout mới)
@@ -190,7 +172,7 @@
       return (shop_name || "").replace(/<[^>]*>/g, "").trim();
     },
 
-   
+    // Seller id từ DOM — microscope-data userid (legacy) + link shop href (ICE).
     sellerFromDom: function () {
       try {
         var meta = document.querySelector('meta[name="microscope-data"]');
@@ -201,6 +183,15 @@
             var kv = parts[i].split("=");
             if (kv[0] && kv[0].trim() === "userid" && kv[1]) return kv[1].trim();
           }
+        }
+        // Layout ICE: link shop chứa shopId=/user_id=/userId=
+        var link = document.querySelector(
+          '[class*="shopName"] a[href*="shopId="], [class*="ShopHeader--"] a[href*="shopId="], a[href*="shop"][href*="user_id="], a[href*="userId="]'
+        );
+        if (link) {
+          var href = link.getAttribute("href") || "";
+          var mm = href.match(/[?&](?:shopId|user_id|userId|sellerId)=(\d{3,20})/);
+          if (mm) return mm[1];
         }
       } catch (e) {}
       return "";

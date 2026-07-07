@@ -193,7 +193,7 @@ public class ProductService(
         var (items, total) = await productRepo.SearchAsync(
             req.Keyword, req.CategoryId, req.PlatformId,
             req.MinPriceCny, req.MaxPriceCny,
-            req.ActiveOnly, req.Page, req.PageSize, ct);
+            req.ActiveOnly, req.Sort, req.Page, req.PageSize, ct);
 
         return new PagedProductResponse(
             items.Select(ProductMapper.ToListItem).ToList(),

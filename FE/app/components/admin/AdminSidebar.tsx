@@ -34,7 +34,15 @@ import {
   FaBoxOpen,
   FaTruckRampBox,
   FaPassport,
-  FaFileCircleQuestion
+  FaFileCircleQuestion,
+  FaChartBar,
+  FaClock,
+  FaChartLine,
+  FaCalendarDays,
+  FaComments,
+  FaUserGear,
+  FaUserShield,
+  FaKey
 } from "react-icons/fa6";
 
 interface AdminSidebarProps {
@@ -54,14 +62,38 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
   const location = useLocation();
 
   const MENU_ITEMS: MenuItem[] = [
-    { to: "/admin/orders", label: t("nav.orders"), icon: <FaBox className="text-base text-blue-400" /> },
-    { to: "/admin/platform-orders", label: t("nav.platform_orders"), icon: <FaBagShopping className="text-base text-purple-400" /> },
-    { to: "/admin/products", label: t("nav.products"), icon: <FaTags className="text-base text-green-400" /> },
-    { to: "/admin/categories", label: t("nav.categories"), icon: <FaFolder className="text-base text-yellow-400" /> },
-    { to: "/admin/platforms", label: t("nav.platforms"), icon: <FaGlobe className="text-base text-cyan-400" /> },
-    { to: "/admin/ingestion", label: t("nav.ingestion"), icon: <FaFileImport className="text-base text-orange-400" /> },
-    { to: "/admin/exchange-rates", label: t("nav.exchange_rates"), icon: <FaMoneyBillTransfer className="text-base text-emerald-400" /> },
-    { to: "/admin/staff", label: t("nav.staff"), icon: <FaUsers className="text-base text-pink-400" /> },
+    {
+      label: t("nav.group_orders"),
+      icon: <FaBox className="text-base text-blue-400" />,
+      children: [
+        { to: "/admin/orders", label: t("nav.orders"), icon: <FaBox className="text-base text-blue-400" /> },
+        { to: "/admin/platform-orders", label: t("nav.platform_orders"), icon: <FaBagShopping className="text-base text-purple-400" /> },
+      ]
+    },
+    {
+      label: t("nav.group_products"),
+      icon: <FaTags className="text-base text-green-400" />,
+      children: [
+        { to: "/admin/products", label: t("nav.products"), icon: <FaTags className="text-base text-green-400" /> },
+        { to: "/admin/categories", label: t("nav.categories"), icon: <FaFolder className="text-base text-yellow-400" /> },
+        { to: "/admin/platforms", label: t("nav.platforms"), icon: <FaGlobe className="text-base text-cyan-400" /> },
+        { to: "/admin/ingestion", label: t("nav.ingestion"), icon: <FaFileImport className="text-base text-orange-400" /> },
+        { to: "/admin/reviews", label: t("nav.reviews"), icon: <FaStar className="text-base text-amber-400" /> },
+      ]
+    },
+    {
+      label: t("nav.group_staff"),
+      icon: <FaUsers className="text-base text-pink-400" />,
+      children: [
+        { to: "/admin/staff", label: t("nav.staff"), icon: <FaUsers className="text-base text-pink-400" /> },
+        { to: "/admin/staff-dashboard", label: t("nav.staff_dashboard"), icon: <FaChartBar className="text-base text-blue-400" /> },
+        { to: "/admin/assignments/overdue", label: t("nav.overdue_sla"), icon: <FaClock className="text-base text-red-400" /> },
+        { to: "/admin/staff-kpi", label: t("nav.staff_kpi"), icon: <FaChartLine className="text-base text-indigo-400" /> },
+        { to: "/admin/staff-settings", label: t("nav.staff_settings"), icon: <FaCalendarDays className="text-base text-amber-400" /> },
+        { to: "/staff/complaints", label: t("nav.complaints"), icon: <FaComments className="text-base text-sky-400" /> },
+        { to: "/staff", label: t("nav.staff_portal"), icon: <FaUserGear className="text-base text-emerald-400" /> },
+      ]
+    },
     {
       label: t("nav.finance"),
       icon: <FaMoneyBillWave className="text-base text-emerald-400" />,
@@ -92,19 +124,29 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
         { to: "/admin/customs", label: t("nav.customs"), icon: <FaPassport className="text-base text-rose-400" /> },
         { to: "/admin/claims", label: t("nav.claims"), icon: <FaFileCircleQuestion className="text-base text-teal-400" /> },
       ]
+    },
+    {
+      label: t("nav.group_system"),
+      icon: <FaGear className="text-base text-slate-400" />,
+      children: [
+        { to: "/admin/exchange-rates", label: t("nav.exchange_rates"), icon: <FaMoneyBillTransfer className="text-base text-emerald-400" /> },
+        { to: "/admin/roles", label: t("nav.roles"), icon: <FaUserShield className="text-base text-pink-400" /> },
+        { to: "/admin/permissions", label: t("nav.permissions"), icon: <FaKey className="text-base text-amber-400" /> },
+      ]
     }
   ];
 
+  // Mặc định mở nhóm chứa route đang active để NV biết mình đang ở đâu.
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>(() => {
-    return {
-      [t("nav.finance")]: location.pathname.startsWith("/admin/finance"),
-      [t("nav.logistics")]: location.pathname.startsWith("/admin/warehouses") ||
-        location.pathname.startsWith("/admin/packages") ||
-        location.pathname.startsWith("/admin/sacks") ||
-        location.pathname.startsWith("/admin/container-trips") ||
-        location.pathname.startsWith("/admin/customs") ||
-        location.pathname.startsWith("/admin/claims"),
-    };
+    const state: Record<string, boolean> = {};
+    for (const item of MENU_ITEMS) {
+      if (item.children) {
+        state[item.label] = item.children.some(
+          (c) => c.to && (location.pathname === c.to || location.pathname.startsWith(c.to + "/"))
+        );
+      }
+    }
+    return state;
   });
 
   const toggleMenu = (label: string) => {

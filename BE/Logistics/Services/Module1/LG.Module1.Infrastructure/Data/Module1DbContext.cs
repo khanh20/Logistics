@@ -33,9 +33,25 @@ public class Module1DbContext(DbContextOptions<Module1DbContext> options) : DbCo
 
     public DbSet<ExtensionScrapeLog> ExtensionScrapeLogs => Set<ExtensionScrapeLog>();
 
+    // ── Staff Operations expansion ───────────────────────────────────────────
+    public DbSet<StaffWorkSetting>      StaffWorkSettings      => Set<StaffWorkSetting>();
+    public DbSet<StaffPerformanceDaily> StaffPerformanceDailies => Set<StaffPerformanceDaily>();
+    public DbSet<StaffNotification>     StaffNotifications     => Set<StaffNotification>();
+    public DbSet<OrderComplaint>        OrderComplaints        => Set<OrderComplaint>();
+    public DbSet<SupplierChatLog>       SupplierChatLogs       => Set<SupplierChatLog>();
+
+    // ── Engagement / Recommendation (Plan C) ─────────────────────────────────
+    public DbSet<UserActivityEvent> UserActivityEvents => Set<UserActivityEvent>();
+    public DbSet<UserFavorite>      UserFavorites      => Set<UserFavorite>();
+    public DbSet<ProductReview>     ProductReviews     => Set<ProductReview>();
+    public DbSet<TrendingProduct>   TrendingProducts   => Set<TrendingProduct>();
+    public DbSet<ProductEmbedding>  ProductEmbeddings  => Set<ProductEmbedding>();
+    public DbSet<ProductCoView>     ProductCoViews     => Set<ProductCoView>();
+
     protected override void OnModelCreating(ModelBuilder mb)
     {
         mb.HasDefaultSchema("mod1");
+        mb.HasPostgresExtension("vector"); // pgvector cho ProductEmbedding (Plan G)
         mb.ApplyConfigurationsFromAssembly(typeof(Module1DbContext).Assembly);
 
         // UTC auto-convert
