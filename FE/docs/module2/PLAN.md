@@ -42,10 +42,10 @@ Một số điểm trong tài liệu gốc đoán sai shape — code đã build 
 | Body claims | `ResolveClaimRequest`, `ReviewInsuranceClaimRequest` | Tên thật: `ResolveMissingClaimRequest { resolution; claimedValueVnd?; staffNote? }`, `UpdateInsuranceClaimRequest { status; approvedAmountVnd?; notes? }`; investigate có body `{ staffNote? }`. |
 | Quyền list missing-claims (staff) | complaint.read | **`complaint.manage`** (staff chỉ có read sẽ 403 khi list). |
 
-> Lưu ý BE-side cần báo team:
-> - `GET /api/my/packages/{id}/tracking` gọi `GetTrackingAsync(id)` **không kiểm tra ownership** theo user.
-> - `GET /api/missing-claims/{id}` và `GET /api/insurance-claims/{id}` cũng **không check ownership** — khách nào có `complaint.read` đều xem được claim của người khác nếu biết id.
-> - Không có endpoint **list insurance-claims** → khách tạo yêu cầu bồi thường xong sẽ không tìm lại được nếu mất link (FE đã nhắc user lưu URL); nên bổ sung `GET /api/my/insurance-claims`.
+> ~~Lưu ý BE-side cần báo team~~ — **ĐÃ FIX TOÀN BỘ (2026-07-07):**
+> - ✅ `GET /api/my/packages/{id}/tracking` giờ check ownership (kiện khác chủ → 404).
+> - ✅ `GET /api/missing-claims/{id}` và `GET /api/insurance-claims/{id}`: staff (`complaint.manage`) xem mọi claim; khách chỉ xem claim của mình (khác chủ → 404, không lộ tồn tại).
+> - ✅ Đã có `GET /api/my/insurance-claims` — FE thêm `insuranceClaimsApi.listMine()` + section "Yêu cầu bồi thường bảo hiểm" trong trang `customer/claims`.
 
 ---
 

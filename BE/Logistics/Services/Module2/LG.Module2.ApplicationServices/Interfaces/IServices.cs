@@ -147,7 +147,8 @@ public interface IClaimService
 {
     // MissingClaim
     Task<MissingClaimResponse>       CreateMissingClaimAsync(Guid customerId, CreateMissingClaimRequest req, CancellationToken ct = default);
-    Task<MissingClaimResponse>       GetMissingClaimAsync(Guid id, CancellationToken ct = default);
+    /// `requesterCustomerId` != null → chỉ trả claim của đúng khách đó (khác chủ → 404, không lộ tồn tại).
+    Task<MissingClaimResponse>       GetMissingClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default);
     Task<List<MissingClaimResponse>> GetMyMissingClaimsAsync(Guid customerId, CancellationToken ct = default);
     Task<List<MissingClaimResponse>> GetMissingClaimsByStatusAsync(MissingClaimStatus status, CancellationToken ct = default);
     Task<MissingClaimResponse>       InvestigateMissingClaimAsync(Guid id, InvestigateClaimRequest req, CancellationToken ct = default);
@@ -156,7 +157,9 @@ public interface IClaimService
 
     // InsuranceClaim
     Task<InsuranceClaimResponse>     CreateInsuranceClaimAsync(CreateInsuranceClaimRequest req, CancellationToken ct = default);
-    Task<InsuranceClaimResponse>     GetInsuranceClaimAsync(Guid id, CancellationToken ct = default);
+    /// `requesterCustomerId` != null → chỉ trả claim có kiện thuộc đúng khách đó (khác chủ → 404).
+    Task<InsuranceClaimResponse>     GetInsuranceClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default);
+    Task<List<InsuranceClaimResponse>> GetMyInsuranceClaimsAsync(Guid customerId, CancellationToken ct = default);
     Task<InsuranceClaimResponse>     UpdateInsuranceClaimAsync(Guid id, UpdateInsuranceClaimRequest req, CancellationToken ct = default);
     Task<InsuranceClaimResponse>     PayInsuranceClaimAsync(Guid id, CancellationToken ct = default);
 }
@@ -189,4 +192,6 @@ public interface IPackageService
     Task<List<PackageSummaryResponse>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default);
     Task<PackageImageResponse>    UploadImageAsync(Guid staffId, UploadPackageImageRequest req, CancellationToken ct = default);
     Task<List<TrackingEventResponse>> GetTrackingAsync(Guid packageId, CancellationToken ct = default);
+    /// Tracking cho khách: kiểm tra kiện thuộc đúng khách trước khi trả (khác chủ → 404).
+    Task<List<TrackingEventResponse>> GetTrackingForCustomerAsync(Guid customerId, Guid packageId, CancellationToken ct = default);
 }

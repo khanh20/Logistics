@@ -343,14 +343,20 @@ export const missingClaimsApi = {
 };
 
 // ── Insurance claims (UC-2.10) ────────────────────────────────────────────────
-// ⚠️ BE KHÔNG có endpoint list — chỉ tra theo id (từ missingClaim.insuranceClaimId
-// hoặc dán ID trực tiếp). review/pay: complaint.manage (staff).
+// Khách: listMine + getDetail (chỉ claim của mình — khác chủ BE trả 404).
+// Staff không có list-all — tra theo id / link từ missing claim. review/pay: complaint.manage.
 export const insuranceClaimsApi = {
   // POST /api/insurance-claims — kiện phải insuranceOpted (PACKAGE_NOT_INSURED)
   create: (body: CreateInsuranceClaimBody) =>
     apiModule2Client.post<unknown, ApiResponse<InsuranceClaim>>(
       "/api/insurance-claims",
       body
+    ),
+
+  // GET /api/my/insurance-claims — yêu cầu bồi thường của khách hiện tại
+  listMine: () =>
+    apiModule2Client.get<unknown, ApiResponse<InsuranceClaim[]>>(
+      "/api/my/insurance-claims"
     ),
 
   // GET /api/insurance-claims/{id}

@@ -40,9 +40,14 @@ public class ClaimService(
         return MapMissing(claim, package.Barcode, null);
     }
 
-    public async Task<MissingClaimResponse> GetMissingClaimAsync(Guid id, CancellationToken ct = default)
+    public async Task<MissingClaimResponse> GetMissingClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default)
     {
-        var claim   = await missingRepo.GetByIdAsync(id, ct) ?? throw new MissingClaimNotFoundException(id);
+        var claim = await missingRepo.GetByIdAsync(id, ct) ?? throw new MissingClaimNotFoundException(id);
+
+        // Khách chỉ xem được claim của mình — khác chủ trả 404 như không tồn tại
+        if (requesterCustomerId.HasValue && claim.CustomerId != requesterCustomerId.Value)
+            throw new MissingClaimNotFoundException(id);
+
         var package = await packageRepo.GetByIdAsync(claim.PackageId, ct);
         var insId   = await FindLinkedInsuranceClaimIdAsync(claim, ct);
         return MapMissing(claim, package?.Barcode ?? "", insId);
@@ -174,11 +179,28 @@ public class ClaimService(
         return MapInsurance(claim, package.Barcode);
     }
 
-    public async Task<InsuranceClaimResponse> GetInsuranceClaimAsync(Guid id, CancellationToken ct = default)
+    public async Task<InsuranceClaimResponse> GetInsuranceClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default)
     {
         var claim   = await insuranceRepo.GetByIdAsync(id, ct) ?? throw new InsuranceClaimNotFoundException(id);
         var package = await packageRepo.GetByIdAsync(claim.PackageId, ct);
+
+        // InsuranceClaim không có CustomerId riêng — ownership xét qua kiện hàng
+        if (requesterCustomerId.HasValue && package?.CustomerId != requesterCustomerId.Value)
+            throw new InsuranceClaimNotFoundException(id);
+
         return MapInsurance(claim, package?.Barcode ?? "");
+    }
+
+    public async Task<List<InsuranceClaimResponse>> GetMyInsuranceClaimsAsync(Guid customerId, CancellationToken ct = default)
+    {
+        var claims = await insuranceRepo.GetByCustomerAsync(customerId, ct);
+        var result = new List<InsuranceClaimResponse>(claims.Count);
+        foreach (var claim in claims)
+        {
+            var package = await packageRepo.GetByIdAsync(claim.PackageId, ct);
+            result.Add(MapInsurance(claim, package?.Barcode ?? ""));
+        }
+        return result;
     }
 
     public async Task<InsuranceClaimResponse> UpdateInsuranceClaimAsync(Guid id, UpdateInsuranceClaimRequest req, CancellationToken ct = default)

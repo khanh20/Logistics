@@ -3,7 +3,7 @@ import { Link, redirect, useNavigate, useRevalidator } from "react-router";
 import { Button, Form, Input, InputNumber, Modal, Select, message } from "antd";
 import { store } from "~/lib/feature/store";
 import { missingClaimsApi, insuranceClaimsApi, myPackagesApi } from "~/lib/api/logistics";
-import { MissingClaimStatusBadge } from "~/components/shared/ClaimStatusBadge";
+import { MissingClaimStatusBadge, InsuranceClaimStatusBadge } from "~/components/shared/ClaimStatusBadge";
 import { formatVND, formatDate, numberFormatter, numberParser } from "~/lib/utils/format";
 import { normalizeError } from "~/lib/utils/errors";
 import {
@@ -11,7 +11,7 @@ import {
   MISSING_CLAIM_RESOLUTION_LABEL,
   CLAIM_ERROR_MESSAGE,
 } from "~/lib/constants/logistics";
-import type { MissingClaim, PackageSummary } from "~/lib/types/logistics";
+import type { InsuranceClaim, MissingClaim, PackageSummary } from "~/lib/types/logistics";
 import type { Route } from "./+types/claims._index";
 
 export function meta(_: Route.MetaArgs) {
@@ -22,11 +22,16 @@ export async function clientLoader() {
   const { token } = store.getState().authState;
   if (!token) throw redirect("/login");
 
-  const [claimRes, pkgRes] = await Promise.all([
+  const [claimRes, insuranceRes, pkgRes] = await Promise.all([
     missingClaimsApi.listMine(),
+    insuranceClaimsApi.listMine(),
     myPackagesApi.list(),
   ]);
-  return { claims: claimRes.data ?? [], packages: pkgRes.data ?? [] };
+  return {
+    claims: claimRes.data ?? [],
+    insuranceClaims: insuranceRes.data ?? [],
+    packages: pkgRes.data ?? [],
+  };
 }
 
 function errMsg(err: unknown, fallback: string) {
@@ -46,9 +51,13 @@ function parseUrls(raw?: string): string[] | undefined {
 export default function ClaimsPage({
   loaderData,
 }: {
-  loaderData: { claims: MissingClaim[]; packages: PackageSummary[] };
+  loaderData: {
+    claims: MissingClaim[];
+    insuranceClaims: InsuranceClaim[];
+    packages: PackageSummary[];
+  };
 }) {
-  const { claims, packages } = loaderData;
+  const { claims, insuranceClaims, packages } = loaderData;
   const navigate = useNavigate();
   const revalidator = useRevalidator();
 
@@ -102,7 +111,6 @@ export default function ClaimsPage({
       message.success("Đã gửi yêu cầu bồi thường bảo hiểm.");
       setInsuranceOpen(false);
       insuranceForm.resetFields();
-      // BE không có list insurance claims cho khách → điều hướng thẳng vào detail.
       if (res.data) navigate(`/claims/insurance/${res.data.id}`);
     } catch (err) {
       message.error(errMsg(err, "Gửi yêu cầu bồi thường thất bại."));
@@ -176,6 +184,46 @@ export default function ClaimsPage({
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Yêu cầu bồi thường bảo hiểm của tôi */}
+      {insuranceClaims.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+            Yêu cầu bồi thường bảo hiểm
+          </h2>
+          <div className="space-y-3">
+            {insuranceClaims.map((c) => (
+              <Link
+                key={c.id}
+                to={`/claims/insurance/${c.id}`}
+                className="block bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-4"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <InsuranceClaimStatusBadge status={c.status} />
+                      <span className="text-xs font-mono text-gray-500">
+                        {c.barcode}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Gửi ngày {formatDate(c.createdAt)}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {c.approvedAmount != null ? formatVND(c.approvedAmount) : "—"}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {c.approvedAmount != null ? "được duyệt" : "chờ duyệt"}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

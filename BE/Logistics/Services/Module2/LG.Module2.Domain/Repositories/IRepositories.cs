@@ -155,6 +155,8 @@ public interface IInsuranceClaimRepository
 {
     Task<InsuranceClaim?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<List<InsuranceClaim>> GetByPackageAsync(Guid packageId, CancellationToken ct = default);
+    /// Claim của khách (join qua Package.CustomerId — InsuranceClaim không có cột CustomerId riêng).
+    Task<List<InsuranceClaim>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default);
     Task AddAsync(InsuranceClaim claim, CancellationToken ct = default);
     Task UpdateAsync(InsuranceClaim claim, CancellationToken ct = default);
 }
