@@ -138,6 +138,31 @@ public class GhtkCarrierGateway(
         return false;
     }
 
+    // ── Tra trạng thái: GET /services/shipment/v2/{label} ────────────────────────
+    // Đối soát chủ động khi webhook miss (GHTK chỉ retry webhook 1 lần).
+    public async Task<CarrierWaybillStatus?> GetWaybillStatusAsync(string trackingNo, CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get,
+            $"/services/shipment/v2/{Uri.EscapeDataString(trackingNo)}");
+        AddAuthHeaders(req);
+
+        var res  = await httpClient.SendAsync(req, ct);
+        var body = await res.Content.ReadAsStringAsync(ct);
+        var dto  = Deserialize<GhtkTraceResponse>(body);
+
+        if (dto is not { Success: true } || dto.Order is null || string.IsNullOrWhiteSpace(dto.Order.Status))
+        {
+            logger.LogWarning("[GHTK] trace {TrackingNo} failed: {Message}", trackingNo, dto?.Message ?? body);
+            return null;
+        }
+
+        logger.LogInformation("[GHTK] trace {TrackingNo} → status={Status} ({Text})",
+            trackingNo, dto.Order.Status, dto.Order.StatusText);
+
+        decimal? fee = decimal.TryParse(dto.Order.ShipMoney, out var f) ? f : null;
+        return new CarrierWaybillStatus(dto.Order.Status, dto.Order.StatusText, fee);
+    }
+
     // ── Map status_id GHTK → enum nội bộ ─────────────────────────────────────────
     // Bảng mã GHTK: -1 huỷ, 1-2 tiếp nhận, 3 đã lấy, 4 đang giao, 5-6 đã giao,
     // 7-8 lỗi lấy hàng, 9 giao thất bại, 10 hoãn giao, 11/13/20/21 trả hàng, 12 đang lấy.
@@ -243,6 +268,19 @@ public class GhtkCarrierGateway(
         public bool Success { get; set; }
         public string? Message { get; set; }
         public GhtkOrderInfo? Order { get; set; }
+    }
+
+    private sealed class GhtkTraceResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public GhtkTraceOrder? Order { get; set; }
+    }
+    private sealed class GhtkTraceOrder
+    {
+        public string? Status { get; set; }   // status_id dạng chuỗi
+        [JsonPropertyName("status_text")] public string? StatusText { get; set; }
+        [JsonPropertyName("ship_money")]  public string? ShipMoney { get; set; }
     }
     private sealed class GhtkOrderInfo
     {

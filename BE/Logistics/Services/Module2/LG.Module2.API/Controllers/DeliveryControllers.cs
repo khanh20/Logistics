@@ -47,3 +47,20 @@ public class DeliveryRequestsController(IDeliveryService deliveryService) : Modu
         return Ok(ApiResponse<object>.Ok(result, "Đã huỷ yêu cầu giao hàng."));
     }
 }
+
+// ── Domestic Waybills (Staff) — đối soát trạng thái với carrier ───────────────
+[Route("api/domestic-waybills")]
+public class DomesticWaybillsController(ITrackingService trackingService) : Module2BaseController
+{
+    // POST /api/domestic-waybills/{trackingNo}/sync
+    // Query trạng thái từ carrier rồi áp dụng như webhook (dùng khi nghi webhook miss).
+    [HttpPost("{trackingNo}/sync")]
+    [Authorize(Policy = Permissions.ShipmentManage)]
+    public async Task<IActionResult> Sync(string trackingNo, CancellationToken ct)
+    {
+        var result = await trackingService.SyncWaybillAsync(trackingNo, ct);
+        return Ok(ApiResponse<object>.Ok(result, result.Processed
+            ? $"Đã đối soát: vận đơn chuyển sang '{result.NewStatus}'."
+            : "Trạng thái không đổi hoặc carrier không trả dữ liệu."));
+    }
+}

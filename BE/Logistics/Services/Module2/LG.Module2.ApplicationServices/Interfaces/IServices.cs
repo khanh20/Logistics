@@ -105,6 +105,9 @@ public interface ICarrierGateway
     /// Huỷ vận đơn bên carrier. false = carrier từ chối huỷ (đơn đã được lấy/đang giao).
     Task<bool> CancelWaybillAsync(string trackingNo, CancellationToken ct = default);
 
+    /// Tra cứu trạng thái vận đơn chủ động (đối soát khi webhook miss). null = carrier không hỗ trợ/tra không được.
+    Task<CarrierWaybillStatus?> GetWaybillStatusAsync(string trackingNo, CancellationToken ct = default);
+
     /// Map mã trạng thái raw của carrier → enum nội bộ.
     DomesticWaybillStatus MapStatus(string rawStatus);
 
@@ -131,6 +134,9 @@ public interface IDeliveryService
 public interface ITrackingService
 {
     Task<WebhookResult> ProcessWebhookAsync(string carrierName, CarrierWebhookRequest req, CancellationToken ct = default);
+
+    /// Đối soát chủ động: query trạng thái từ carrier rồi áp dụng như webhook (GHTK chỉ retry webhook 1 lần).
+    Task<WebhookResult> SyncWaybillAsync(string trackingNo, CancellationToken ct = default);
 }
 
 // ── IClaimService (UC-2.10 — khiếu nại & bảo hiểm) ────────────────────────────

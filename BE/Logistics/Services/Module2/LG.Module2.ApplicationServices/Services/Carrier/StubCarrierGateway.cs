@@ -53,6 +53,12 @@ public class StubCarrierGateway(ILogger<StubCarrierGateway> logger) : ICarrierGa
         return Task.FromResult(true);
     }
 
+    public Task<CarrierWaybillStatus?> GetWaybillStatusAsync(string trackingNo, CancellationToken ct = default)
+    {
+        logger.LogInformation("[CARRIER-STUB] trace {TrackingNo}: không có API thật, bỏ qua đối soát", trackingNo);
+        return Task.FromResult<CarrierWaybillStatus?>(null);
+    }
+
     public DomesticWaybillStatus MapStatus(string rawStatus)
     {
         var s = rawStatus.Trim().ToLowerInvariant().Replace("_", "").Replace("-", "").Replace(" ", "");
