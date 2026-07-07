@@ -99,7 +99,7 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 
 **C. Phụ thuộc phase/module khác:**
 - [ ] Trừ ví khách (PaymentLock) — chờ Module3 Finance (hiện log stub)
-- [ ] GHN/Viettel Post/J&T API thật — hiện stub
+- [x] ~~GHN/Viettel Post/J&T API thật~~ — **CHỐT SCOPE (2026-07-07): chỉ tích hợp GHTK, KHÔNG tích hợp carrier khác.** 3 carrier còn lại tắt qua migration `DeactivateNonGhtkCarriers` (seed `IsActive=false` → khách chọn nhận 422 `CARRIER_INACTIVE`); FE chỉ hiển thị GHTK. `StubCarrierGateway` vẫn giữ làm fallback dev cho GHTK khi chưa cấu hình Token. Nếu sau này đổi ý: revert migration + bật lại list FE
 - [ ] Reconcile `DeliveryAddressId` với sổ địa chỉ (hiện địa chỉ lấy trực tiếp từ body request)
 
 ### Còn pending

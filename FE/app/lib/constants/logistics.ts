@@ -186,7 +186,8 @@ export const WAYBILL_STATUS_COLOR: Record<WaybillStatus, string> = {
 };
 
 // ── Domestic carriers (BE không có endpoint list → seed theo EntityConfigurations) ─
-// ⚠️ Chỉ GHTK là API thật; GHN/Viettel Post/J&T hiện là stub ở BE → ưu tiên GHTK khi demo.
+// Scope Phase 6: CHỈ tích hợp GHTK. GHN/Viettel Post/J&T đã tắt ở BE (IsActive=false,
+// migration DeactivateNonGhtkCarriers) — chọn sẽ nhận 422 CARRIER_INACTIVE nên không hiển thị.
 export interface CarrierOption {
   id: string;
   name: string;
@@ -196,10 +197,7 @@ export interface CarrierOption {
 }
 
 export const DOMESTIC_CARRIERS: CarrierOption[] = [
-  { id: "B0000000-0000-0000-0000-000000000001", name: "GHTK",         maxWeightKg: 30, maxValueVnd: 20_000_000, isReal: true },
-  { id: "B0000000-0000-0000-0000-000000000002", name: "GHN",          maxWeightKg: 30, maxValueVnd: 20_000_000, isReal: false },
-  { id: "B0000000-0000-0000-0000-000000000003", name: "Viettel Post", maxWeightKg: 50, maxValueVnd: 50_000_000, isReal: false },
-  { id: "B0000000-0000-0000-0000-000000000004", name: "J&T Express",  maxWeightKg: 50, maxValueVnd: 30_000_000, isReal: false },
+  { id: "B0000000-0000-0000-0000-000000000001", name: "GHTK", maxWeightKg: 30, maxValueVnd: 20_000_000, isReal: true },
 ];
 
 // ── Sack status (UC-2.03) ─────────────────────────────────────────────────────
