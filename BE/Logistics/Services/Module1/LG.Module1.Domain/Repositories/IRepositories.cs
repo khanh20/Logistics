@@ -1,4 +1,5 @@
 using LG.Module1.Domain.Entities;
+using Pgvector;
 using System.Threading.Tasks;
 
 namespace LG.Module1.Domain.Repositories;
@@ -84,12 +85,23 @@ public interface IProductRepository
     Task<ProductMaster?> GetBySlugAsync(string slug, CancellationToken ct = default);
     Task<ProductMaster?> GetByPlatformProductIdAsync(Guid shopId, string platformProductId, CancellationToken ct = default);
 
+    /// Tìm sản phẩm đã có theo platform + id-trên-sàn (không cần shopId) — dùng khi resolve link mà DB đã fetch sẵn.
+    Task<ProductMaster?> GetByPlatformAndProductIdAsync(Guid platformId, string platformProductId, CancellationToken ct = default);
+
     Task<(List<ProductMaster> Items, int TotalCount)> SearchAsync(
         string? keyword, Guid? categoryId, Guid? platformId,
         decimal? minPriceCny, decimal? maxPriceCny,
-        bool activeOnly, int page, int pageSize, CancellationToken ct = default);
+        bool activeOnly, ProductSort sort, int page, int pageSize, CancellationToken ct = default);
 
     Task<List<ProductMaster>> GetFeaturedAsync(int limit, CancellationToken ct = default);
+
+    /// Nạp nhiều sản phẩm theo danh sách Id (cho recommendation). Chỉ trả active + không cấm.
+    Task<List<ProductMaster>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
+
+    /// Top sản phẩm trong các danh mục (loại trừ excludeIds), sắp theo lượt xem — cho recommend theo nội dung.
+    Task<List<ProductMaster>> GetTopByCategoriesAsync(
+        IEnumerable<Guid> categoryIds, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default);
+
     Task AddAsync(ProductMaster product, CancellationToken ct = default);
     Task UpdateAsync(ProductMaster product, CancellationToken ct = default);
 }
@@ -182,6 +194,16 @@ public interface ICustomerOrderRepository
     /// Lấy các đơn PendingPayment đã quá timeout (phút).
     Task<List<CustomerOrder>> GetTimedOutPendingOrdersAsync(int timeoutMinutes, CancellationToken ct = default);
 
+    /// Đếm số đơn đã hoàn tất của 1 khách — dùng phân khúc khách cho recommendation.
+    Task<int> CountCompletedByCustomerAsync(Guid customerId, CancellationToken ct = default);
+
+    /// Id sản phẩm khách đã MUA (từ đơn Completed) — tín hiệu mạnh nhất cho gợi ý.
+    Task<List<Guid>> GetPurchasedProductIdsAsync(Guid customerId, int limit, CancellationToken ct = default);
+    /// Id shop khách đã mua hàng (đơn Completed) — cho "hàng từ shop quen".
+    Task<List<Guid>> GetPurchasedShopIdsAsync(Guid customerId, CancellationToken ct = default);
+    /// Khách đã từng mua sản phẩm này chưa (đơn Completed) — điều kiện để đánh giá.
+    Task<bool> HasPurchasedProductAsync(Guid customerId, Guid productId, CancellationToken ct = default);
+
     Task AddAsync(CustomerOrder order, CancellationToken ct = default);
     Task UpdateAsync(CustomerOrder order, CancellationToken ct = default);
 }
@@ -199,6 +221,9 @@ public interface IPlatformOrderRepository
 // ── StaffAssignment repos ─────────────────────────────────────────────────────
 public interface IStaffAssignmentRepository
 {
+    /// Lấy 1 assignment theo Id (kèm Order để map OrderCode).
+    Task<StaffAssignment?> GetByIdAsync(Guid id, CancellationToken ct = default);
+
     /// Lấy assignment đang active (chưa CompletedAt) của đơn.
     Task<StaffAssignment?> GetActiveByOrderIdAsync(Guid orderId, CancellationToken ct = default);
 
@@ -221,6 +246,14 @@ public interface IStaffAssignmentRepository
     /// Đếm số đơn overdue của staff (cho WorkloadBalancer tie-break).
     Task<int> GetOverdueCountAsync(Guid staffId, CancellationToken ct = default);
 
+    /// Hàng đợi của 1 NV — kèm Order, lọc trạng thái đóng/mở. Cho portal NV.
+    Task<List<StaffAssignment>> GetQueueByStaffAsync(Guid staffId, bool includeClosed,
+                                                     CancellationToken ct = default);
+
+    /// Lấy assignment được gán trong khoảng (theo AssignedAt) — cho KPI aggregation.
+    Task<List<StaffAssignment>> GetAssignedBetweenAsync(DateTime fromUtc, DateTime toUtc,
+                                                        CancellationToken ct = default);
+
     Task AddAsync(StaffAssignment assignment, CancellationToken ct = default);
     Task UpdateAsync(StaffAssignment assignment, CancellationToken ct = default);
 }
@@ -229,6 +262,126 @@ public interface IStaffAssignmentRepository
 public interface IExtensionScrapeLogRepository
 {
     Task AddAsync(ExtensionScrapeLog log, CancellationToken ct = default);
+}
+
+// ── Staff ops repos ───────────────────────────────────────────────────────────
+public interface IStaffWorkSettingRepository
+{
+    Task<StaffWorkSetting?> GetByStaffIdAsync(Guid staffId, CancellationToken ct = default);
+    Task<List<StaffWorkSetting>> GetAllAsync(CancellationToken ct = default);
+    /// Cấu hình của những NV trong danh sách Id (cho auto-assign filter).
+    Task<List<StaffWorkSetting>> GetByStaffIdsAsync(IEnumerable<Guid> staffIds, CancellationToken ct = default);
+    Task AddAsync(StaffWorkSetting setting, CancellationToken ct = default);
+    Task UpdateAsync(StaffWorkSetting setting, CancellationToken ct = default);
+}
+
+public interface IStaffPerformanceRepository
+{
+    Task<StaffPerformanceDaily?> GetAsync(Guid staffId, DateOnly date, CancellationToken ct = default);
+    Task<List<StaffPerformanceDaily>> GetRangeAsync(Guid? staffId, DateOnly from, DateOnly to,
+                                                    CancellationToken ct = default);
+    Task AddAsync(StaffPerformanceDaily snapshot, CancellationToken ct = default);
+    Task UpdateAsync(StaffPerformanceDaily snapshot, CancellationToken ct = default);
+}
+
+public interface IStaffNotificationRepository
+{
+    Task<List<StaffNotification>> GetByStaffAsync(Guid staffId, bool unreadOnly, int take,
+                                                  CancellationToken ct = default);
+    Task<int> CountUnreadAsync(Guid staffId, CancellationToken ct = default);
+    Task<StaffNotification?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task MarkAllReadAsync(Guid staffId, CancellationToken ct = default);
+    Task AddAsync(StaffNotification notification, CancellationToken ct = default);
+    Task UpdateAsync(StaffNotification notification, CancellationToken ct = default);
+}
+
+public interface IOrderComplaintRepository
+{
+    Task<OrderComplaint?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<OrderComplaint>> GetByOrderAsync(Guid orderId, CancellationToken ct = default);
+    Task<(List<OrderComplaint> Items, int TotalCount)> SearchAsync(
+        ComplaintStatus? status, Guid? assignedToStaffId, Guid? customerId,
+        int page, int pageSize, CancellationToken ct = default);
+    Task AddAsync(OrderComplaint complaint, CancellationToken ct = default);
+    Task UpdateAsync(OrderComplaint complaint, CancellationToken ct = default);
+}
+
+public interface ISupplierChatLogRepository
+{
+    Task<List<SupplierChatLog>> GetByOrderAsync(Guid orderId, CancellationToken ct = default);
+    Task AddAsync(SupplierChatLog log, CancellationToken ct = default);
+}
+
+// ── Engagement / Recommendation (Plan C) ─────────────────────────────────────
+public interface IUserActivityRepository
+{
+    Task AddAsync(UserActivityEvent ev, CancellationToken ct = default);
+    /// Id sản phẩm user xem gần đây (distinct, mới nhất trước).
+    Task<List<Guid>> GetRecentlyViewedProductIdsAsync(Guid customerId, int limit, CancellationToken ct = default);
+    /// Id sản phẩm được tương tác nhiều nhất trong N ngày gần đây (trending).
+    Task<List<Guid>> GetTrendingProductIdsAsync(int days, int limit, CancellationToken ct = default);
+    /// Danh mục user xem gần đây (distinct) — cho recommend theo nội dung.
+    Task<List<Guid>> GetRecentCategoryIdsAsync(Guid customerId, int limit, CancellationToken ct = default);
+    /// Trending kèm điểm (count) — TrendingAggregationJob dùng để ghi cache.
+    Task<List<TrendingScore>> GetTrendingScoredAsync(int days, int limit, CancellationToken ct = default);
+    /// Nguồn tính co-view: các cặp (phiên, sản phẩm) đã View trong N ngày (distinct).
+    Task<List<CoViewSourceRow>> GetCoViewSourceAsync(int days, int maxRows, CancellationToken ct = default);
+}
+
+// 1 dòng nguồn co-view: phiên (CustomerId hoặc SessionKey) + sản phẩm đã xem.
+public readonly record struct CoViewSourceRow(Guid? CustomerId, string? SessionKey, Guid ProductId);
+
+public interface IProductCoViewRepository
+{
+    /// Sản phẩm hay được xem chung với các seed (gộp điểm), loại trừ; điểm cao trước.
+    Task<List<Guid>> GetRelatedAsync(IEnumerable<Guid> seedProductIds, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default);
+    Task ReplaceAllAsync(IReadOnlyList<ProductCoView> rows, CancellationToken ct = default);
+}
+
+public interface ITrendingProductRepository
+{
+    /// Top productId theo rank đã precompute (đọc cache cho recommendation).
+    Task<List<Guid>> GetTopProductIdsAsync(int limit, CancellationToken ct = default);
+    /// Thay toàn bộ snapshot trending (job gọi).
+    Task ReplaceAllAsync(IReadOnlyList<TrendingProduct> rows, CancellationToken ct = default);
+}
+
+// ── Vector embedding (Plan G — pgvector) ─────────────────────────────────────
+public interface IProductEmbeddingRepository
+{
+    Task UpsertAsync(Guid productId, Vector embedding, string model, CancellationToken ct = default);
+    /// Lấy vector của các sản phẩm (để dựng user-vector).
+    Task<List<Vector>> GetVectorsAsync(IEnumerable<Guid> productIds, CancellationToken ct = default);
+    /// ANN cosine: id sản phẩm gần userVector nhất, loại trừ excludeIds.
+    Task<List<Guid>> FindNearestAsync(Vector userVector, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default);
+    /// Như FindNearest nhưng kèm cosine distance (để dùng làm điểm similarity trong rank).
+    Task<List<(Guid Id, double Distance)>> FindNearestWithScoreAsync(Vector userVector, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default);
+    /// Sản phẩm active chưa có embedding (cho backfill job).
+    Task<List<Guid>> GetProductIdsMissingEmbeddingAsync(int limit, CancellationToken ct = default);
+}
+
+public interface IUserFavoriteRepository
+{
+    Task<bool> ExistsAsync(Guid customerId, Guid productId, CancellationToken ct = default);
+    Task<UserFavorite?> GetAsync(Guid customerId, Guid productId, CancellationToken ct = default);
+    Task<List<UserFavorite>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default);
+    Task AddAsync(UserFavorite fav, CancellationToken ct = default);
+    Task RemoveAsync(UserFavorite fav, CancellationToken ct = default);
+}
+
+public interface IProductReviewRepository
+{
+    Task<ProductReview?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    /// Đánh giá của 1 sản phẩm, lọc theo trạng thái (Approved cho khách xem).
+    Task<(List<ProductReview> Items, int TotalCount)> GetByProductAsync(
+        Guid productId, ReviewStatus? status, int page, int pageSize, CancellationToken ct = default);
+    /// Hàng đợi kiểm duyệt (Admin/Staff).
+    Task<(List<ProductReview> Items, int TotalCount)> SearchAsync(
+        ReviewStatus? status, int page, int pageSize, CancellationToken ct = default);
+    Task<bool> ExistsForCustomerAsync(Guid productId, Guid customerId, CancellationToken ct = default);
+    Task<ProductReview?> GetByProductAndCustomerAsync(Guid productId, Guid customerId, CancellationToken ct = default);
+    Task AddAsync(ProductReview review, CancellationToken ct = default);
+    Task UpdateAsync(ProductReview review, CancellationToken ct = default);
 }
 
 // ── Unit of Work ──────────────────────────────────────────────────────────────

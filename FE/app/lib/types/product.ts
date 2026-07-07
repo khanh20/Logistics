@@ -87,6 +87,14 @@ export interface PagedProductResponse {
   totalPages: number;
 }
 
+export type ProductSort =
+  | "Relevance"
+  | "PriceAsc"
+  | "PriceDesc"
+  | "Newest"
+  | "BestSelling"
+  | "MostViewed";
+
 export interface ProductSearchParams {
   keyword?: string;
   categoryId?: string;
@@ -94,6 +102,7 @@ export interface ProductSearchParams {
   minPriceCny?: number;
   maxPriceCny?: number;
   activeOnly?: boolean;
+  sort?: ProductSort;
   page?: number;
   pageSize?: number;
 }

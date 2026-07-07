@@ -16,6 +16,8 @@ public interface IUserRepository
     Task<List<string>> GetRoleNamesAsync(Guid userId, CancellationToken ct = default);
     Task<List<User>> GetByRoleNameAsync(string roleName, bool activeOnly,
                                          CancellationToken ct = default);
+    /// Lấy nhiều user theo danh sách Id (cho cross-module directory resolve).
+    Task<List<User>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
 }
 
 public interface IRoleRepository

@@ -45,6 +45,15 @@ public class ExtensionProductUpserter(
             logger.LogInformation("Auto-created shop: {Name} ({ExtId}) on {Platform}",
                 shop.ShopName, shop.ShopIdOnPlatform, platform.Name);
         }
+        else if (ShouldUpdateShopName(shop.ShopName, d.ShopName))
+        {
+            // Gỡ "đóng băng": shop đã tồn tại nhưng tên cũ là placeholder/khác → cập nhật tên thật.
+            shop.UpdateInfo(d.ShopName, d.ShopUrl);
+            await shopRepo.UpdateAsync(shop, ct);
+            await uow.SaveChangesAsync(ct);
+            logger.LogInformation("Updated shop name: {ExtId} on {Platform} → {Name}",
+                shop.ShopIdOnPlatform, platform.Name, shop.ShopName);
+        }
         if (shop.IsBlacklisted)
             throw new BlacklistedShopException(shop.ShopName);
 
@@ -151,6 +160,20 @@ public class ExtensionProductUpserter(
         "RAKUTEN" => "Rakuten",
         _         => p.Trim(),
     };
+
+    // Có nên cập nhật tên shop hiện tại bằng tên mới scrape được không?
+    // Chỉ khi tên mới hợp lệ (không rỗng, không phải fallback "Shop ...") và KHÁC tên cũ.
+    public static bool ShouldUpdateShopName(string current, string? incoming)
+    {
+        if (string.IsNullOrWhiteSpace(incoming)) return false;
+        var inc = incoming.Trim();
+        if (IsPlaceholderShopName(inc)) return false;
+        return !string.Equals(current?.Trim(), inc, StringComparison.Ordinal);
+    }
+
+    private static bool IsPlaceholderShopName(string name) =>
+        name.StartsWith("Shop ", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("unknown", StringComparison.OrdinalIgnoreCase);
 
     public static decimal ConvertToCny(decimal price, string currency)
     {

@@ -9,6 +9,7 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   ssr: {
+    // Inline antd + rc-* để CSS-in-JS / ESM hoạt động khi SSR.
     noExternal: [
       /^antd/,
       /^@ant-design/,
@@ -18,5 +19,10 @@ export default defineConfig({
       "@emotion/hash",
       "react-toastify",
     ],
+    // Ép esbuild prebundle các package icon antd cho môi trường SSR → CJS→ESM sạch,
+    // tránh "exports is not defined" trong module-runner của Vite dev.
+    optimizeDeps: {
+      include: ["@ant-design/icons", "@ant-design/icons/es/icons/*", "@ant-design/icons-svg"],
+    },
   },
 });

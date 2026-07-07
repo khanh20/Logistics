@@ -160,7 +160,14 @@ public record StaffAssignmentDto(
     DateTime? CompletedAt,
     bool      IsOverdue,
     bool      IsAutoAssigned,
-    string?   Note
+    string?   Note,
+    string    Status            = "Assigned",
+    DateTime? AcceptedAt        = null,
+    DateTime? StartedAt         = null,
+    int?      HandlingMinutes   = null,
+    bool?     IsOnTime          = null,
+    string?   OrderCode         = null,
+    string?   StaffName         = null
 );
 
 public record OverdueAssignmentDto(
@@ -170,7 +177,8 @@ public record OverdueAssignmentDto(
     Guid    StaffId,
     DateTime SlaDeadline,
     int     OverdueByMinutes,
-    string  OrderStatus
+    string  OrderStatus,
+    string? StaffName = null
 );
 
 public record ActiveAssignmentSummary(

@@ -4,24 +4,17 @@ import type { Route } from "./+types/ingestion";
 import { ingestionApi, categoriesApi } from "~/lib/api/categories";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
-import { Select } from "~/components/ui/Select";
 import { Badge } from "~/components/ui/Badge";
+import { SectionHeader } from "~/components/shared/Panels";
+import { SkeletonPanel } from "~/components/shared/Skeleton";
+import { FadeIn } from "~/components/shared/Motion";
+import { CheckCircle, WarningCircle } from "~/components/shared/icons";
+import { useFetch } from "~/lib/hooks/useFetch";
 import { cn } from "~/lib/utils/cn";
 import type { CategoryTree, CrawlResultResponse, CrawlUrlResultResponse } from "~/lib/types/category";
 
 export function meta(_: Route.MetaArgs) {
   return [{ title: "Import sản phẩm — MuaHo Admin" }];
-}
-
-export async function clientLoader() {
-  const [platformsRes, categoriesRes] = await Promise.all([
-    ingestionApi.getAvailablePlatforms(),
-    categoriesApi.getTree(),
-  ]);
-  return {
-    availablePlatforms: platformsRes.data,
-    categories: categoriesRes.data,
-  };
 }
 
 interface FlatCategory {
@@ -51,10 +44,11 @@ function CategorySelect({
 
   return (
     <div className="flex flex-col gap-1">
-      <Select
-        label={t("ingestion.category_label")}
+      <label className="text-sm font-medium text-slate-700">{t("ingestion.category_label")}</label>
+      <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
       >
         <option value="">{t("ingestion.category_placeholder")}</option>
         {flat.map((cat) => (
@@ -62,36 +56,41 @@ function CategorySelect({
             {"—".repeat(cat.depth)} {cat.nameVn}
           </option>
         ))}
-      </Select>
+      </select>
     </div>
   );
 }
 
 type TabMode = "keyword" | "url";
 
-export default function IngestionPage({
-  loaderData,
-}: {
-  loaderData: { availablePlatforms: string[]; categories: CategoryTree[] };
-}) {
+export default function IngestionPage() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabMode>("keyword");
 
+  const { data, loading, error } = useFetch<{ availablePlatforms: string[]; categories: CategoryTree[] }>(
+    async () => {
+      const [platformsRes, categoriesRes] = await Promise.all([
+        ingestionApi.getAvailablePlatforms(),
+        categoriesApi.getTree(),
+      ]);
+      return { availablePlatforms: platformsRes.data, categories: categoriesRes.data };
+    },
+    []
+  );
+
   return (
-    <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{t("ingestion.title")}</h1>
+    <FadeIn className="max-w-4xl space-y-6">
+      <SectionHeader title={t("ingestion.title")} />
 
       {/* Tab switcher */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit mb-6">
+      <div className="flex w-fit gap-1 rounded-lg bg-slate-100 p-1">
         {(["keyword", "url"] as const).map((mode) => (
           <button
             key={mode}
             onClick={() => setTab(mode)}
             className={cn(
-              "px-4 py-1.5 rounded-md text-sm font-medium transition-colors",
-              tab === mode
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-700"
+              "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+              tab === mode ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
             )}
           >
             {mode === "keyword" ? t("ingestion.crawl_keyword") : t("ingestion.crawl_url")}
@@ -99,34 +98,34 @@ export default function IngestionPage({
         ))}
       </div>
 
-      {tab === "keyword" ? (
-        <KeywordCrawlForm
-          platforms={loaderData.availablePlatforms}
-          categories={loaderData.categories}
-        />
-      ) : (
-        <UrlCrawlForm categories={loaderData.categories} />
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <WarningCircle size={18} weight="fill" />
+          {error}
+        </div>
       )}
-    </div>
+
+      {loading && !data ? (
+        <SkeletonPanel rows={4} cols={2} />
+      ) : !data ? null : tab === "keyword" ? (
+        <KeywordCrawlForm platforms={data.availablePlatforms} categories={data.categories} />
+      ) : (
+        <UrlCrawlForm categories={data.categories} />
+      )}
+    </FadeIn>
   );
 }
 
 // ── Keyword Crawl ─────────────────────────────────────────────────────────────
-function KeywordCrawlForm({
-  platforms,
-  categories,
-}: {
-  platforms: string[];
-  categories: CategoryTree[];
-}) {
+function KeywordCrawlForm({ platforms, categories }: { platforms: string[]; categories: CategoryTree[] }) {
   const { t } = useTranslation();
-  const [platform, setPlatform]     = useState(platforms[0] ?? "eBay");
-  const [keyword, setKeyword]       = useState("");
+  const [platform, setPlatform] = useState(platforms[0] ?? "eBay");
+  const [keyword, setKeyword] = useState("");
   const [maxResults, setMaxResults] = useState(20);
   const [categoryId, setCategoryId] = useState("");
-  const [loading, setLoading]       = useState(false);
-  const [result, setResult]         = useState<CrawlResultResponse | null>(null);
-  const [error, setError]           = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<CrawlResultResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -150,21 +149,24 @@ function KeywordCrawlForm({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex gap-4 flex-wrap">
-            <div className="flex flex-col gap-1 min-w-40">
-              <Select
-                label={t("ingestion.platform_label")}
+          <div className="flex flex-wrap gap-4">
+            <div className="flex min-w-40 flex-col gap-1">
+              <label className="text-sm font-medium text-slate-700">{t("ingestion.platform_label")}</label>
+              <select
                 value={platform}
                 onChange={(e) => setPlatform(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 {platforms.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
                 ))}
-              </Select>
+              </select>
             </div>
-            <div className="flex-1 min-w-56">
+            <div className="min-w-56 flex-1">
               <Input
                 label={t("ingestion.keyword_label")}
                 value={keyword}
@@ -184,14 +186,11 @@ function KeywordCrawlForm({
               />
             </div>
           </div>
-          <CategorySelect
-            categories={categories}
-            value={categoryId}
-            onChange={setCategoryId}
-          />
+          <CategorySelect categories={categories} value={categoryId} onChange={setCategoryId} />
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <WarningCircle size={18} weight="fill" />
               {error}
             </p>
           )}
@@ -210,11 +209,11 @@ function KeywordCrawlForm({
 // ── URL Crawl ─────────────────────────────────────────────────────────────────
 function UrlCrawlForm({ categories }: { categories: CategoryTree[] }) {
   const { t } = useTranslation();
-  const [url, setUrl]               = useState("");
+  const [url, setUrl] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [loading, setLoading]       = useState(false);
-  const [result, setResult]         = useState<CrawlUrlResultResponse | null>(null);
-  const [error, setError]           = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<CrawlUrlResultResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -222,10 +221,7 @@ function UrlCrawlForm({ categories }: { categories: CategoryTree[] }) {
     setResult(null);
     setLoading(true);
     try {
-      const res = await ingestionApi.crawlByUrl({
-        url,
-        categoryId: categoryId || undefined,
-      });
+      const res = await ingestionApi.crawlByUrl({ url, categoryId: categoryId || undefined });
       setResult(res.data);
     } catch (err: unknown) {
       setError((err as { message?: string })?.message ?? t("common.error"));
@@ -236,7 +232,7 @@ function UrlCrawlForm({ categories }: { categories: CategoryTree[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label={t("ingestion.url_label")}
@@ -246,13 +242,10 @@ function UrlCrawlForm({ categories }: { categories: CategoryTree[] }) {
             placeholder={t("ingestion.url_placeholder")}
             required
           />
-          <CategorySelect
-            categories={categories}
-            value={categoryId}
-            onChange={setCategoryId}
-          />
+          <CategorySelect categories={categories} value={categoryId} onChange={setCategoryId} />
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <WarningCircle size={18} weight="fill" />
               {error}
             </p>
           )}
@@ -263,19 +256,14 @@ function UrlCrawlForm({ categories }: { categories: CategoryTree[] }) {
       </div>
 
       {result && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <h3 className="font-semibold text-gray-900 mb-3">Kết quả</h3>
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-sm">
+          <h3 className="mb-3 font-heading font-semibold text-slate-900">{t("ingestion.result", "Kết quả")}</h3>
           <CrawlStatusBadge status={result.status} />
-          {result.reason && (
-            <p className="mt-2 text-sm text-gray-600">{result.reason}</p>
-          )}
+          {result.reason && <p className="mt-2 text-sm text-slate-600">{result.reason}</p>}
           {result.savedProductId && (
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-slate-600">
               Product ID:{" "}
-              <a
-                href={`/products/${result.savedProductId}`}
-                className="text-primary hover:underline font-medium"
-              >
+              <a href={`/products/${result.savedProductId}`} className="font-medium text-primary hover:underline">
                 {result.savedProductId}
               </a>
             </p>
@@ -291,28 +279,29 @@ function CrawlResultPanel({ result }: { result: CrawlResultResponse }) {
   const { t } = useTranslation();
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-sm">
       {/* Summary bar */}
-      <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex flex-wrap gap-6 text-sm">
-        <span className="font-medium text-gray-900">
+      <div className="flex flex-wrap gap-6 border-b border-slate-200 bg-slate-50/80 px-6 py-4 text-sm">
+        <span className="font-medium text-slate-900">
           {result.platformName} — "{result.keyword}"
         </span>
-        <span className="text-green-700">✓ Lưu: {result.saved}</span>
-        <span className="text-gray-500">Tìm thấy: {result.totalFound}</span>
-        <span className="text-amber-600">Bỏ qua: {result.skipped}</span>
-        <span className="text-red-600">Hàng cấm: {result.forbidden}</span>
+        <span className="inline-flex items-center gap-1 text-emerald-700">
+          <CheckCircle size={15} weight="fill" />
+          {t("ingestion.saved", "Lưu")}: {result.saved}
+        </span>
+        <span className="text-slate-500">{t("ingestion.found", "Tìm thấy")}: {result.totalFound}</span>
+        <span className="text-amber-600">{t("ingestion.skipped_count", "Bỏ qua")}: {result.skipped}</span>
+        <span className="text-red-600">{t("ingestion.forbidden_count", "Hàng cấm")}: {result.forbidden}</span>
       </div>
 
       {/* Item list */}
-      <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+      <div className="max-h-96 divide-y divide-slate-100 overflow-y-auto">
         {result.items.map((item) => (
-          <div key={item.platformProductId} className="px-6 py-3 flex items-start gap-3">
+          <div key={item.platformProductId} className="flex items-start gap-3 px-6 py-3">
             <CrawlStatusBadge status={item.status} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-900 truncate">{item.title}</p>
-              {item.reason && (
-                <p className="text-xs text-gray-500 mt-0.5">{item.reason}</p>
-              )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm text-slate-900">{item.title}</p>
+              {item.reason && <p className="mt-0.5 text-xs text-slate-500">{item.reason}</p>}
             </div>
           </div>
         ))}
@@ -325,17 +314,13 @@ function CrawlStatusBadge({ status }: { status: string }) {
   const { t } = useTranslation();
 
   const CONFIG: Record<string, { variant: import("~/components/ui/Badge").BadgeProps["variant"]; labelKey: string }> = {
-    Created:   { variant: "success", labelKey: "ingestion.status_created" },
-    Updated:   { variant: "info",    labelKey: "ingestion.status_updated" },
-    Skipped:   { variant: "default", labelKey: "ingestion.status_skipped" },
-    Forbidden: { variant: "error",   labelKey: "ingestion.status_forbidden" },
-    Error:     { variant: "error",   labelKey: "ingestion.status_error" },
+    Created: { variant: "success", labelKey: "ingestion.status_created" },
+    Updated: { variant: "info", labelKey: "ingestion.status_updated" },
+    Skipped: { variant: "default", labelKey: "ingestion.status_skipped" },
+    Forbidden: { variant: "error", labelKey: "ingestion.status_forbidden" },
+    Error: { variant: "error", labelKey: "ingestion.status_error" },
   };
 
   const cfg = CONFIG[status] ?? { variant: "default" as const, labelKey: "" };
-  return (
-    <Badge variant={cfg.variant}>
-      {cfg.labelKey ? t(cfg.labelKey) : status}
-    </Badge>
-  );
+  return <Badge variant={cfg.variant}>{cfg.labelKey ? t(cfg.labelKey) : status}</Badge>;
 }

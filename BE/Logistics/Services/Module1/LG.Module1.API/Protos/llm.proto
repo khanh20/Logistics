@@ -1,0 +1,148 @@
+// serving_pipeline/grpc/protos/llm.proto  (updated — Phase 1)
+//
+// Backward compatible: chỉ thêm fields mới (7+), không xóa fields cũ.
+// ASP.NET Core cũ không gửi agent_mode → default false → behavior cũ.
+//
+// Regenerate sau khi update:
+//   pip install grpcio-tools==1.65.5
+//   python -m grpc_tools.protoc \
+//     -I protos \
+//     --python_out=generated \
+//     --grpc_python_out=generated \
+//     protos/llm.proto
+
+syntax = "proto3";
+
+package chatbot.llm;
+option csharp_namespace = "Chatbot.AI.LLM";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Service
+// ─────────────────────────────────────────────────────────────────────────────
+
+service LLMService {
+  rpc StreamGenerate(GenerateRequest) returns (stream TokenResponse);
+  rpc Generate(GenerateRequest) returns (GenerateResponse);
+  rpc BatchGenerate(BatchGenerateRequest) returns (BatchGenerateResponse);
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Common
+// ─────────────────────────────────────────────────────────────────────────────
+
+message ChatMessage {
+  string role    = 1;
+  string content = 2;
+  string name    = 3;
+}
+
+message ImageInput {
+  string url         = 1;
+  string base64_data = 2;
+  string media_type  = 3;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Agent config
+// ─────────────────────────────────────────────────────────────────────────────
+
+message AgentConfig {
+  int32  max_iterations          = 1;   // default 10
+  repeated string allowed_tools  = 2;   // empty = all tools
+  string agent_type              = 3;   // "react" (default) | "plan_execute" (future)
+  bool   enable_thinking         = 4;   // Gemini 2.5+ thinking mode (future)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// StreamGenerate & Generate
+// ─────────────────────────────────────────────────────────────────────────────
+
+message GenerateRequest {
+  // ── Existing fields ─────────────────────────────────────────
+  repeated ChatMessage messages = 1;
+  string model                  = 2;
+  repeated ImageInput  images   = 3;
+  float  temperature            = 4;
+  float  top_p                  = 5;
+  int32  max_tokens             = 6;
+  repeated string stop          = 7;
+  string lora_name              = 8;
+  string request_id             = 9;
+
+  // ── Agentic fields ───────────────────────────────────────────────────
+  bool        agent_mode        = 10;  // false = behavior cũ (default)
+  AgentConfig agent_config      = 11;
+  string      conversation_id   = 12;  // để agent log và track
+}
+
+// TokenResponse — thêm event_type để phân biệt agentic events
+message TokenResponse {
+  // ── Existing fields (giữ nguyên) ─────────────────────────────────────────
+  string token             = 1;
+  bool   is_final          = 2;
+  string finish_reason     = 3;
+  int32  prompt_tokens     = 4;
+  int32  completion_tokens = 5;
+
+  // ── Agentic event fields ─────────────────────────────────────────────
+  // event_type: "token" | "thinking" | "tool_call" | "tool_result" | "done" | "error"
+  // event_data_json: JSON payload cho non-token events
+  // Khi event_type="token": dùng field 'token' như cũ
+  // Khi event_type khác: đọc event_data_json (ASP.NET Core forward trực tiếp)
+  string event_type        = 6;
+  string event_data_json   = 7;
+}
+
+message GenerateResponse {
+  string text              = 1;
+  string finish_reason     = 2;
+  int32  prompt_tokens     = 3;
+  int32  completion_tokens = 4;
+  float  latency_ms        = 5;
+  string request_id        = 6;
+  string model             = 7;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Batch
+// ─────────────────────────────────────────────────────────────────────────────
+
+message BatchItem {
+  string item_id               = 1;
+  repeated ChatMessage messages = 2;
+  string model                  = 3;
+  repeated ImageInput  images   = 4;
+  float  temperature            = 5;
+  int32  max_tokens             = 6;
+}
+
+message BatchGenerateRequest {
+  repeated BatchItem items = 1;
+  int32  max_concurrency   = 2;
+  float  timeout_seconds   = 3;
+}
+
+message BatchResultItem {
+  string item_id           = 1;
+  string text              = 2;
+  string error             = 3;
+  int32  prompt_tokens     = 4;
+  int32  completion_tokens = 5;
+  float  latency_ms        = 6;
+}
+
+message BatchGenerateResponse {
+  repeated BatchResultItem results = 1;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Health
+// ─────────────────────────────────────────────────────────────────────────────
+
+message HealthRequest {}
+
+message HealthResponse {
+  repeated string loaded_models = 1;
+  float  uptime_s               = 2;
+}

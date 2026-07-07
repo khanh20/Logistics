@@ -4,32 +4,31 @@ import type { Route } from "./+types/platforms._index";
 import { platformsApi } from "~/lib/api/platforms";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
-import { Select } from "~/components/ui/Select";
 import { Badge } from "~/components/ui/Badge";
-import { cn } from "~/lib/utils/cn";
-import { PLATFORM_ICON, API_PROVIDERS, type ApiProvider } from "~/lib/constants/platforms";
+import { SectionHeader, EmptyState } from "~/components/shared/Panels";
+import { SkeletonCards } from "~/components/shared/Skeleton";
+import { FadeIn } from "~/components/shared/Motion";
+import { Plus, Storefront, X, CheckCircle, WarningCircle } from "~/components/shared/icons";
+import { useFetch } from "~/lib/hooks/useFetch";
+import { API_PROVIDERS } from "~/lib/constants/platforms";
 import type { Platform, CreatePlatformRequest } from "~/lib/types/platform";
-import type { ApiResponse } from "~/lib/types/common";
 
 export function meta(_: Route.MetaArgs) {
   return [{ title: "Sàn TMĐT — MuaHo Admin" }];
 }
 
-export async function clientLoader() {
-  const res = await platformsApi.getAll();
-  return { platforms: res.data };
-}
-
-export default function PlatformsPage({ loaderData }: { loaderData: { platforms: Platform[] } }) {
+export default function PlatformsPage() {
   const { t } = useTranslation();
-  const [platforms, setPlatforms] = useState<Platform[]>(loaderData.platforms);
+  const { data, loading, error, setData } = useFetch<Platform[]>(
+    async () => (await platformsApi.getAll()).data,
+    []
+  );
+
   const [showCreate, setShowCreate] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [credentialsPlatformId, setCredentialsPlatformId] = useState<string | null>(null);
 
-  function selectedPlatform() {
-    return platforms.find((p) => p.id === selectedId) ?? null;
-  }
+  const platforms = data ?? [];
 
   async function handleToggleActive(platform: Platform) {
     try {
@@ -40,104 +39,97 @@ export default function PlatformsPage({ loaderData }: { loaderData: { platforms:
         isActive: !platform.isActive,
         logoUrl: platform.logoUrl ?? undefined,
       });
-      setPlatforms((prev) => prev.map((p) => (p.id === platform.id ? res.data : p)));
-    } catch { /* noop */ }
+      setData((prev) => (prev ?? []).map((p) => (p.id === platform.id ? res.data : p)));
+    } catch {
+      /* noop */
+    }
   }
 
-  async function handleCreated(p: Platform) {
-    setPlatforms((prev) => [...prev, p]);
+  function handleCreated(p: Platform) {
+    setData((prev) => [...(prev ?? []), p]);
     setShowCreate(false);
   }
 
+  const selectedPlatform = platforms.find((p) => p.id === selectedId) ?? null;
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t("platform.title")}</h1>
-        <Button onClick={() => setShowCreate(true)} size="md">
-          + {t("platform.create")}
-        </Button>
-      </div>
+    <FadeIn className="space-y-6">
+      <SectionHeader
+        title={t("platform.title")}
+        action={
+          <Button onClick={() => setShowCreate(true)} size="sm" className="gap-1.5">
+            <Plus size={16} weight="bold" />
+            {t("platform.create")}
+          </Button>
+        }
+      />
 
-      {/* Platform grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {platforms.map((p) => (
-          <div
-            key={p.id}
-            className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-3"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">{PLATFORM_ICON[p.name] ?? "🛒"}</span>
-                <div>
-                  <h3 className="font-semibold text-gray-900">{p.name}</h3>
-                  <p className="text-xs text-gray-500">{p.baseUrl}</p>
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <WarningCircle size={18} weight="fill" />
+          {error}
+        </div>
+      )}
+
+      {loading && !data ? (
+        <SkeletonCards count={6} />
+      ) : platforms.length === 0 ? (
+        <EmptyState icon={<Storefront size={40} />} title={t("common.no_data")} />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {platforms.map((p) => (
+            <div
+              key={p.id}
+              className="flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                    <Storefront size={22} weight="duotone" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-semibold text-slate-900">{p.name}</h3>
+                    <p className="text-xs text-slate-500">{p.baseUrl}</p>
+                  </div>
                 </div>
+                <Badge variant={p.isActive ? "success" : "default"}>
+                  {p.isActive ? "Active" : "Inactive"}
+                </Badge>
               </div>
-              <Badge variant={p.isActive ? "success" : "default"}>
-                {p.isActive ? "Active" : "Inactive"}
-              </Badge>
-            </div>
 
-            <div className="flex gap-4 text-sm text-gray-500">
-              <span>{t("platform.shop_count", { count: p.shopCount })}</span>
-              <span>Provider: {p.apiProvider}</span>
-            </div>
+              <div className="flex gap-4 text-sm text-slate-500">
+                <span>{t("platform.shop_count", { count: p.shopCount })}</span>
+                <span>Provider: {p.apiProvider}</span>
+              </div>
 
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setSelectedId(p.id)}
-              >
-                Shops
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCredentialsPlatformId(p.id)}
-              >
-                {t("platform.set_credentials")}
-              </Button>
-              <Button
-                variant={p.isActive ? "danger" : "secondary"}
-                size="sm"
-                onClick={() => handleToggleActive(p)}
-              >
-                {p.isActive ? "Tắt" : "Bật"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setSelectedId(p.id)}>
+                  Shops
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setCredentialsPlatformId(p.id)}>
+                  {t("platform.set_credentials")}
+                </Button>
+                <Button
+                  variant={p.isActive ? "danger" : "secondary"}
+                  size="sm"
+                  onClick={() => handleToggleActive(p)}
+                >
+                  {p.isActive ? t("common.off", "Tắt") : t("common.on", "Bật")}
+                </Button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {platforms.length === 0 && (
-        <p className="text-center text-gray-400 py-16">{t("common.no_data")}</p>
+          ))}
+        </div>
       )}
 
-      {/* Create modal */}
-      {showCreate && (
-        <CreatePlatformModal
-          onClose={() => setShowCreate(false)}
-          onCreated={handleCreated}
-        />
-      )}
-
-      {/* Credentials modal */}
+      {showCreate && <CreatePlatformModal onClose={() => setShowCreate(false)} onCreated={handleCreated} />}
       {credentialsPlatformId && (
-        <CredentialsModal
-          platformId={credentialsPlatformId}
-          onClose={() => setCredentialsPlatformId(null)}
-        />
+        <CredentialsModal platformId={credentialsPlatformId} onClose={() => setCredentialsPlatformId(null)} />
       )}
-
-      {/* Shops drawer */}
-      {selectedId && (
-        <ShopsDrawer
-          platform={selectedPlatform()!}
-          onClose={() => setSelectedId(null)}
-        />
+      {selectedId && selectedPlatform && (
+        <ShopsDrawer platform={selectedPlatform} onClose={() => setSelectedId(null)} />
       )}
-    </div>
+    </FadeIn>
   );
 }
 
@@ -150,11 +142,7 @@ function CreatePlatformModal({
   onCreated: (p: Platform) => void;
 }) {
   const { t } = useTranslation();
-  const [form, setForm] = useState<CreatePlatformRequest>({
-    name: "",
-    baseUrl: "",
-    apiProvider: "PublicApi",
-  });
+  const [form, setForm] = useState<CreatePlatformRequest>({ name: "", baseUrl: "", apiProvider: "PublicApi" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -178,38 +166,29 @@ function CreatePlatformModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("platform.create")}</h2>
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="mb-4 font-heading text-lg font-semibold text-slate-900">{t("platform.create")}</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label={t("platform.name")}
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
-          <Input
-            label={t("platform.base_url")}
-            name="baseUrl"
-            type="url"
-            value={form.baseUrl}
-            onChange={handleChange}
-            required
-          />
+          <Input label={t("platform.name")} name="name" value={form.name} onChange={handleChange} required />
+          <Input label={t("platform.base_url")} name="baseUrl" type="url" value={form.baseUrl} onChange={handleChange} required />
           <div className="flex flex-col gap-1">
-            <Select
-              label={t("platform.api_provider")}
+            <label className="text-sm font-medium text-slate-700">{t("platform.api_provider")}</label>
+            <select
               name="apiProvider"
               value={form.apiProvider}
               onChange={handleChange}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             >
               {API_PROVIDERS.map((p) => (
-                <option key={p} value={p}>{p}</option>
+                <option key={p} value={p}>
+                  {p}
+                </option>
               ))}
-            </Select>
+            </select>
           </div>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <p className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <WarningCircle size={18} weight="fill" />
               {error}
             </p>
           )}
@@ -228,29 +207,20 @@ function CreatePlatformModal({
 }
 
 // ── Credentials Modal ─────────────────────────────────────────────────────────
-function CredentialsModal({
-  platformId,
-  onClose,
-}: {
-  platformId: string;
-  onClose: () => void;
-}) {
+function CredentialsModal({ platformId, onClose }: { platformId: string; onClose: () => void }) {
   const { t } = useTranslation();
-  const [apiKey, setApiKey]       = useState("");
+  const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [success, setSuccess]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      await platformsApi.setCredentials(platformId, {
-        apiKey,
-        apiSecret: apiSecret || undefined,
-      });
+      await platformsApi.setCredentials(platformId, { apiKey, apiSecret: apiSecret || undefined });
       setSuccess(true);
       setTimeout(onClose, 1200);
     } catch (err: unknown) {
@@ -262,21 +232,18 @@ function CredentialsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">{t("platform.credentials")}</h2>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="mb-4 font-heading text-lg font-semibold text-slate-900">{t("platform.credentials")}</h2>
         {success ? (
-          <p className="text-green-600 text-center py-4">✓ Credentials đã cập nhật!</p>
+          <p className="flex items-center justify-center gap-1.5 py-4 text-emerald-600">
+            <CheckCircle size={18} weight="fill" />
+            {t("platform.credentials_saved", "Credentials đã cập nhật!")}
+          </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            <Input label="API Key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} required />
             <Input
-              label="API Key"
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              required
-            />
-            <Input
-              label="API Secret (tuỳ chọn)"
+              label={t("platform.api_secret_optional", "API Secret (tuỳ chọn)")}
               type="password"
               value={apiSecret}
               onChange={(e) => setApiSecret(e.target.value)}
@@ -298,61 +265,49 @@ function CredentialsModal({
 }
 
 // ── Shops Drawer ──────────────────────────────────────────────────────────────
-function ShopsDrawer({
-  platform,
-  onClose,
-}: {
-  platform: Platform;
-  onClose: () => void;
-}) {
+function ShopsDrawer({ platform, onClose }: { platform: Platform; onClose: () => void }) {
   const { t } = useTranslation();
-  const [shops, setShops] = useState<import("~/lib/types/platform").PlatformShop[] | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useState(() => {
-    platformsApi
-      .getShops(platform.id)
-      .then((res) => setShops(res.data))
-      .finally(() => setLoading(false));
-  });
+  const { data: shops, loading } = useFetch(
+    async () => (await platformsApi.getShops(platform.id)).data,
+    [platform.id]
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex">
       <div className="flex-1 bg-black/30" onClick={onClose} />
-      <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Shops — {platform.name}
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl">×</button>
+      <div className="flex w-full max-w-lg flex-col overflow-y-auto bg-white shadow-xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-6 py-4">
+          <h2 className="font-heading text-lg font-semibold text-slate-900">Shops — {platform.name}</h2>
+          <button onClick={onClose} className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700">
+            <X size={20} weight="bold" />
+          </button>
         </div>
 
         <div className="flex-1 p-6">
-          {loading && <p className="text-gray-400">{t("common.loading")}</p>}
-          {!loading && shops?.length === 0 && (
-            <p className="text-gray-400">{t("common.no_data")}</p>
-          )}
-          {shops?.map((shop) => (
-            <div
-              key={shop.id}
-              className="border border-gray-200 rounded-xl p-4 mb-3"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">{shop.shopName}</p>
-                  <p className="text-xs text-gray-500">{shop.shopIdOnPlatform}</p>
-                </div>
-                {shop.isBlacklisted && (
-                  <Badge variant="error">Blacklisted</Badge>
-                )}
-              </div>
-              <div className="mt-2 flex gap-4 text-xs text-gray-500">
-                <span>Rating: {shop.internalRating.toFixed(1)}/5</span>
-                <span>Sản phẩm: {shop.totalProductsCrawled}</span>
-                {shop.avgShipDays && <span>Ship: ~{shop.avgShipDays} ngày</span>}
-              </div>
+          {loading && !shops ? (
+            <div className="space-y-3">
+              <SkeletonCards count={3} />
             </div>
-          ))}
+          ) : !shops?.length ? (
+            <EmptyState icon={<Storefront size={40} />} title={t("common.no_data")} />
+          ) : (
+            shops.map((shop) => (
+              <div key={shop.id} className="mb-3 rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-slate-900">{shop.shopName}</p>
+                    <p className="text-xs text-slate-500">{shop.shopIdOnPlatform}</p>
+                  </div>
+                  {shop.isBlacklisted && <Badge variant="error">Blacklisted</Badge>}
+                </div>
+                <div className="mt-2 flex gap-4 text-xs text-slate-500">
+                  <span>Rating: {shop.internalRating.toFixed(1)}/5</span>
+                  <span>{t("platform.products_label", "Sản phẩm")}: {shop.totalProductsCrawled}</span>
+                  {shop.avgShipDays && <span>Ship: ~{shop.avgShipDays} {t("order.days", "ngày")}</span>}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

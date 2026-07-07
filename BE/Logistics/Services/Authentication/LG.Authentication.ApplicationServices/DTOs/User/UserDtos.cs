@@ -59,6 +59,14 @@ public record StaffRosterItemResponse(
     string Email
 );
 
+// Cross-module directory resolve — kèm Status để Module 1 hiển thị.
+public record StaffDirectoryItemResponse(
+    Guid   Id,
+    string FullName,
+    string Email,
+    string Status
+);
+
 public record PagedResponse<T>(
     List<T> Data,
     int     Page,

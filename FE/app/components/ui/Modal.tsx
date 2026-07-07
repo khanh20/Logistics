@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { cn } from "~/lib/utils/cn";
+import { X } from "~/components/shared/icons";
 
 interface ModalProps {
   open: boolean;
@@ -66,10 +67,10 @@ export function Modal({
             <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 active:scale-90"
               aria-label="Đóng"
             >
-              ×
+              <X size={18} weight="bold" />
             </button>
           </div>
         )}

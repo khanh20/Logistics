@@ -2,6 +2,8 @@ using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Repositories;
 using LG.Module1.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Pgvector;
+using Pgvector.EntityFrameworkCore;
 
 namespace LG.Module1.Infrastructure.Repositories;
 
@@ -234,10 +236,16 @@ public class ProductRepository(Module1DbContext db) : IProductRepository
           .FirstOrDefaultAsync(x => x.ShopId == shopId
                                     && x.PlatformProductId == platformProductId, ct);
 
+    public Task<ProductMaster?> GetByPlatformAndProductIdAsync(Guid platformId, string platformProductId, CancellationToken ct = default) =>
+        db.ProductMasters
+          .Where(x => x.Shop.PlatformId == platformId && x.PlatformProductId == platformProductId)
+          .OrderByDescending(x => x.IsActive)   // ưu tiên bản đang active nếu trùng id
+          .FirstOrDefaultAsync(ct);
+
     public async Task<(List<ProductMaster> Items, int TotalCount)> SearchAsync(
         string? keyword, Guid? categoryId, Guid? platformId,
         decimal? minPriceCny, decimal? maxPriceCny,
-        bool activeOnly, int page, int pageSize, CancellationToken ct = default)
+        bool activeOnly, ProductSort sort, int page, int pageSize, CancellationToken ct = default)
     {
         var q = db.ProductMasters
                   .Include(x => x.Shop).ThenInclude(s => s.Platform)
@@ -263,8 +271,19 @@ public class ProductRepository(Module1DbContext db) : IProductRepository
             q = q.Where(x => x.Variants.Any(v => v.PriceCnyCurrent <= maxPriceCny.Value));
 
         var total = await q.CountAsync(ct);
-        var items = await q.OrderByDescending(x => x.IsFeatured)
-                           .ThenByDescending(x => x.ViewCount)
+
+        // Sắp xếp theo lựa chọn của khách; mặc định giữ hành vi cũ (nổi bật → lượt xem).
+        IOrderedQueryable<ProductMaster> ordered = sort switch
+        {
+            ProductSort.PriceAsc    => q.OrderBy(x => x.Variants.Min(v => (decimal?)v.PriceCnyCurrent)),
+            ProductSort.PriceDesc   => q.OrderByDescending(x => x.Variants.Max(v => (decimal?)v.PriceCnyCurrent)),
+            ProductSort.Newest      => q.OrderByDescending(x => x.CreatedAt),
+            ProductSort.BestSelling => q.OrderByDescending(x => x.TotalSoldLocal),
+            ProductSort.MostViewed  => q.OrderByDescending(x => x.ViewCount),
+            _                       => q.OrderByDescending(x => x.IsFeatured).ThenByDescending(x => x.ViewCount),
+        };
+
+        var items = await ordered
                            .Skip((page - 1) * pageSize)
                            .Take(pageSize)
                            .ToListAsync(ct);
@@ -275,10 +294,38 @@ public class ProductRepository(Module1DbContext db) : IProductRepository
     public Task<List<ProductMaster>> GetFeaturedAsync(int limit, CancellationToken ct = default) =>
         db.ProductMasters
           .Where(x => x.IsActive && x.IsFeatured && !x.IsForbidden)
+          .Include(x => x.Shop).ThenInclude(s => s.Platform)
           .Include(x => x.Images.Where(i => i.IsPrimary))
           .Include(x => x.Variants.OrderBy(v => v.PriceCnyCurrent).Take(1))
           .OrderByDescending(x => x.ViewCount)
           .Take(limit).ToListAsync(ct);
+
+    public async Task<List<ProductMaster>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+    {
+        var idList = ids.Distinct().ToList();
+        if (idList.Count == 0) return new();
+        return await db.ProductMasters
+            .Where(x => idList.Contains(x.Id) && x.IsActive && !x.IsForbidden)
+            .Include(x => x.Shop).ThenInclude(s => s.Platform)
+            .Include(x => x.Images.Where(i => i.IsPrimary))
+            .Include(x => x.Variants.OrderBy(v => v.PriceCnyCurrent).Take(1))
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<ProductMaster>> GetTopByCategoriesAsync(
+        IEnumerable<Guid> categoryIds, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default)
+    {
+        var cats = categoryIds.Distinct().ToList();
+        if (cats.Count == 0) return new();
+        var exclude = excludeIds.Distinct().ToList();
+        return await db.ProductMasters
+            .Where(x => x.IsActive && !x.IsForbidden && cats.Contains(x.CategoryId) && !exclude.Contains(x.Id))
+            .Include(x => x.Shop).ThenInclude(s => s.Platform)
+            .Include(x => x.Images.Where(i => i.IsPrimary))
+            .Include(x => x.Variants.OrderBy(v => v.PriceCnyCurrent).Take(1))
+            .OrderByDescending(x => x.IsFeatured).ThenByDescending(x => x.ViewCount)
+            .Take(limit).ToListAsync(ct);
+    }
 
     public async Task AddAsync(ProductMaster p, CancellationToken ct = default) =>
         await db.ProductMasters.AddAsync(p, ct);
@@ -537,6 +584,42 @@ public class CustomerOrderRepository(Module1DbContext db) : ICustomerOrderReposi
           .Take(take)
           .ToListAsync(ct);
 
+    public Task<int> CountCompletedByCustomerAsync(Guid customerId, CancellationToken ct = default) =>
+        db.CustomerOrders.CountAsync(o => o.CustomerId == customerId && o.Status == OrderStatus.Completed, ct);
+
+    public async Task<List<Guid>> GetPurchasedProductIdsAsync(Guid customerId, int limit, CancellationToken ct = default)
+    {
+        // OrderItem giữ VariantId → map sang ProductId qua ProductVariants.
+        var variantIds = await db.CustomerOrders
+            .Where(o => o.CustomerId == customerId && o.Status == OrderStatus.Completed)
+            .SelectMany(o => o.Items.Select(i => i.VariantId))
+            .Distinct()
+            .Take(limit * 4)
+            .ToListAsync(ct);
+        if (variantIds.Count == 0) return new();
+
+        return await db.ProductVariants
+            .Where(v => variantIds.Contains(v.Id))
+            .Select(v => v.ProductId)
+            .Distinct()
+            .Take(limit)
+            .ToListAsync(ct);
+    }
+
+    public Task<List<Guid>> GetPurchasedShopIdsAsync(Guid customerId, CancellationToken ct = default) =>
+        db.CustomerOrders
+          .Where(o => o.CustomerId == customerId && o.Status == OrderStatus.Completed)
+          .Select(o => o.ShopId)
+          .Distinct()
+          .ToListAsync(ct);
+
+    public Task<bool> HasPurchasedProductAsync(Guid customerId, Guid productId, CancellationToken ct = default) =>
+        db.CustomerOrders
+          .Where(o => o.CustomerId == customerId && o.Status == OrderStatus.Completed)
+          .SelectMany(o => o.Items)
+          .Join(db.ProductVariants, i => i.VariantId, v => v.Id, (i, v) => v.ProductId)
+          .AnyAsync(pid => pid == productId, ct);
+
     public Task<List<CustomerOrder>> GetTimedOutPendingOrdersAsync(int timeoutMinutes, CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
@@ -639,6 +722,9 @@ public class Module1UnitOfWork(Module1DbContext db) : IModule1UnitOfWork
 // ── StaffAssignment ───────────────────────────────────────────────────────────
 public class StaffAssignmentRepository(Module1DbContext db) : IStaffAssignmentRepository
 {
+    public Task<StaffAssignment?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.StaffAssignments.Include(x => x.Order).FirstOrDefaultAsync(x => x.Id == id, ct);
+
     public Task<StaffAssignment?> GetActiveByOrderIdAsync(Guid orderId, CancellationToken ct = default) =>
         // Query trực tiếp trên FK column orderId — không qua navigation (tránh Bug 3)
         db.StaffAssignments
@@ -679,6 +765,22 @@ public class StaffAssignmentRepository(Module1DbContext db) : IStaffAssignmentRe
     public Task<int> GetOverdueCountAsync(Guid staffId, CancellationToken ct = default) =>
         db.StaffAssignments.CountAsync(x => x.StaffId == staffId && x.IsOverdue && x.CompletedAt == null, ct);
 
+    public Task<List<StaffAssignment>> GetQueueByStaffAsync(Guid staffId, bool includeClosed,
+                                                            CancellationToken ct = default)
+    {
+        var q = db.StaffAssignments.Include(x => x.Order).Where(x => x.StaffId == staffId);
+        if (!includeClosed) q = q.Where(x => x.CompletedAt == null);
+        return q.OrderBy(x => x.CompletedAt == null ? 0 : 1)
+                .ThenBy(x => x.SlaDeadline)
+                .ToListAsync(ct);
+    }
+
+    public Task<List<StaffAssignment>> GetAssignedBetweenAsync(DateTime fromUtc, DateTime toUtc,
+                                                               CancellationToken ct = default) =>
+        db.StaffAssignments
+          .Where(x => x.AssignedAt >= fromUtc && x.AssignedAt < toUtc)
+          .ToListAsync(ct);
+
     public async Task AddAsync(StaffAssignment assignment, CancellationToken ct = default)
     {
         // Tránh Bug 1 (EF snapshot): chỉ Add khi entry Detached
@@ -701,5 +803,395 @@ public class ExtensionScrapeLogRepository(Module1DbContext db) : IExtensionScrap
     {
         if (db.Entry(log).State == EntityState.Detached)
             await db.ExtensionScrapeLogs.AddAsync(log, ct);
+    }
+}
+
+// ── StaffWorkSetting ──────────────────────────────────────────────────────────
+public class StaffWorkSettingRepository(Module1DbContext db) : IStaffWorkSettingRepository
+{
+    public Task<StaffWorkSetting?> GetByStaffIdAsync(Guid staffId, CancellationToken ct = default) =>
+        db.StaffWorkSettings.FirstOrDefaultAsync(x => x.StaffId == staffId, ct);
+
+    public Task<List<StaffWorkSetting>> GetAllAsync(CancellationToken ct = default) =>
+        db.StaffWorkSettings.ToListAsync(ct);
+
+    public Task<List<StaffWorkSetting>> GetByStaffIdsAsync(IEnumerable<Guid> staffIds, CancellationToken ct = default)
+    {
+        var ids = staffIds.ToList();
+        return db.StaffWorkSettings.Where(x => ids.Contains(x.StaffId)).ToListAsync(ct);
+    }
+
+    public async Task AddAsync(StaffWorkSetting setting, CancellationToken ct = default)
+    {
+        if (db.Entry(setting).State == EntityState.Detached)
+            await db.StaffWorkSettings.AddAsync(setting, ct);
+    }
+
+    public Task UpdateAsync(StaffWorkSetting setting, CancellationToken ct = default)
+    {
+        if (db.Entry(setting).State == EntityState.Detached)
+            db.StaffWorkSettings.Update(setting);
+        return Task.CompletedTask;
+    }
+}
+
+// ── StaffPerformanceDaily ─────────────────────────────────────────────────────
+public class StaffPerformanceRepository(Module1DbContext db) : IStaffPerformanceRepository
+{
+    public Task<StaffPerformanceDaily?> GetAsync(Guid staffId, DateOnly date, CancellationToken ct = default) =>
+        db.StaffPerformanceDailies.FirstOrDefaultAsync(x => x.StaffId == staffId && x.Date == date, ct);
+
+    public Task<List<StaffPerformanceDaily>> GetRangeAsync(Guid? staffId, DateOnly from, DateOnly to,
+                                                           CancellationToken ct = default)
+    {
+        var q = db.StaffPerformanceDailies.Where(x => x.Date >= from && x.Date <= to);
+        if (staffId.HasValue) q = q.Where(x => x.StaffId == staffId.Value);
+        return q.OrderBy(x => x.Date).ToListAsync(ct);
+    }
+
+    public async Task AddAsync(StaffPerformanceDaily snapshot, CancellationToken ct = default)
+    {
+        if (db.Entry(snapshot).State == EntityState.Detached)
+            await db.StaffPerformanceDailies.AddAsync(snapshot, ct);
+    }
+
+    public Task UpdateAsync(StaffPerformanceDaily snapshot, CancellationToken ct = default)
+    {
+        if (db.Entry(snapshot).State == EntityState.Detached)
+            db.StaffPerformanceDailies.Update(snapshot);
+        return Task.CompletedTask;
+    }
+}
+
+// ── StaffNotification ─────────────────────────────────────────────────────────
+public class StaffNotificationRepository(Module1DbContext db) : IStaffNotificationRepository
+{
+    public Task<List<StaffNotification>> GetByStaffAsync(Guid staffId, bool unreadOnly, int take,
+                                                         CancellationToken ct = default)
+    {
+        var q = db.StaffNotifications.Where(x => x.StaffId == staffId);
+        if (unreadOnly) q = q.Where(x => !x.IsRead);
+        return q.OrderByDescending(x => x.CreatedAt).Take(take).ToListAsync(ct);
+    }
+
+    public Task<int> CountUnreadAsync(Guid staffId, CancellationToken ct = default) =>
+        db.StaffNotifications.CountAsync(x => x.StaffId == staffId && !x.IsRead, ct);
+
+    public Task<StaffNotification?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.StaffNotifications.FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public async Task MarkAllReadAsync(Guid staffId, CancellationToken ct = default) =>
+        await db.StaffNotifications
+            .Where(x => x.StaffId == staffId && !x.IsRead)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsRead, true), ct);
+
+    public async Task AddAsync(StaffNotification notification, CancellationToken ct = default)
+    {
+        if (db.Entry(notification).State == EntityState.Detached)
+            await db.StaffNotifications.AddAsync(notification, ct);
+    }
+
+    public Task UpdateAsync(StaffNotification notification, CancellationToken ct = default)
+    {
+        if (db.Entry(notification).State == EntityState.Detached)
+            db.StaffNotifications.Update(notification);
+        return Task.CompletedTask;
+    }
+}
+
+// ── OrderComplaint ────────────────────────────────────────────────────────────
+public class OrderComplaintRepository(Module1DbContext db) : IOrderComplaintRepository
+{
+    public Task<OrderComplaint?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.OrderComplaints.Include(x => x.Order).FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public Task<List<OrderComplaint>> GetByOrderAsync(Guid orderId, CancellationToken ct = default) =>
+        db.OrderComplaints.Where(x => x.OrderId == orderId)
+                          .OrderByDescending(x => x.CreatedAt).ToListAsync(ct);
+
+    public async Task<(List<OrderComplaint> Items, int TotalCount)> SearchAsync(
+        ComplaintStatus? status, Guid? assignedToStaffId, Guid? customerId,
+        int page, int pageSize, CancellationToken ct = default)
+    {
+        var q = db.OrderComplaints.Include(x => x.Order).AsQueryable();
+        if (status.HasValue)            q = q.Where(x => x.Status == status);
+        if (assignedToStaffId.HasValue) q = q.Where(x => x.AssignedToStaffId == assignedToStaffId);
+        if (customerId.HasValue)        q = q.Where(x => x.CustomerId == customerId);
+
+        var total = await q.CountAsync(ct);
+        var items = await q.OrderByDescending(x => x.CreatedAt)
+                           .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        return (items, total);
+    }
+
+    public async Task AddAsync(OrderComplaint complaint, CancellationToken ct = default)
+    {
+        if (db.Entry(complaint).State == EntityState.Detached)
+            await db.OrderComplaints.AddAsync(complaint, ct);
+    }
+
+    public Task UpdateAsync(OrderComplaint complaint, CancellationToken ct = default)
+    {
+        if (db.Entry(complaint).State == EntityState.Detached)
+            db.OrderComplaints.Update(complaint);
+        return Task.CompletedTask;
+    }
+}
+
+// ── SupplierChatLog ───────────────────────────────────────────────────────────
+public class SupplierChatLogRepository(Module1DbContext db) : ISupplierChatLogRepository
+{
+    public Task<List<SupplierChatLog>> GetByOrderAsync(Guid orderId, CancellationToken ct = default) =>
+        db.SupplierChatLogs.Where(x => x.OrderId == orderId)
+                           .OrderBy(x => x.SentAt).ToListAsync(ct);
+
+    public async Task AddAsync(SupplierChatLog log, CancellationToken ct = default)
+    {
+        if (db.Entry(log).State == EntityState.Detached)
+            await db.SupplierChatLogs.AddAsync(log, ct);
+    }
+}
+
+// ── Engagement / Recommendation (Plan C) ─────────────────────────────────────
+public class UserActivityRepository(Module1DbContext db) : IUserActivityRepository
+{
+    public async Task AddAsync(UserActivityEvent ev, CancellationToken ct = default)
+    {
+        if (db.Entry(ev).State == EntityState.Detached)
+            await db.UserActivityEvents.AddAsync(ev, ct);
+    }
+
+    public async Task<List<Guid>> GetRecentlyViewedProductIdsAsync(Guid customerId, int limit, CancellationToken ct = default)
+    {
+        // Lấy dư rồi distinct giữ thứ tự mới nhất (tránh DISTINCT+ORDER BY phức tạp trên SQL).
+        var ids = await db.UserActivityEvents
+            .Where(x => x.CustomerId == customerId && x.ProductId != null
+                        && x.EventType == ActivityEventType.View)
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => x.ProductId!.Value)
+            .Take(limit * 5)
+            .ToListAsync(ct);
+        return ids.Distinct().Take(limit).ToList();
+    }
+
+    public Task<List<Guid>> GetTrendingProductIdsAsync(int days, int limit, CancellationToken ct = default)
+    {
+        var since = DateTime.UtcNow.AddDays(-days);
+        return db.UserActivityEvents
+            .Where(x => x.ProductId != null && x.CreatedAt >= since
+                        && (x.EventType == ActivityEventType.View || x.EventType == ActivityEventType.Purchase))
+            .GroupBy(x => x.ProductId!.Value)
+            .OrderByDescending(g => g.Count())
+            .Select(g => g.Key)
+            .Take(limit)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Guid>> GetRecentCategoryIdsAsync(Guid customerId, int limit, CancellationToken ct = default)
+    {
+        var cats = await db.UserActivityEvents
+            .Where(x => x.CustomerId == customerId && x.CategoryId != null
+                        && x.EventType == ActivityEventType.View)
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => x.CategoryId!.Value)
+            .Take(limit * 5)
+            .ToListAsync(ct);
+        return cats.Distinct().Take(limit).ToList();
+    }
+
+    public async Task<List<TrendingScore>> GetTrendingScoredAsync(int days, int limit, CancellationToken ct = default)
+    {
+        var since = DateTime.UtcNow.AddDays(-days);
+        var raw = await db.UserActivityEvents
+            .Where(x => x.ProductId != null && x.CreatedAt >= since
+                        && (x.EventType == ActivityEventType.View || x.EventType == ActivityEventType.Purchase))
+            .GroupBy(x => x.ProductId!.Value)
+            .Select(g => new { Pid = g.Key, Count = g.Count() })
+            .OrderByDescending(a => a.Count)
+            .Take(limit)
+            .ToListAsync(ct);
+        return raw.Select(a => new TrendingScore(a.Pid, a.Count)).ToList();
+    }
+
+    public async Task<List<CoViewSourceRow>> GetCoViewSourceAsync(int days, int maxRows, CancellationToken ct = default)
+    {
+        var since = DateTime.UtcNow.AddDays(-days);
+        var raw = await db.UserActivityEvents
+            .Where(x => x.EventType == ActivityEventType.View && x.ProductId != null && x.CreatedAt >= since)
+            .Select(x => new { x.CustomerId, x.SessionKey, Pid = x.ProductId!.Value })
+            .Distinct()
+            .Take(maxRows)
+            .ToListAsync(ct);
+        return raw.Select(a => new CoViewSourceRow(a.CustomerId, a.SessionKey, a.Pid)).ToList();
+    }
+}
+
+// ── TrendingProduct cache ─────────────────────────────────────────────────────
+public class TrendingProductRepository(Module1DbContext db) : ITrendingProductRepository
+{
+    public Task<List<Guid>> GetTopProductIdsAsync(int limit, CancellationToken ct = default) =>
+        db.TrendingProducts.OrderBy(x => x.Rank).Take(limit).Select(x => x.ProductId).ToListAsync(ct);
+
+    public async Task ReplaceAllAsync(IReadOnlyList<TrendingProduct> rows, CancellationToken ct = default)
+    {
+        await db.TrendingProducts.ExecuteDeleteAsync(ct);
+        if (rows.Count > 0) await db.TrendingProducts.AddRangeAsync(rows, ct);
+    }
+}
+
+// ── ProductEmbedding (pgvector) ───────────────────────────────────────────────
+public class ProductEmbeddingRepository(Module1DbContext db) : IProductEmbeddingRepository
+{
+    public async Task UpsertAsync(Guid productId, Vector embedding, string model, CancellationToken ct = default)
+    {
+        var existing = await db.ProductEmbeddings.FirstOrDefaultAsync(x => x.ProductId == productId, ct);
+        if (existing is null)
+            await db.ProductEmbeddings.AddAsync(ProductEmbedding.Create(productId, embedding, model), ct);
+        else
+            existing.Update(embedding, model);
+    }
+
+    public async Task<List<Vector>> GetVectorsAsync(IEnumerable<Guid> productIds, CancellationToken ct = default)
+    {
+        var ids = productIds.Distinct().ToList();
+        if (ids.Count == 0) return new();
+        return await db.ProductEmbeddings.Where(x => ids.Contains(x.ProductId))
+            .Select(x => x.Embedding).ToListAsync(ct);
+    }
+
+    public async Task<List<Guid>> FindNearestAsync(
+        Vector userVector, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default)
+    {
+        var exclude = excludeIds.Distinct().ToList();
+        return await db.ProductEmbeddings
+            .Where(x => !exclude.Contains(x.ProductId))
+            .OrderBy(x => x.Embedding.CosineDistance(userVector)) // pgvector <=>
+            .Take(limit)
+            .Select(x => x.ProductId)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<(Guid Id, double Distance)>> FindNearestWithScoreAsync(
+        Vector userVector, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default)
+    {
+        var exclude = excludeIds.Distinct().ToList();
+        var rows = await db.ProductEmbeddings
+            .Where(x => !exclude.Contains(x.ProductId))
+            .Select(x => new { x.ProductId, Dist = x.Embedding.CosineDistance(userVector) })
+            .OrderBy(a => a.Dist)
+            .Take(limit)
+            .ToListAsync(ct);
+        return rows.Select(a => (a.ProductId, a.Dist)).ToList();
+    }
+
+    public Task<List<Guid>> GetProductIdsMissingEmbeddingAsync(int limit, CancellationToken ct = default) =>
+        db.ProductMasters
+          .Where(p => p.IsActive && !p.IsForbidden
+                      && !db.ProductEmbeddings.Any(e => e.ProductId == p.Id))
+          .OrderByDescending(p => p.UpdatedAt)
+          .Select(p => p.Id)
+          .Take(limit)
+          .ToListAsync(ct);
+}
+
+// ── ProductCoView (item-to-item) ──────────────────────────────────────────────
+public class ProductCoViewRepository(Module1DbContext db) : IProductCoViewRepository
+{
+    public async Task<List<Guid>> GetRelatedAsync(
+        IEnumerable<Guid> seedProductIds, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default)
+    {
+        var seeds = seedProductIds.Distinct().ToList();
+        if (seeds.Count == 0) return new();
+        var exclude = excludeIds.Distinct().ToList();
+
+        return await db.ProductCoViews
+            .Where(x => seeds.Contains(x.ProductId)
+                        && !seeds.Contains(x.RelatedProductId)
+                        && !exclude.Contains(x.RelatedProductId))
+            .GroupBy(x => x.RelatedProductId)
+            .OrderByDescending(g => g.Sum(r => r.Score))
+            .Select(g => g.Key)
+            .Take(limit)
+            .ToListAsync(ct);
+    }
+
+    public async Task ReplaceAllAsync(IReadOnlyList<ProductCoView> rows, CancellationToken ct = default)
+    {
+        await db.ProductCoViews.ExecuteDeleteAsync(ct);
+        if (rows.Count > 0) await db.ProductCoViews.AddRangeAsync(rows, ct);
+    }
+}
+
+public class UserFavoriteRepository(Module1DbContext db) : IUserFavoriteRepository
+{
+    public Task<bool> ExistsAsync(Guid customerId, Guid productId, CancellationToken ct = default) =>
+        db.UserFavorites.AnyAsync(x => x.CustomerId == customerId && x.ProductId == productId, ct);
+
+    public Task<UserFavorite?> GetAsync(Guid customerId, Guid productId, CancellationToken ct = default) =>
+        db.UserFavorites.FirstOrDefaultAsync(x => x.CustomerId == customerId && x.ProductId == productId, ct);
+
+    public Task<List<UserFavorite>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default) =>
+        db.UserFavorites.Where(x => x.CustomerId == customerId)
+                        .OrderByDescending(x => x.CreatedAt).ToListAsync(ct);
+
+    public async Task AddAsync(UserFavorite fav, CancellationToken ct = default)
+    {
+        if (db.Entry(fav).State == EntityState.Detached)
+            await db.UserFavorites.AddAsync(fav, ct);
+    }
+
+    public Task RemoveAsync(UserFavorite fav, CancellationToken ct = default)
+    {
+        db.UserFavorites.Remove(fav);
+        return Task.CompletedTask;
+    }
+}
+
+public class ProductReviewRepository(Module1DbContext db) : IProductReviewRepository
+{
+    public Task<ProductReview?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.ProductReviews.FirstOrDefaultAsync(x => x.Id == id, ct);
+
+    public async Task<(List<ProductReview> Items, int TotalCount)> GetByProductAsync(
+        Guid productId, ReviewStatus? status, int page, int pageSize, CancellationToken ct = default)
+    {
+        var q = db.ProductReviews.Where(x => x.ProductId == productId);
+        if (status.HasValue) q = q.Where(x => x.Status == status);
+
+        var total = await q.CountAsync(ct);
+        var items = await q.OrderByDescending(x => x.CreatedAt)
+                           .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        return (items, total);
+    }
+
+    public async Task<(List<ProductReview> Items, int TotalCount)> SearchAsync(
+        ReviewStatus? status, int page, int pageSize, CancellationToken ct = default)
+    {
+        var q = db.ProductReviews.AsQueryable();
+        if (status.HasValue) q = q.Where(x => x.Status == status);
+
+        var total = await q.CountAsync(ct);
+        var items = await q.OrderByDescending(x => x.CreatedAt)
+                           .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        return (items, total);
+    }
+
+    public Task<bool> ExistsForCustomerAsync(Guid productId, Guid customerId, CancellationToken ct = default) =>
+        db.ProductReviews.AnyAsync(x => x.ProductId == productId && x.CustomerId == customerId, ct);
+
+    public Task<ProductReview?> GetByProductAndCustomerAsync(Guid productId, Guid customerId, CancellationToken ct = default) =>
+        db.ProductReviews.FirstOrDefaultAsync(x => x.ProductId == productId && x.CustomerId == customerId, ct);
+
+    public async Task AddAsync(ProductReview review, CancellationToken ct = default)
+    {
+        if (db.Entry(review).State == EntityState.Detached)
+            await db.ProductReviews.AddAsync(review, ct);
+    }
+
+    public Task UpdateAsync(ProductReview review, CancellationToken ct = default)
+    {
+        if (db.Entry(review).State == EntityState.Detached)
+            db.ProductReviews.Update(review);
+        return Task.CompletedTask;
     }
 }

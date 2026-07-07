@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { cn } from "~/lib/utils/cn";
+import { Timer, WarningCircle } from "~/components/shared/icons";
 
 interface SlaCountdownProps {
   deadline: string;   // ISO datetime string
@@ -50,13 +51,14 @@ export function SlaCountdown({ deadline, className }: SlaCountdownProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium tabular-nums",
         colorClass,
         className
       )}
       title={`SLA Deadline: ${new Date(deadline).toLocaleString("vi-VN")}`}
     >
-      {isOverdue ? "⚠️" : "⏱"} {formatDuration(remaining)}
+      {isOverdue ? <WarningCircle size={13} weight="fill" /> : <Timer size={13} weight="bold" />}
+      {formatDuration(remaining)}
     </span>
   );
 }

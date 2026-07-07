@@ -19,6 +19,8 @@ export function CustomerNavbar() {
 
   const NAV_ITEMS = [
     { to: "/", label: t("nav.home") },
+    { to: "/products", label: t("nav.products") },
+    { to: "/favorites", label: t("nav.favorites") },
     { to: "/orders", label: t("nav.user_orders") },
     { to: "/finance", label: "Tài chính" },
     { to: "/cart", label: t("nav.cart") },

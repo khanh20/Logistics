@@ -164,6 +164,13 @@ export interface StaffAssignmentDto {
   isOverdue: boolean;
   isAutoAssigned: boolean;
   note: string | null;
+  status: string;
+  acceptedAt: string | null;
+  startedAt: string | null;
+  handlingMinutes: number | null;
+  isOnTime: boolean | null;
+  orderCode: string | null;
+  staffName: string | null;
 }
 
 export interface OverdueAssignmentDto {
@@ -174,6 +181,7 @@ export interface OverdueAssignmentDto {
   slaDeadline: string;
   overdueByMinutes: number;
   orderStatus: string;
+  staffName: string | null;
 }
 
 export interface StaffWorkloadDto {

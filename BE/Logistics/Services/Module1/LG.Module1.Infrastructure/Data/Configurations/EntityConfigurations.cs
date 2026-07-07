@@ -396,6 +396,7 @@ public class StaffAssignmentConfig : IEntityTypeConfiguration<StaffAssignment>
         b.ToTable("staff_assignments");
         b.HasKey(x => x.Id);
         b.Property(x => x.Note).HasMaxLength(500);
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
 
         // Index cho job query: tìm pending-expired, query by staff, query overdue
         b.HasIndex(x => x.OrderId);
@@ -404,6 +405,75 @@ public class StaffAssignmentConfig : IEntityTypeConfiguration<StaffAssignment>
 
         b.HasOne(x => x.Order).WithMany()
          .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+// ── Staff Operations expansion configs ───────────────────────────────────────
+public class StaffWorkSettingConfig : IEntityTypeConfiguration<StaffWorkSetting>
+{
+    public void Configure(EntityTypeBuilder<StaffWorkSetting> b)
+    {
+        b.ToTable("staff_work_settings");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => x.StaffId).IsUnique();
+    }
+}
+
+public class StaffPerformanceDailyConfig : IEntityTypeConfiguration<StaffPerformanceDaily>
+{
+    public void Configure(EntityTypeBuilder<StaffPerformanceDaily> b)
+    {
+        b.ToTable("staff_performance_dailies");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => new { x.StaffId, x.Date }).IsUnique();
+    }
+}
+
+public class StaffNotificationConfig : IEntityTypeConfiguration<StaffNotification>
+{
+    public void Configure(EntityTypeBuilder<StaffNotification> b)
+    {
+        b.ToTable("staff_notifications");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Type).HasConversion<string>().HasMaxLength(30);
+        b.Property(x => x.Title).HasMaxLength(255).IsRequired();
+        b.Property(x => x.Body).HasMaxLength(1000).IsRequired();
+        b.HasIndex(x => new { x.StaffId, x.IsRead, x.CreatedAt });
+    }
+}
+
+public class OrderComplaintConfig : IEntityTypeConfiguration<OrderComplaint>
+{
+    public void Configure(EntityTypeBuilder<OrderComplaint> b)
+    {
+        b.ToTable("order_complaints");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.Description).HasMaxLength(2000).IsRequired();
+        b.Property(x => x.EvidenceUrls).HasColumnType("jsonb");
+        b.Property(x => x.Resolution).HasMaxLength(2000);
+        b.Property(x => x.ResolvedAmountVnd).HasPrecision(14, 0);
+        b.HasIndex(x => x.OrderId);
+        b.HasIndex(x => x.CustomerId);
+        b.HasIndex(x => new { x.Status, x.AssignedToStaffId });
+
+        b.HasOne(x => x.Order).WithMany()
+         .HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class SupplierChatLogConfig : IEntityTypeConfiguration<SupplierChatLog>
+{
+    public void Configure(EntityTypeBuilder<SupplierChatLog> b)
+    {
+        b.ToTable("supplier_chat_logs");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Direction).HasConversion<string>().HasMaxLength(10);
+        b.Property(x => x.Message).HasMaxLength(2000).IsRequired();
+        b.Property(x => x.ScreenshotUrl).HasMaxLength(500);
+        b.Property(x => x.PlatformChatTool).HasMaxLength(50);
+        b.HasIndex(x => new { x.OrderId, x.SentAt });
     }
 }
 
@@ -424,5 +494,88 @@ public class ExtensionScrapeLogConfig : IEntityTypeConfiguration<ExtensionScrape
         // Analytics queries: filter theo platform + success, theo customer
         b.HasIndex(x => new { x.Platform, x.Success, x.CreatedAt });
         b.HasIndex(x => x.CustomerId);
+    }
+}
+
+// ── Engagement / Recommendation (Plan C) ─────────────────────────────────────
+public class UserActivityEventConfig : IEntityTypeConfiguration<UserActivityEvent>
+{
+    public void Configure(EntityTypeBuilder<UserActivityEvent> b)
+    {
+        b.ToTable("user_activity_events");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.EventType).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.SessionKey).HasMaxLength(100);
+        b.Property(x => x.Keyword).HasMaxLength(255);
+        // Nguồn cho recently-viewed, co-view, phân khúc khách
+        b.HasIndex(x => new { x.CustomerId, x.CreatedAt });
+        b.HasIndex(x => new { x.ProductId, x.EventType });
+        b.HasIndex(x => x.SessionKey);
+    }
+}
+
+public class UserFavoriteConfig : IEntityTypeConfiguration<UserFavorite>
+{
+    public void Configure(EntityTypeBuilder<UserFavorite> b)
+    {
+        b.ToTable("user_favorites");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => new { x.CustomerId, x.ProductId }).IsUnique();
+        b.HasIndex(x => x.CustomerId);
+        b.HasOne(x => x.Product).WithMany()
+         .HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class ProductReviewConfig : IEntityTypeConfiguration<ProductReview>
+{
+    public void Configure(EntityTypeBuilder<ProductReview> b)
+    {
+        b.ToTable("product_reviews");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.Content).HasMaxLength(2000).IsRequired();
+        b.Property(x => x.RejectReason).HasMaxLength(500);
+        b.HasIndex(x => new { x.ProductId, x.Status });
+        b.HasIndex(x => x.CustomerId);
+        b.HasOne(x => x.Product).WithMany()
+         .HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class TrendingProductConfig : IEntityTypeConfiguration<TrendingProduct>
+{
+    public void Configure(EntityTypeBuilder<TrendingProduct> b)
+    {
+        b.ToTable("trending_products");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => x.ProductId).IsUnique();
+        b.HasIndex(x => x.Rank);
+    }
+}
+
+public class ProductCoViewConfig : IEntityTypeConfiguration<ProductCoView>
+{
+    public void Configure(EntityTypeBuilder<ProductCoView> b)
+    {
+        b.ToTable("product_co_views");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => new { x.ProductId, x.Score });
+        b.HasIndex(x => new { x.ProductId, x.RelatedProductId }).IsUnique();
+    }
+}
+
+public class ProductEmbeddingConfig : IEntityTypeConfiguration<ProductEmbedding>
+{
+    public void Configure(EntityTypeBuilder<ProductEmbedding> b)
+    {
+        b.ToTable("product_embeddings");
+        b.HasKey(x => x.ProductId);
+        b.Property(x => x.Embedding).HasColumnType($"vector({EmbeddingDims.Default})");
+        b.Property(x => x.Model).HasMaxLength(100).IsRequired();
+        // HNSW + cosine cho ANN nhanh (pgvector).
+        b.HasIndex(x => x.Embedding).HasMethod("hnsw").HasOperators("vector_cosine_ops");
+        b.HasOne(x => x.Product).WithOne()
+         .HasForeignKey<ProductEmbedding>(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);
     }
 }
