@@ -16,6 +16,7 @@ Thumbs.db
 /BE/Logistics/Services/Authentication/LG.Authentication.API/.env
 /BE/Logistics/Services/Module1/LG.Module1.API/.env
 /BE/Logistics/Services/Module1/LG.Module1.API/appsettings.json
+/BE/Logistics/Services/Module2/LG.Module2.API/.env
 
 
 .react-router
