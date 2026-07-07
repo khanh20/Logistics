@@ -98,7 +98,12 @@ Controllers tương ứng từng nhóm use case, Swagger doc, webhook endpoint c
 - [x] B6 — Unit test ✅ (2026-07-07): project mới `LG.Module2.Tests` (xUnit + Moq, đã thêm vào solution) — **57 test, pass 100%**: bảng map status_id GHTK đầy đủ, verify webhook token (DB secret ưu tiên config), `GhtkOptions.Enabled`, công thức phí stub (bậc thang + COD + bảo hiểm + tối thiểu 0.5kg), guard B5 trên `DomesticWaybill` (trùng/đi lùi/kết thúc/failed-lặp), luồng webhook end-to-end qua `TrackingService` (delivered/duplicate/đến trễ/failed >2 lần alert CSKH/returned/not-found). Chạy: `dotnet test Services/Module2/LG.Module2.Tests/LG.Module2.Tests.csproj`
 
 **C. Phụ thuộc phase/module khác:**
-- [ ] Trừ ví khách (PaymentLock) — chờ Module3 Finance (hiện log stub)
+- [x] Trừ ví khách + hoàn tiền ✅ (2026-07-07): "Module3 Finance" hoá ra là **Services/Core** (port 7215) — tích hợp thật qua `IWalletService`/`WalletHttpService` (typed HttpClient `Core:BaseUrl`, cùng pattern Module1, gọi `api/wallet-payment/deduct|refund`):
+  - **Tạo yêu cầu giao**: Tx1 chốt request → **trừ ví** (thiếu số dư → 422 `WALLET_OPERATION_FAILED`, không tạo đơn carrier) → tạo vận đơn → Tx2. Compensation khi fail: hoàn ví + huỷ carrier theo partner code + request Cancelled
+  - **Khách huỷ yêu cầu**: hoàn phí ship sau khi huỷ chốt DB (best-effort — fail thì log ERROR đối soát tay, không chặn việc huỷ)
+  - **Claims**: ResolveMissingClaim (Refund) + PayInsuranceClaim hoàn ví thật **sau khi commit** (không giữ transaction qua HTTP call); fail → log ERROR đối soát tay qua Core FinanceManagement
+  - Lưu ý: deduct/refund phía Core **không idempotent** → không retry mù; 5 unit test trong `WalletIntegrationTests`
+  - ⚠️ `WalletPaymentController` phía Core đang `[AllowAnonymous]` — cần báo team chủ Core chuyển sang X-Internal-Key
 - [x] ~~GHN/Viettel Post/J&T API thật~~ — **CHỐT SCOPE (2026-07-07): chỉ tích hợp GHTK, các carrier khác XOÁ HẲN.** 2 bước: migration `DeactivateNonGhtkCarriers` (tắt IsActive) rồi `RemoveNonGhtkCarriers` (xoá 3 row seed; dọn trước waybill demo tham chiếu + gỡ `DomesticCarrierId` ở delivery_requests — phần dọn này không khôi phục được khi Down). FE chỉ còn GHTK trong `DOMESTIC_CARRIERS`. `StubCarrierGateway` giữ lại làm fallback dev cho GHTK khi chưa cấu hình Token (prefix đơn giản hoá GHTK/DOM). Muốn thêm carrier mới sau này: seed row mới + viết gateway riêng implement `ICarrierGateway`
 - [ ] Reconcile `DeliveryAddressId` với sổ địa chỉ (hiện địa chỉ lấy trực tiếp từ body request)
 

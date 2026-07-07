@@ -89,6 +89,9 @@ public class DeliveryNotCancellableException(string status)
 public class CarrierCancelFailedException(string trackingNo)
     : Module2DomainException($"Hãng vận chuyển từ chối huỷ vận đơn '{trackingNo}' (đơn có thể đã được lấy hàng).", "CARRIER_CANCEL_FAILED");
 
+public class WalletOperationFailedException(string message)
+    : Module2DomainException(message, "WALLET_OPERATION_FAILED");
+
 // ── Phase 7 — Claims & Insurance ──────────────────────────────────────────────
 public class InvalidClaimStateException(string currentStatus, string action)
     : Module2DomainException($"Không thể '{action}' khi khiếu nại đang ở trạng thái '{currentStatus}'.", "INVALID_CLAIM_STATE");

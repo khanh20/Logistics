@@ -15,6 +15,7 @@ public class DeliveryService(
     IPackageRepository         packageRepo,
     ITrackingEventRepository   trackingRepo,
     ICarrierGatewayResolver    gatewayResolver,
+    IWalletService             walletService,
     INotificationService       notifyService,
     IModule2UnitOfWork         uow,
     ILogger<DeliveryService>   logger
@@ -83,9 +84,6 @@ public class DeliveryService(
         var quote = await gateway.QuoteAsync(ctx, ct);
         request.SetShipFee(quote.ShipFeeVnd, carrier.Id);
 
-        // TODO Phase tài chính: trừ ví khách (PaymentLock) qua Module3 — hiện log placeholder
-        logger.LogInformation("[WALLET-STUB] Trừ ví khách {CustomerId}: phí ship {ShipFee} VND", customerId, quote.ShipFeeVnd);
-
         request.Confirm();
 
         // Tx1: chốt request vào DB trước khi gọi carrier — nếu bước sau fail vẫn còn
@@ -95,6 +93,19 @@ public class DeliveryService(
             await deliveryRepo.AddAsync(request, innerCt);
         }, ct);
 
+        // Trừ ví khách (Core Finance) — trước khi tạo đơn carrier: thiếu số dư thì
+        // không có đơn GHTK nào được tạo, chỉ cần huỷ request trong DB.
+        try
+        {
+            await walletService.DeductAsync(customerId, quote.ShipFeeVnd, "DeliveryRequest", request.Id,
+                $"Phí giao nội địa {carrier.Name} — yêu cầu {request.Id:N}", ct);
+        }
+        catch
+        {
+            await CompensateFailedCreateAsync(request, gateway, refundWallet: false);
+            throw;
+        }
+
         // HTTP: tạo vận đơn bên carrier (idempotent theo PartnerOrderCode)
         CarrierWaybillResult waybillResult;
         try
@@ -103,7 +114,7 @@ public class DeliveryService(
         }
         catch
         {
-            await CompensateFailedCreateAsync(request, gateway);
+            await CompensateFailedCreateAsync(request, gateway, refundWallet: true);
             throw;
         }
 
@@ -140,15 +151,15 @@ public class DeliveryService(
         }
         catch
         {
-            await CompensateFailedCreateAsync(request, gateway);
+            await CompensateFailedCreateAsync(request, gateway, refundWallet: true);
             throw;
         }
     }
 
     // Compensation khi tạo đơn fail giữa chừng: huỷ đơn carrier theo partner code (best-effort,
-    // idempotent — chưa tạo thì carrier trả false vô hại) + chuyển request sang Cancelled.
+    // idempotent — chưa tạo thì carrier trả false vô hại) + hoàn ví (nếu đã trừ) + request → Cancelled.
     // Dùng CancellationToken.None: phải chạy trọn vẹn kể cả khi request gốc đã bị cancel/timeout.
-    private async Task CompensateFailedCreateAsync(DeliveryRequest request, ICarrierGateway gateway)
+    private async Task CompensateFailedCreateAsync(DeliveryRequest request, ICarrierGateway gateway, bool refundWallet)
     {
         var partnerCode = request.Id.ToString("N");
         try
@@ -158,6 +169,21 @@ public class DeliveryService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Compensation: không huỷ được đơn carrier partner code {PartnerCode} — cần đối soát tay", partnerCode);
+        }
+
+        if (refundWallet && request.ShipFeeVnd is > 0m)
+        {
+            try
+            {
+                await walletService.RefundAsync(request.CustomerId, request.ShipFeeVnd.Value,
+                    "DeliveryRequest", request.Id,
+                    $"Hoàn phí ship — tạo yêu cầu giao {request.Id:N} thất bại", CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Compensation: không hoàn được {Amount} VND ví khách {CustomerId} (request {Id}) — cần đối soát tay",
+                    request.ShipFeeVnd, request.CustomerId, request.Id);
+            }
         }
 
         try
@@ -225,7 +251,7 @@ public class DeliveryService(
             }
         }
 
-        return await uow.ExecuteInTransactionAsync(async innerCt =>
+        var response = await uow.ExecuteInTransactionAsync(async innerCt =>
         {
             request.Cancel();
             foreach (var waybill in activeWaybills)
@@ -253,6 +279,25 @@ public class DeliveryService(
                 id, customerId, activeWaybills.Count);
             return await BuildResponseAsync(request, innerCt);
         }, ct);
+
+        // Hoàn phí ship về ví — sau khi huỷ đã chốt trong DB. Best-effort: fail thì log ERROR
+        // để đối soát tay (qua Core FinanceManagement), không rollback việc huỷ.
+        if (request.ShipFeeVnd is > 0m)
+        {
+            try
+            {
+                await walletService.RefundAsync(customerId, request.ShipFeeVnd.Value,
+                    "DeliveryRequest", request.Id,
+                    $"Hoàn phí ship — khách huỷ yêu cầu giao {request.Id:N}", CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Không hoàn được {Amount} VND phí ship cho khách {CustomerId} (request {Id} đã huỷ) — cần đối soát tay",
+                    request.ShipFeeVnd, customerId, request.Id);
+            }
+        }
+
+        return response;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────────

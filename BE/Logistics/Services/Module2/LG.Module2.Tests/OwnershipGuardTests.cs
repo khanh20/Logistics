@@ -68,7 +68,7 @@ public class OwnershipGuardTests
                    .ReturnsAsync(package);
 
         return new ClaimService(missingRepo.Object, insuranceRepo.Object, packageRepo.Object,
-            Mock.Of<ITrackingEventRepository>(), Mock.Of<INotificationService>(),
+            Mock.Of<ITrackingEventRepository>(), Mock.Of<IWalletService>(), Mock.Of<INotificationService>(),
             Mock.Of<IModule2UnitOfWork>(), Mock.Of<ILogger<ClaimService>>());
     }
 

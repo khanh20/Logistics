@@ -50,6 +50,7 @@ public class Module2ExceptionMiddleware(
             CarrierInactiveException e          => (422, e.Code, e.Message),
             DeliveryNotCancellableException e   => (422, e.Code, e.Message),
             CarrierCancelFailedException e      => (422, e.Code, e.Message),
+            WalletOperationFailedException e    => (422, e.Code, e.Message),
             InvalidClaimStateException e        => (422, e.Code, e.Message),
             PackageNotInsuredException e        => (422, e.Code, e.Message),
             BorderAlertAlreadyResolvedException e => (422, e.Code, e.Message),

@@ -124,6 +124,18 @@ public interface ICarrierGatewayResolver
     ICarrierGateway Resolve(string carrierName);
 }
 
+// ── IWalletService (ví khách — gọi Core Finance, cùng pattern Module1) ────────
+public interface IWalletService
+{
+    /// Trừ ví khách. Thiếu số dư / ví đóng băng / Core lỗi → WalletOperationFailedException (422).
+    Task DeductAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId,
+                     string note, CancellationToken ct = default);
+
+    /// Hoàn tiền về ví khách.
+    Task RefundAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId,
+                     string note, CancellationToken ct = default);
+}
+
 // ── IDeliveryService (UC-2.08) ────────────────────────────────────────────────
 public interface IDeliveryService
 {
