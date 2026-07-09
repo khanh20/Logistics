@@ -12,9 +12,9 @@
 | 2 — Baseline heuristic | ✅ 2026-07-08 | **MAE 1.491 · bias +1.03 · PICP 58.9%** — mốc phải vượt: MAE ≤ 1.27, PICP ≥ 80% |
 | 3 — Time split | ✅ chốt thiết kế | Train <2026 · Calib Q1/26 · Test ≥T4/26 + fold 2 test Q1/26 (Tết) |
 | 4 — Trainer ML.NET | ✅ 2026-07-08 | Model v1: **MAE 1.338 (−10.3%) · bias −0.007 · PICP 89.4%** · width 5.67 (phình — do calib dính Tết) |
-| 5 — Train + tune | ⬜ | Mục tiêu kéo MAE ≤ 1.27 |
-| 6 — Conformal interval | ⬜ | Mondrian (cửa khẩu × chế-độ-Tết) để hết phình width |
-| 7 — Đánh giá vs baseline | ⬜ | |
+| 5 — Train + tune | ✅ 2026-07-08 | Grid phẳng → config nhỏ 200/16/0.03; **MAE 1.322 (−11.3%)**, mốc 1.27 chưa đạt — dư địa ở feature alert (B7) |
+| 6 — Conformal interval | ✅ 2026-07-08 | Mondrian: **PICP 82.5%, width 4.14** (−27%); coverage lệch cửa khẩu do calib 1 quý |
+| 7 — Đánh giá vs baseline | ⬜ | Thử nghiệm alert_active (alert trễ 2-3d) + fold Tết Q1/26 + feature importance |
 | 8 — Tích hợp AIForecastService | ⬜ | |
 | 9 — Ground truth thật | ⬜ chờ hệ vận hành | |
 
@@ -184,20 +184,49 @@ chỉ cửa khẩu; dự báo mùa thường dùng q từ mẫu calib mùa thư�
 Lưu ý giữ nguyên: **không đưa `congestion_active` vào feature** (leakage) — thông tin
 tắc biên đi vào lúc serve qua "border alert đang active" (như heuristic đang làm).
 
-### Bước 5 — Train + tune
-Early stopping trên validation; tune sơ numberOfLeaves / learningRate / numberOfTrees
-(vài chục tổ hợp là đủ, đừng sa đà). Xuất model `.zip` bằng `mlContext.Model.Save`.
+### Bước 5 — Train + tune — ✅ DONE 2026-07-08
 
-### Bước 6 — Sinh khoảng dự báo bằng conformal
-Trên tập calibration: tính residual `r = |actual − predicted|`, lấy phân vị 80%
-(hoặc theo confidence muốn công bố) → `min = pred − q80`, `max = pred + q80`
-(chặn min ≥ 1 ngày). Nâng cao: tính q theo từng cửa khẩu để khoảng hẹp hơn ở
-tuyến ổn định.
+Grid 27 tổ hợp (trees × leaves × lr) trên **validation Q4/2025 tách từ train**
+(không đụng test; val cùng chế-độ-mùa-thường với test). Kết quả:
+- **Grid phẳng** (val MAE 1.438–1.452 cho top 5) → hyperparameter KHÔNG phải nút vặn
+  quan trọng của bài này; chọn config nhỏ nhất trong nhóm đầu: **200 trees, 16 leaves,
+  lr 0.03** (model nhẹ, ít overfit).
+- Test MAE **1.322** (v1: 1.338; baseline 1.491 → thắng **11.3%**), bias +0.015.
+- ⚠️ Mốc MAE ≤ 1.27 **chưa đạt**. Phân tích: sai số còn lại chủ yếu từ **tắc biên
+  không biết trước** (12% mẫu, nhân 1.3–2.5×) — không nén được bằng tune. Dư địa
+  thật nằm ở **feature `alert_active` lúc serve** (Bước 7 thử nghiệm: train bằng
+  `congestion_active` + mô phỏng alert phát hiện TRỄ 2-3 ngày để không tự dối mình
+  bằng giả định alert hoàn hảo).
+
+### Bước 6 — Khoảng dự báo Mondrian conformal — ✅ DONE 2026-07-08
+
+Chuyển từ conformal theo cửa khẩu (Bước 4) sang **Mondrian theo (cửa khẩu ×
+chế-độ-Tết)**, nhóm <80 mẫu fallback về cửa khẩu → global. q80 đo được:
+Hữu Nghị ±2.21/±3.18 (thường/tết) · Lào Cai ±2.10/±2.08 · Móng Cái ±1.62/**±6.98**
+(tết Móng Cái cực nhiễu — khớp EDA).
+
+| | Bước 4 (gộp) | Bước 6 (Mondrian) | Mốc |
+|---|---|---|---|
+| PICP | 89.4% (over) | **82.5%** — sát nominal 80% ✓ | ≥80% |
+| Width TB | 5.67 | **4.14** (−27%) | ≤3.5 — gần đạt |
+
+⚠️ **Hạn chế phát hiện**: coverage lệch theo cửa khẩu (Hữu Nghị 95.8% / Lào Cai 71.2% /
+Móng Cái **59.9%**) — calibration chỉ 1 quý nên nhóm nhỏ dính may rủi của các đợt
+tắc biên ngẫu nhiên (vi phạm exchangeability cục bộ). Thuốc: **cửa sổ calibration
+dài hơn (rolling 6–12 tháng)** khi có dữ liệu thật; với data tổng hợp chấp nhận
+PICP tổng đạt mốc. Xuất `models/conformal.csv` format `border,regime,q80`
+(có dòng fallback `*`) — Bước 8 load cùng model.
 
 ### Bước 7 — Đánh giá & sanity check
 - MAE model vs MAE baseline (phải thắng rõ, VD ≥15%).
 - PICP ≈ confidence công bố; độ rộng khoảng ≤ heuristic.
 - Feature importance khớp "sự thật ngầm" của seeder → pipeline đúng.
+- **Bổ sung từ Bước 5-6:**
+  - Thử nghiệm feature `alert_active` — train bằng `congestion_active` nhưng mô phỏng
+    alert phát hiện **trễ 2-3 ngày** (trung thực với hệ alert thật); kỳ vọng đây là
+    chỗ kéo MAE qua mốc 1.27.
+  - Fold walk-forward thứ hai (test Q1/26 chứa Tết) — chấm điểm chế độ Tết.
+  - Coverage per-border khi calibration dài hơn.
 
 ### Bước 8 — Tích hợp vào Module 2 (thay ruột, giữ contract)
 - Model `.zip` load bằng `PredictionEnginePool` (thread-safe) trong ApplicationServices.
