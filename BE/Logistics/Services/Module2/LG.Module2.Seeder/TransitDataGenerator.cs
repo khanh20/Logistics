@@ -10,9 +10,11 @@ public record PackageRow(
     BorderCrossing Border,
     double         WeightKg,
     string         Season,
-    bool           IsTetWindow,
+    bool           IsTetWindow,       // LƯU Ý: tương đương season=="tet" — khi train chỉ dùng 1 trong 2
     bool           CongestionActive,
-    double         TransitDays        // LABEL: số ngày từ xuất kho TQ → nhập kho VN
+    double         TransitDays        // LABEL: TOÀN HÀNH TRÌNH shop gửi hàng → nhập kho VN
+                                      // (gồm cả chặng nội địa TQ — vì thế tỉnh gửi/carrier TQ mới là feature;
+                                      //  ground truth thật sau này đo từ ChinaWaybill/CnWarehouseIn → VnWarehouseIn)
 );
 
 /// Sinh dữ liệu tổng hợp mô phỏng vận hành TQ→VN. Mọi hệ số dưới đây là "sự thật ngầm"

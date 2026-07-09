@@ -8,8 +8,11 @@ liệu vận hành thật thì train lại trên `ContainerTrip`/`TrackingEvent`
 
 ```bash
 cd BE/Logistics/Services/Module2/LG.Module2.Seeder
-dotnet run -- --rows 20000 --out transit_dataset.csv --seed 42
+dotnet run -- --rows 50000 --seed 42 --out data/transit_50k.csv
 ```
+
+Thư mục `data/` đã gitignore — chỗ chuẩn để chứa dataset (tái lập được bằng `--seed`,
+không commit). EDA: `python3 eda.py data/transit_50k.csv`.
 
 Mỗi dòng = 1 kiện, cột khớp 1:1 input `TransitForecastRequest` + label:
 `departure_date, origin_province_cn, carrier_cn, border_crossing, weight_kg, month,
