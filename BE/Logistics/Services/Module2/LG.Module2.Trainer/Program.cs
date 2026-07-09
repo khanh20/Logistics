@@ -39,13 +39,13 @@ var all = File.ReadLines(csvPath).Skip(1).Select(line =>
 var ml = new MLContext(seed: 42);
 string RegimeOf(TransitSample s) => s.Season == "tet" ? "tet" : "normal";
 
-IEstimator<ITransformer> BuildPipeline(bool withAlert)
+IEstimator<ITransformer> BuildPipeline(bool withAlert, bool linear = false)
 {
     var numeric = new List<string>
         { nameof(TransitSample.WeightKg), nameof(TransitSample.Month), nameof(TransitSample.IsBulk) };
     if (withAlert) numeric.Add(nameof(TransitSample.AlertActive));
 
-    return ml.Transforms.Categorical.OneHotEncoding(new[]
+    var prep = ml.Transforms.Categorical.OneHotEncoding(new[]
         {
             new InputOutputColumnPair("BorderEnc",   nameof(TransitSample.Border)),
             new InputOutputColumnPair("ProvinceEnc", nameof(TransitSample.Province)),
@@ -53,8 +53,12 @@ IEstimator<ITransformer> BuildPipeline(bool withAlert)
             new InputOutputColumnPair("SeasonEnc",   nameof(TransitSample.Season)),
         })
         .Append(ml.Transforms.Concatenate("Features",
-            new[] { "BorderEnc", "ProvinceEnc", "CarrierEnc", "SeasonEnc" }.Concat(numeric).ToArray()))
-        .Append(ml.Regression.Trainers.FastTree(
+            new[] { "BorderEnc", "ProvinceEnc", "CarrierEnc", "SeasonEnc" }.Concat(numeric).ToArray()));
+
+    // Mô hình tuyến tính (SDCA) làm đối chứng — kiểm chứng luận điểm "cần tree-based vì tương tác"
+    return linear
+        ? prep.Append(ml.Regression.Trainers.Sdca(maximumNumberOfIterations: 100))
+        : prep.Append(ml.Regression.Trainers.FastTree(
             numberOfTrees: 200, numberOfLeaves: 16, minimumExampleCountPerLeaf: 20, learningRate: 0.03));
 }
 
@@ -65,9 +69,12 @@ float[] Predict(ITransformer m, List<TransitSample> data) =>
 // Train + Mondrian conformal + eval — dùng cho mọi fold/variant
 (ITransformer Model, Func<string, string, double> QFor, double Mae) RunVariant(
     string name, bool withAlert,
-    List<TransitSample> train, List<TransitSample> calib, List<TransitSample> test)
+    List<TransitSample> train, List<TransitSample> calib, List<TransitSample> test,
+    bool linear = false)
 {
-    var model = BuildPipeline(withAlert).Fit(ml.Data.LoadFromEnumerable(train));
+    var swTrain = System.Diagnostics.Stopwatch.StartNew();
+    var model = BuildPipeline(withAlert, linear).Fit(ml.Data.LoadFromEnumerable(train));
+    swTrain.Stop();
 
     var calibRes = calib.Zip(Predict(model, calib),
         (s, p) => (s.Border, Regime: RegimeOf(s), Res: (double)Math.Abs(s.TransitDays - p))).ToList();
@@ -105,7 +112,7 @@ float[] Predict(ITransformer m, List<TransitSample> data) =>
 
     var n = test.Count;
     Console.WriteLine($"  {name,-34} MAE={sumAbs / n:0.000}  bias={sumErr / n:+0.000;-0.000}  " +
-                      $"PICP={(double)covered / n:P1}  width={width / n:0.00}");
+                      $"PICP={(double)covered / n:P1}  width={width / n:0.00}  (train {swTrain.Elapsed.TotalSeconds:0.0}s)");
     foreach (var (regime, v) in byRegime.Where(kv => kv.Value.n > 0))
         Console.WriteLine($"      {regime,-7} MAE={v.abs / v.n:0.000}  PICP={(double)v.cov / v.n:P1}  n={v.n}");
     return (model, QFor, sumAbs / n);
@@ -140,6 +147,7 @@ var f1Calib = all.Where(s => s.Departure >= new DateTime(2026, 1, 1) && s.Depart
 var f1Test  = all.Where(s => s.Departure >= new DateTime(2026, 4, 1)).ToList();
 Console.WriteLine($"== FOLD 1 (test mùa thường, n={f1Test.Count}) ==");
 RunHeuristic("heuristic V1", f1Test);
+RunVariant("tuyến tính SDCA (có alert)", withAlert: true, f1Train, f1Calib, f1Test, linear: true);
 RunVariant("model v2 (không alert)", withAlert: false, f1Train, f1Calib, f1Test);
 var (v3Model, _, _) = RunVariant("model v3 (CÓ alert, trễ 2d)", withAlert: true, f1Train, f1Calib, f1Test);
 
@@ -149,6 +157,7 @@ var f2Calib = all.Where(s => s.Departure >= new DateTime(2025, 12, 1) && s.Depar
 var f2Test  = all.Where(s => s.Departure >= new DateTime(2026, 1, 1) && s.Departure < new DateTime(2026, 4, 1)).ToList();
 Console.WriteLine($"\n== FOLD 2 (test Q1/26 chứa Tết, n={f2Test.Count}, tết={f2Test.Count(s => RegimeOf(s) == "tet")}) ==");
 RunHeuristic("heuristic V1", f2Test);
+RunVariant("tuyến tính SDCA (có alert)", withAlert: true, f2Train, f2Calib, f2Test, linear: true);
 RunVariant("model v2 (không alert)", withAlert: false, f2Train, f2Calib, f2Test);
 RunVariant("model v3 (CÓ alert, trễ 2d)", withAlert: true, f2Train, f2Calib, f2Test);
 
@@ -187,6 +196,22 @@ foreach (var (name, copy) in features)
     var mae = f1Test.Zip(Predict(v3Model, shuffled), (s, p) => Math.Abs(s.TransitDays - p)).Average();
     Console.WriteLine($"  {name,-12} ΔMAE = +{mae - baseMae:0.000}");
 }
+
+// ── Benchmark suy luận (mục 5.1 báo cáo): batch + từng mẫu ────────────────────
+var swBatch = System.Diagnostics.Stopwatch.StartNew();
+Predict(v3Model, f1Test);
+swBatch.Stop();
+var engine = ml.Model.CreatePredictionEngine<TransitSample, TransitPrediction>(v3Model);
+engine.Predict(f1Test[0]);   // warm-up
+var swSingle = System.Diagnostics.Stopwatch.StartNew();
+const int BenchN = 10_000;
+for (var i = 0; i < BenchN; i++) engine.Predict(f1Test[i % f1Test.Count]);
+swSingle.Stop();
+Console.WriteLine($"\n== BENCHMARK SUY LUẬN (v3) ==");
+Console.WriteLine($"  Batch {f1Test.Count} mẫu: {swBatch.ElapsedMilliseconds} ms " +
+                  $"({swBatch.Elapsed.TotalMilliseconds * 1000 / f1Test.Count:0.0} µs/mẫu)");
+Console.WriteLine($"  Từng mẫu (PredictionEngine, {BenchN:N0} lần): " +
+                  $"{swSingle.Elapsed.TotalMilliseconds * 1000 / BenchN:0.0} µs/mẫu");
 
 // ── Xuất model production = v3 (serve với alert thật từ AIBorderAlert) ────────
 var outDir = Path.Combine(AppContext.BaseDirectory, "../../../models");
