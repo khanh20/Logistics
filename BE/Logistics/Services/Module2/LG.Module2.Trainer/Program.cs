@@ -2,10 +2,10 @@ using System.Globalization;
 using LG.Module2.Trainer;
 using Microsoft.ML;
 
-// ── LG.Module2.Trainer — Bước 4-6 LeadTime.md ──────────────────────────────────
-// Load CSV Seeder → tune FastTree trên validation tách từ train (KHÔNG đụng test)
-// → retrain config tốt nhất → Mondrian conformal (cửa khẩu × chế-độ-Tết)
-// → eval test vs baseline heuristic → xuất models/leadtime.zip + conformal.csv.
+// ── LG.Module2.Trainer — Bước 4-7 LeadTime.md ──────────────────────────────────
+// Bước 7: (A) thử nghiệm feature alert_active (alert trễ 2 ngày — khả dụng lúc serve)
+//         (B) fold walk-forward Tết (test Q1/26)  (C) permutation importance.
+// Config từ Bước 5: FastTree 200 trees / 16 leaves / lr 0.03 (grid phẳng).
 //
 // Chạy:  dotnet run [-- <csv>]      (mặc định ../LG.Module2.Seeder/data/transit_50k.csv)
 
@@ -17,7 +17,6 @@ if (!File.Exists(csvPath))
     return 1;
 }
 
-// ── Load + feature dẫn xuất ──────────────────────────────────────────────────
 var all = File.ReadLines(csvPath).Skip(1).Select(line =>
 {
     var c = line.Split(',');
@@ -32,29 +31,21 @@ var all = File.ReadLines(csvPath).Skip(1).Select(line =>
         Month     = int.Parse(c[5]),
         Season    = c[6],
         IsBulk    = weight >= 500 ? 1 : 0,
-        TransitDays = float.Parse(c[9], CultureInfo.InvariantCulture),
+        AlertActive = c[9] == "1" ? 1 : 0,   // alert trễ 2d — KHÔNG phải congestion_active (c[8], leakage)
+        TransitDays = float.Parse(c[10], CultureInfo.InvariantCulture),
     };
 }).ToList();
 
-// ── Time split (Bước 3 — không shuffle) ──────────────────────────────────────
-// Tune: trainSub → val (Q4/2025, mùa thường — cùng chế độ với test).
-// Final: trainFull (<2026) → calib (Q1/26, Mondrian) → test (≥T4/26, chấm 1 lần duy nhất).
-var valFrom   = new DateTime(2025, 10, 1);
-var trainEnd  = new DateTime(2026, 1, 1);
-var testFrom  = new DateTime(2026, 4, 1);
-
-var trainSub  = all.Where(s => s.Departure < valFrom).ToList();
-var val       = all.Where(s => s.Departure >= valFrom && s.Departure < trainEnd).ToList();
-var trainFull = all.Where(s => s.Departure < trainEnd).ToList();
-var calib     = all.Where(s => s.Departure >= trainEnd && s.Departure < testFrom).ToList();
-var test      = all.Where(s => s.Departure >= testFrom).ToList();
-Console.WriteLine($"Dataset {all.Count} → tune: {trainSub.Count}/{val.Count} (train/val) · " +
-                  $"final: {trainFull.Count}/{calib.Count}/{test.Count} (train/calib/test)");
-
 var ml = new MLContext(seed: 42);
+string RegimeOf(TransitSample s) => s.Season == "tet" ? "tet" : "normal";
 
-IEstimator<ITransformer> BuildPipeline(int trees, int leaves, double lr) =>
-    ml.Transforms.Categorical.OneHotEncoding(new[]
+IEstimator<ITransformer> BuildPipeline(bool withAlert)
+{
+    var numeric = new List<string>
+        { nameof(TransitSample.WeightKg), nameof(TransitSample.Month), nameof(TransitSample.IsBulk) };
+    if (withAlert) numeric.Add(nameof(TransitSample.AlertActive));
+
+    return ml.Transforms.Categorical.OneHotEncoding(new[]
         {
             new InputOutputColumnPair("BorderEnc",   nameof(TransitSample.Border)),
             new InputOutputColumnPair("ProvinceEnc", nameof(TransitSample.Province)),
@@ -62,118 +53,157 @@ IEstimator<ITransformer> BuildPipeline(int trees, int leaves, double lr) =>
             new InputOutputColumnPair("SeasonEnc",   nameof(TransitSample.Season)),
         })
         .Append(ml.Transforms.Concatenate("Features",
-            "BorderEnc", "ProvinceEnc", "CarrierEnc", "SeasonEnc",
-            nameof(TransitSample.WeightKg), nameof(TransitSample.Month), nameof(TransitSample.IsBulk)))
+            new[] { "BorderEnc", "ProvinceEnc", "CarrierEnc", "SeasonEnc" }.Concat(numeric).ToArray()))
         .Append(ml.Regression.Trainers.FastTree(
-            numberOfTrees: trees, numberOfLeaves: leaves,
-            minimumExampleCountPerLeaf: 20, learningRate: lr));
-
-float[] Predict(ITransformer m, List<TransitSample> data)
-{
-    var scored = m.Transform(ml.Data.LoadFromEnumerable(data));
-    return ml.Data.CreateEnumerable<TransitPrediction>(scored, reuseRowObject: false)
-             .Select(p => p.PredictedDays).ToArray();
+            numberOfTrees: 200, numberOfLeaves: 16, minimumExampleCountPerLeaf: 20, learningRate: 0.03));
 }
 
-double Mae(ITransformer m, List<TransitSample> data)
+float[] Predict(ITransformer m, List<TransitSample> data) =>
+    ml.Data.CreateEnumerable<TransitPrediction>(m.Transform(ml.Data.LoadFromEnumerable(data)), false)
+      .Select(p => p.PredictedDays).ToArray();
+
+// Train + Mondrian conformal + eval — dùng cho mọi fold/variant
+(ITransformer Model, Func<string, string, double> QFor, double Mae) RunVariant(
+    string name, bool withAlert,
+    List<TransitSample> train, List<TransitSample> calib, List<TransitSample> test)
 {
-    var preds = Predict(m, data);
-    return data.Zip(preds, (s, p) => Math.Abs(s.TransitDays - p)).Average();
+    var model = BuildPipeline(withAlert).Fit(ml.Data.LoadFromEnumerable(train));
+
+    var calibRes = calib.Zip(Predict(model, calib),
+        (s, p) => (s.Border, Regime: RegimeOf(s), Res: (double)Math.Abs(s.TransitDays - p))).ToList();
+
+    double Q80(IEnumerable<double> xs)
+    {
+        var a = xs.OrderBy(x => x).ToArray();
+        return a[(int)(0.80 * (a.Length - 1))];
+    }
+    var qGroup  = calibRes.GroupBy(r => (r.Border, r.Regime)).Where(g => g.Count() >= 80)
+                          .ToDictionary(g => g.Key, g => Q80(g.Select(x => x.Res)));
+    var qBorder = calibRes.GroupBy(r => r.Border)
+                          .ToDictionary(g => g.Key, g => Q80(g.Select(x => x.Res)));
+    var qGlobal = Q80(calibRes.Select(x => x.Res));
+    double QFor(string border, string regime) =>
+        qGroup.TryGetValue((border, regime), out var q) ? q
+        : qBorder.TryGetValue(border, out var qb) ? qb : qGlobal;
+
+    var preds = Predict(model, test);
+    double sumAbs = 0, sumErr = 0, width = 0; int covered = 0;
+    var byRegime = new Dictionary<string, (double abs, int n, int cov)>
+        { ["normal"] = default, ["tet"] = default };
+    for (var i = 0; i < test.Count; i++)
+    {
+        var s = test[i];
+        var q = QFor(s.Border, RegimeOf(s));
+        var (lo, hi) = (Math.Max(1, preds[i] - q), preds[i] + q);
+        var abs = Math.Abs(preds[i] - s.TransitDays);
+        var inside = s.TransitDays >= lo && s.TransitDays <= hi;
+        sumAbs += abs; sumErr += s.TransitDays - preds[i]; width += hi - lo;
+        if (inside) covered++;
+        var r = byRegime[RegimeOf(s)];
+        byRegime[RegimeOf(s)] = (r.abs + abs, r.n + 1, r.cov + (inside ? 1 : 0));
+    }
+
+    var n = test.Count;
+    Console.WriteLine($"  {name,-34} MAE={sumAbs / n:0.000}  bias={sumErr / n:+0.000;-0.000}  " +
+                      $"PICP={(double)covered / n:P1}  width={width / n:0.00}");
+    foreach (var (regime, v) in byRegime.Where(kv => kv.Value.n > 0))
+        Console.WriteLine($"      {regime,-7} MAE={v.abs / v.n:0.000}  PICP={(double)v.cov / v.n:P1}  n={v.n}");
+    return (model, QFor, sumAbs / n);
 }
 
-// ── Bước 5 — Tune trên validation (grid nhỏ, không đụng test) ────────────────
-Console.WriteLine("\n== BƯỚC 5: tune trên val Q4/2025 ==");
-var trainSubDv = ml.Data.LoadFromEnumerable(trainSub);
-var results = new List<(int Trees, int Leaves, double Lr, double ValMae)>();
-foreach (var trees in new[] { 200, 400, 800 })
-foreach (var leaves in new[] { 16, 32, 64 })
-foreach (var lr in new[] { 0.03, 0.05, 0.10 })
+// Heuristic Phase 8 (V1 — không alert) để so trên fold bất kỳ
+void RunHeuristic(string name, List<TransitSample> test)
 {
-    var m = BuildPipeline(trees, leaves, lr).Fit(trainSubDv);
-    var mae = Mae(m, val);
-    results.Add((trees, leaves, lr, mae));
-}
-foreach (var r in results.OrderBy(r => r.ValMae).Take(5))
-    Console.WriteLine($"  trees={r.Trees,3} leaves={r.Leaves,2} lr={r.Lr:0.00} → val MAE={r.ValMae:0.000}");
-var best = results.MinBy(r => r.ValMae);
-Console.WriteLine($"  CHỌN: trees={best.Trees} leaves={best.Leaves} lr={best.Lr:0.00}");
-
-// ── Retrain config tốt nhất trên trainFull ────────────────────────────────────
-var trainFullDv = ml.Data.LoadFromEnumerable(trainFull);
-var model = BuildPipeline(best.Trees, best.Leaves, best.Lr).Fit(trainFullDv);
-
-// ── Bước 6 — Mondrian conformal: (cửa khẩu × chế-độ-Tết) ─────────────────────
-// Calib Q1/26 chứa cửa sổ Tết → residual Tết to bất thường thổi phồng q80 nếu gộp
-// chung (bài học Bước 4). Tách nhóm; nhóm <MinGroup → fallback theo cửa khẩu → global.
-const int MinGroup = 80;
-string RegimeOf(TransitSample s) => s.Season == "tet" ? "tet" : "normal";
-
-var calibPreds = Predict(model, calib);
-var calibRes = calib.Zip(calibPreds, (s, p) => (s.Border, Regime: RegimeOf(s),
-                                                Res: (double)Math.Abs(s.TransitDays - p))).ToList();
-
-double Q80(IEnumerable<double> xs)
-{
-    var a = xs.OrderBy(x => x).ToArray();
-    return a[(int)(0.80 * (a.Length - 1))];
+    double sumAbs = 0, sumErr = 0, width = 0; int covered = 0;
+    foreach (var s in test)
+    {
+        (double lo, double hi) = s.Border switch
+        {
+            "HuuNghi" => (3.0, 5.0), "LaoCai" => (4.0, 6.0), _ => (4.0, 7.0),
+        };
+        if (s.Season == "tet") { lo += 3; hi += 5; }
+        else if (s.Season == "winter") { lo += 1; hi += 1; }
+        if (s.WeightKg >= 500) hi += 1;
+        var point = (lo + hi) / 2;
+        sumAbs += Math.Abs(point - s.TransitDays); sumErr += s.TransitDays - point;
+        width += hi - lo;
+        if (s.TransitDays >= lo && s.TransitDays <= hi) covered++;
+    }
+    var n = test.Count;
+    Console.WriteLine($"  {name,-34} MAE={sumAbs / n:0.000}  bias={sumErr / n:+0.000;-0.000}  " +
+                      $"PICP={(double)covered / n:P1}  width={width / n:0.00}");
 }
 
-var qGroup  = calibRes.GroupBy(r => (r.Border, r.Regime))
-                      .Where(g => g.Count() >= MinGroup)
-                      .ToDictionary(g => g.Key, g => Q80(g.Select(x => x.Res)));
-var qBorder = calibRes.GroupBy(r => r.Border)
-                      .ToDictionary(g => g.Key, g => Q80(g.Select(x => x.Res)));
-var qGlobal = Q80(calibRes.Select(x => x.Res));
+// ── FOLD 1 — test mùa thường (≥T4/26), baseline Bước 2: MAE 1.491 ────────────
+var f1Train = all.Where(s => s.Departure < new DateTime(2026, 1, 1)).ToList();
+var f1Calib = all.Where(s => s.Departure >= new DateTime(2026, 1, 1) && s.Departure < new DateTime(2026, 4, 1)).ToList();
+var f1Test  = all.Where(s => s.Departure >= new DateTime(2026, 4, 1)).ToList();
+Console.WriteLine($"== FOLD 1 (test mùa thường, n={f1Test.Count}) ==");
+RunHeuristic("heuristic V1", f1Test);
+RunVariant("model v2 (không alert)", withAlert: false, f1Train, f1Calib, f1Test);
+var (v3Model, _, _) = RunVariant("model v3 (CÓ alert, trễ 2d)", withAlert: true, f1Train, f1Calib, f1Test);
 
-double QFor(string border, string regime) =>
-    qGroup.TryGetValue((border, regime), out var q) ? q
-    : qBorder.TryGetValue(border, out var qb) ? qb
-    : qGlobal;
+// ── FOLD 2 — walk-forward test Q1/26 CHỨA TẾT (calib 12/25 không có tết → q tết fallback) ──
+var f2Train = all.Where(s => s.Departure < new DateTime(2025, 12, 1)).ToList();
+var f2Calib = all.Where(s => s.Departure >= new DateTime(2025, 12, 1) && s.Departure < new DateTime(2026, 1, 1)).ToList();
+var f2Test  = all.Where(s => s.Departure >= new DateTime(2026, 1, 1) && s.Departure < new DateTime(2026, 4, 1)).ToList();
+Console.WriteLine($"\n== FOLD 2 (test Q1/26 chứa Tết, n={f2Test.Count}, tết={f2Test.Count(s => RegimeOf(s) == "tet")}) ==");
+RunHeuristic("heuristic V1", f2Test);
+RunVariant("model v2 (không alert)", withAlert: false, f2Train, f2Calib, f2Test);
+RunVariant("model v3 (CÓ alert, trễ 2d)", withAlert: true, f2Train, f2Calib, f2Test);
 
-Console.WriteLine("\n== BƯỚC 6: Mondrian conformal q80 (cửa khẩu × chế độ) ==");
-foreach (var kv in qGroup.OrderBy(k => k.Key.Border).ThenBy(k => k.Key.Regime))
-    Console.WriteLine($"  {kv.Key.Border,-8} × {kv.Key.Regime,-6} → ±{kv.Value:0.00}  (n={calibRes.Count(r => (r.Border, r.Regime) == kv.Key)})");
+// ── PERMUTATION IMPORTANCE (fold 1, model v3) — sanity check "sự thật ngầm" ──
+Console.WriteLine("\n== PERMUTATION IMPORTANCE (ΔMAE khi xáo trộn feature, fold 1 / v3) ==");
+var basePreds = Predict(v3Model, f1Test);
+var baseMae = f1Test.Zip(basePreds, (s, p) => Math.Abs(s.TransitDays - p)).Average();
+var rng = new Random(42);
 
-// ── Đánh giá test (chấm 1 lần) — baseline heuristic Bước 2: MAE 1.491, PICP 58.9% ──
-var testPreds = Predict(model, test);
-double sumAbs = 0, sumErr = 0, width = 0; int covered = 0;
-var byBorder = test.Select(s => s.Border).Distinct()
-                   .ToDictionary(b => b, _ => (abs: 0.0, n: 0, cov: 0));
-for (var i = 0; i < test.Count; i++)
+List<TransitSample> Shuffled(Action<TransitSample, TransitSample> copyFrom)
 {
-    var s = test[i];
-    var pred = testPreds[i];
-    var q = QFor(s.Border, RegimeOf(s));
-    var (lo, hi) = (Math.Max(1, pred - q), pred + q);
-
-    sumAbs += Math.Abs(pred - s.TransitDays);
-    sumErr += s.TransitDays - pred;
-    width  += hi - lo;
-    var inside = s.TransitDays >= lo && s.TransitDays <= hi;
-    if (inside) covered++;
-
-    var b = byBorder[s.Border];
-    byBorder[s.Border] = (b.abs + Math.Abs(pred - s.TransitDays), b.n + 1, b.cov + (inside ? 1 : 0));
+    var clone = f1Test.Select(s => new TransitSample
+    {
+        Border = s.Border, Province = s.Province, Carrier = s.Carrier, Season = s.Season,
+        WeightKg = s.WeightKg, Month = s.Month, IsBulk = s.IsBulk, AlertActive = s.AlertActive,
+        TransitDays = s.TransitDays, Departure = s.Departure,
+    }).ToList();
+    var perm = Enumerable.Range(0, clone.Count).OrderBy(_ => rng.Next()).ToArray();
+    for (var i = 0; i < clone.Count; i++) copyFrom(clone[i], f1Test[perm[i]]);
+    return clone;
 }
 
-var n = test.Count;
-Console.WriteLine($"\n== KẾT QUẢ TEST (n={n}) — baseline: MAE 1.491, bias +1.03, PICP 58.9%, width 2.22 ==");
-Console.WriteLine($"  MAE  = {sumAbs / n:0.000} ngày (mốc ≤1.27)");
-Console.WriteLine($"  Bias = {sumErr / n:+0.000;-0.000} ngày");
-Console.WriteLine($"  PICP = {(double)covered / n:P1} (mốc ≥80%)   width TB = {width / n:0.00} ngày (mốc ≤3.5)");
-foreach (var (border, v) in byBorder.OrderBy(kv => kv.Key))
-    Console.WriteLine($"    {border,-8} MAE={v.abs / v.n:0.000}  PICP={(double)v.cov / v.n:P1}  n={v.n}");
+var features = new (string Name, Action<TransitSample, TransitSample> Copy)[]
+{
+    ("Border",      (d, src) => d.Border = src.Border),
+    ("Province",    (d, src) => d.Province = src.Province),
+    ("Carrier",     (d, src) => d.Carrier = src.Carrier),
+    ("Season",      (d, src) => d.Season = src.Season),
+    ("Weight+Bulk", (d, src) => { d.WeightKg = src.WeightKg; d.IsBulk = src.IsBulk; }),
+    ("Month",       (d, src) => d.Month = src.Month),
+    ("AlertActive", (d, src) => d.AlertActive = src.AlertActive),
+};
+foreach (var (name, copy) in features)
+{
+    var shuffled = Shuffled(copy);
+    var mae = f1Test.Zip(Predict(v3Model, shuffled), (s, p) => Math.Abs(s.TransitDays - p)).Average();
+    Console.WriteLine($"  {name,-12} ΔMAE = +{mae - baseMae:0.000}");
+}
 
-// ── Xuất model + tham số conformal (Bước 8 dùng) ─────────────────────────────
+// ── Xuất model production = v3 (serve với alert thật từ AIBorderAlert) ────────
 var outDir = Path.Combine(AppContext.BaseDirectory, "../../../models");
 Directory.CreateDirectory(outDir);
-ml.Model.Save(model, trainFullDv.Schema, Path.Combine(outDir, "leadtime.zip"));
-File.WriteAllLines(Path.Combine(outDir, "conformal.csv"),
-    new[] { "border,regime,q80" }
-        .Concat(qGroup.Select(kv =>
-            $"{kv.Key.Border},{kv.Key.Regime},{kv.Value.ToString("0.###", CultureInfo.InvariantCulture)}"))
-        .Concat(qBorder.Select(kv =>
-            $"{kv.Key},*,{kv.Value.ToString("0.###", CultureInfo.InvariantCulture)}"))
-        .Append($"*,*,{qGlobal.ToString("0.###", CultureInfo.InvariantCulture)}"));
-Console.WriteLine($"\nĐã lưu model + conformal → {Path.GetFullPath(outDir)}");
+var f1TrainDv = ml.Data.LoadFromEnumerable(f1Train);
+ml.Model.Save(v3Model, f1TrainDv.Schema, Path.Combine(outDir, "leadtime.zip"));
+
+// conformal.csv của v3 (fold 1)
+var v3CalibRes = f1Calib.Zip(Predict(v3Model, f1Calib),
+    (s, p) => (s.Border, Regime: RegimeOf(s), Res: (double)Math.Abs(s.TransitDays - p))).ToList();
+double Q80All(IEnumerable<double> xs) { var a = xs.OrderBy(x => x).ToArray(); return a[(int)(0.80 * (a.Length - 1))]; }
+var lines = new List<string> { "border,regime,q80" };
+lines.AddRange(v3CalibRes.GroupBy(r => (r.Border, r.Regime)).Where(g => g.Count() >= 80)
+    .Select(g => $"{g.Key.Border},{g.Key.Regime},{Q80All(g.Select(x => x.Res)).ToString("0.###", CultureInfo.InvariantCulture)}"));
+lines.AddRange(v3CalibRes.GroupBy(r => r.Border)
+    .Select(g => $"{g.Key},*,{Q80All(g.Select(x => x.Res)).ToString("0.###", CultureInfo.InvariantCulture)}"));
+lines.Add($"*,*,{Q80All(v3CalibRes.Select(x => x.Res)).ToString("0.###", CultureInfo.InvariantCulture)}");
+File.WriteAllLines(Path.Combine(outDir, "conformal.csv"), lines);
+Console.WriteLine($"\nĐã lưu model v3 + conformal → {Path.GetFullPath(outDir)}");
 return 0;

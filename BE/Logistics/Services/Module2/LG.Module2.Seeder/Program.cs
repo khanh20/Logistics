@@ -41,12 +41,12 @@ var rows = gen.GeneratePackageRows(opts.Rows);
 await using (var w = new StreamWriter(opts.OutPath))
 {
     await w.WriteLineAsync("departure_date,origin_province_cn,carrier_cn,border_crossing," +
-                           "weight_kg,month,season,is_tet_window,congestion_active,transit_days");
+                           "weight_kg,month,season,is_tet_window,congestion_active,alert_active,transit_days");
     foreach (var r in rows)
         await w.WriteLineAsync(
             $"{r.DepartureDate:yyyy-MM-dd},{r.OriginProvinceCn},{r.CarrierCn},{r.Border}," +
             $"{r.WeightKg:0.##},{r.DepartureDate.Month},{r.Season},{(r.IsTetWindow ? 1 : 0)}," +
-            $"{(r.CongestionActive ? 1 : 0)},{r.TransitDays:0.#}");
+            $"{(r.CongestionActive ? 1 : 0)},{(r.AlertActive ? 1 : 0)},{r.TransitDays:0.#}");
 }
 
 Console.WriteLine($"Đã sinh {rows.Count} dòng → {opts.OutPath}");

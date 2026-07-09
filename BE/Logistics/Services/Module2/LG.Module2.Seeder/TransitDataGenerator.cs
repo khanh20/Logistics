@@ -11,7 +11,9 @@ public record PackageRow(
     double         WeightKg,
     string         Season,
     bool           IsTetWindow,       // LƯU Ý: tương đương season=="tet" — khi train chỉ dùng 1 trong 2
-    bool           CongestionActive,
+    bool           CongestionActive,  // ground truth tắc biên — KHÔNG dùng làm feature (leakage)
+    bool           AlertActive,       // alert hệ thống bật (phát hiện TRỄ 2 ngày sau khi tắc bắt đầu)
+                                      // — DÙNG ĐƯỢC làm feature: lúc predict có thật từ AIBorderAlert
     double         TransitDays        // LABEL: TOÀN HÀNH TRÌNH shop gửi hàng → nhập kho VN
                                       // (gồm cả chặng nội địa TQ — vì thế tỉnh gửi/carrier TQ mới là feature;
                                       //  ground truth thật sau này đo từ ChinaWaybill/CnWarehouseIn → VnWarehouseIn)
@@ -76,10 +78,10 @@ public class TransitDataGenerator(int seed, DateTime from, DateTime to)
             if (_rng.NextDouble() < 0.03) weight = Math.Round(500 + _rng.NextDouble() * 1500, 2); // 3% hàng lô lớn
 
             var days = TransitDaysFor(departure, border, province.Extra, carrier.Extra, weight,
-                                      out var isTet, out var congested);
+                                      out var isTet, out var congested, out var alertActive);
 
             rows.Add(new PackageRow(departure, province.Name, carrier.Name, border, weight,
-                SeasonOf(departure, isTet), isTet, congested, days));
+                SeasonOf(departure, isTet), isTet, congested, alertActive, days));
         }
         return rows;
     }
@@ -94,7 +96,7 @@ public class TransitDataGenerator(int seed, DateTime from, DateTime to)
             var departure = RandomDate().AddHours(6 + _rng.NextDouble() * 12);
             var border    = PickBorder();
             var days      = TransitDaysFor(departure, border, provinceExtra: 0, carrierExtra: 0,
-                                           weightKg: 0, out _, out _);
+                                           weightKg: 0, out _, out _, out _);
 
             var trip = ContainerTrip.Create(
                 tripCode:       $"SEED{i:D5}",
@@ -110,10 +112,13 @@ public class TransitDataGenerator(int seed, DateTime from, DateTime to)
         return trips;
     }
 
+    // Alert nội bộ phát hiện tắc biên TRỄ vài ngày (cần chuyến chậm tích luỹ mới bật)
+    private const int AlertDetectionLagDays = 2;
+
     // ── Công thức sinh label ──────────────────────────────────────────────────────
     private double TransitDaysFor(DateTime departure, BorderCrossing border,
                                   double provinceExtra, double carrierExtra, double weightKg,
-                                  out bool isTet, out bool congested)
+                                  out bool isTet, out bool congested, out bool alertActive)
     {
         var (mean, std, _) = Borders[border];
         var days = Gaussian(mean, std);
@@ -130,7 +135,8 @@ public class TransitDataGenerator(int seed, DateTime from, DateTime to)
 
         var episode = _congestions[border]
             .FirstOrDefault(e => departure >= e.Start && departure <= e.End);
-        congested = episode != default;
+        congested   = episode != default;
+        alertActive = congested && departure >= episode.Start.AddDays(AlertDetectionLagDays);
         if (congested) days *= episode.Multiplier;              // đợt tắc biên: nhân hệ số
 
         days += Gaussian(0, 0.5);                               // nhiễu vận hành

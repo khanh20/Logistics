@@ -17,6 +17,10 @@ public class TransitSample
     public float  Month    { get; set; }
     public float  IsBulk   { get; set; }   // dẫn xuất: weight_kg >= 500 (EDA: phân phối bimodal)
 
+    /// Alert tắc biên đang bật (phát hiện trễ ~2 ngày) — khả dụng lúc predict từ AIBorderAlert.
+    /// Khác congestion_active (ground truth, leakage — không bao giờ dùng).
+    public float AlertActive { get; set; }
+
     [ColumnName("Label")]
     public float TransitDays { get; set; }
 

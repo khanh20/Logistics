@@ -14,7 +14,7 @@
 | 4 — Trainer ML.NET | ✅ 2026-07-08 | Model v1: **MAE 1.338 (−10.3%) · bias −0.007 · PICP 89.4%** · width 5.67 (phình — do calib dính Tết) |
 | 5 — Train + tune | ✅ 2026-07-08 | Grid phẳng → config nhỏ 200/16/0.03; **MAE 1.322 (−11.3%)**, mốc 1.27 chưa đạt — dư địa ở feature alert (B7) |
 | 6 — Conformal interval | ✅ 2026-07-08 | Mondrian: **PICP 82.5%, width 4.14** (−27%); coverage lệch cửa khẩu do calib 1 quý |
-| 7 — Đánh giá vs baseline | ⬜ | Thử nghiệm alert_active (alert trễ 2-3d) + fold Tết Q1/26 + feature importance |
+| 7 — Đánh giá vs baseline | ✅ 2026-07-08 | **Model v3 (alert trễ 2d) ĐẠT MỌI MỐC: MAE 1.090 (−26.9%) · PICP 80.9% · width 3.13**; fold Tết: v3 thắng, v2 thua heuristic; importance khớp thiết kế |
 | 8 — Tích hợp AIForecastService | ⬜ | |
 | 9 — Ground truth thật | ⬜ chờ hệ vận hành | |
 
@@ -217,16 +217,48 @@ dài hơn (rolling 6–12 tháng)** khi có dữ liệu thật; với data tổn
 PICP tổng đạt mốc. Xuất `models/conformal.csv` format `border,regime,q80`
 (có dòng fallback `*`) — Bước 8 load cùng model.
 
-### Bước 7 — Đánh giá & sanity check
-- MAE model vs MAE baseline (phải thắng rõ, VD ≥15%).
-- PICP ≈ confidence công bố; độ rộng khoảng ≤ heuristic.
-- Feature importance khớp "sự thật ngầm" của seeder → pipeline đúng.
-- **Bổ sung từ Bước 5-6:**
-  - Thử nghiệm feature `alert_active` — train bằng `congestion_active` nhưng mô phỏng
-    alert phát hiện **trễ 2-3 ngày** (trung thực với hệ alert thật); kỳ vọng đây là
-    chỗ kéo MAE qua mốc 1.27.
-  - Fold walk-forward thứ hai (test Q1/26 chứa Tết) — chấm điểm chế độ Tết.
-  - Coverage per-border khi calibration dài hơn.
+### Bước 7 — Đánh giá & sanity check — ✅ DONE 2026-07-08
+
+Seeder thêm cột `alert_active` (mô phỏng alert phát hiện **trễ 2 ngày** sau khi đợt tắc
+bắt đầu — phủ 67% mẫu tắc, trung thực với hệ scan thật, KHÔNG giả định alert hoàn hảo).
+Trainer chạy 2 fold × (heuristic / v2 không-alert / v3 có-alert) + permutation importance.
+
+**Fold 1 — test mùa thường (n=5.326):**
+
+| | MAE | Bias | PICP | Width | Mốc |
+|---|---|---|---|---|---|
+| Heuristic V1 | 1.491 | +1.033 | 58.9% | 2.22 | |
+| Model v2 (không alert) | 1.322 | +0.015 | 82.5% | 4.14 | width ❌ |
+| **Model v3 (alert trễ 2d)** | **1.090** (−26.9%) | +0.060 | **80.9%** | **3.13** | **✅ ĐẠT TẤT CẢ** (MAE ≤1.27, PICP ≥80, width ≤3.5) |
+
+**Fold 2 — walk-forward test Q1/26 chứa Tết (n=4.943, tết=1.208; calib 12/25 KHÔNG có tết):**
+
+| | MAE tổng | MAE tết | PICP tết |
+|---|---|---|---|
+| Heuristic V1 | 1.346 | | |
+| Model v2 | **1.626 — THUA heuristic** | 2.536 | 46.8% |
+| Model v3 | **1.138 — thắng** | 1.397 | 67.5% |
+
+- Bài học fold 2: mùa Tết trùng mùa tắc biên — model không có alert **thua cả heuristic**;
+  có alert thì thắng rõ. Feature alert không phải "nice to have" mà là điều kiện thắng.
+- ⚠️ PICP tết 67.5% under-cover vì **calibration 12/2025 không chứa chế độ Tết** (q tết
+  fallback về mức cửa khẩu) — đúng kịch bản thật khi đi qua Tết đầu tiên. Thuốc: calibration
+  **rolling 12–14 tháng** để luôn bao trùm ít nhất 1 mùa Tết (ghi vào Bước 9).
+
+**Permutation importance (fold 1, v3) — sanity check "sự thật ngầm": ✅ KHỚP**
+
+| Feature | ΔMAE khi xáo trộn | Đối chiếu thiết kế seeder |
+|---|---|---|
+| Border | +0.322 | Đúng — feature mạnh nhất |
+| AlertActive | +0.318 | Đúng — tắc biên nhân 1.3–2.5× |
+| Province | +0.106 | Đúng thứ tự (+0→+1.5) |
+| Carrier | +0.081 | Đúng thứ tự (−0.4→+0.5) |
+| Weight+Bulk | +0.013 | Đúng — chỉ ≥500kg mới có hiệu ứng |
+| Season / Month | ≈0 | Hợp lý: test fold 1 toàn mùa thường nên xáo season gần như vô hại — hiệu ứng season thể hiện ở fold 2 |
+
+**Model production = v3** (có `AlertActive`) → `models/leadtime.zip` + `conformal.csv`.
+Hệ quả cho Bước 8: lúc serve, feature `AlertActive` lấy từ `AIBorderAlert` active của
+cửa khẩu đó (`GetActiveByBorderAsync` — đúng dữ liệu bài toán 2 sinh ra).
 
 ### Bước 8 — Tích hợp vào Module 2 (thay ruột, giữ contract)
 - Model `.zip` load bằng `PredictionEnginePool` (thread-safe) trong ApplicationServices.
@@ -243,6 +275,10 @@ PICP tổng đạt mốc. Xuất `models/conformal.csv` format `border,regime,q8
 - Job đối chiếu mỗi forecast với actual khi kiện về kho VN → bảng sai số.
 - Dashboard MAE theo tuần (drift monitor). Retrain định kỳ khi đủ mẫu thật
   (~vài nghìn chuyến), thay dần data tổng hợp bằng data thật.
+- **Từ Bước 7:** calibration conformal dùng cửa sổ **rolling 12–14 tháng** (luôn bao
+  trùm ≥1 mùa Tết); đánh giá lại chất lượng alert thật (bài toán 2) vì model v3
+  phụ thuộc feature này — alert thật kém hơn mô phỏng lag-2d thì MAE sẽ nằm giữa
+  v2 (1.32) và v3 (1.09).
 
 ---
 
