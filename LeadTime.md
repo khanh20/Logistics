@@ -11,9 +11,9 @@
 | 1 — EDA | ✅ 2026-07-08 | Tín hiệu khớp thiết kế; 3 quyết định mới: conformal theo cửa khẩu, thêm `is_bulk`, loại `weekday` |
 | 2 — Baseline heuristic | ✅ 2026-07-08 | **MAE 1.491 · bias +1.03 · PICP 58.9%** — mốc phải vượt: MAE ≤ 1.27, PICP ≥ 80% |
 | 3 — Time split | ✅ chốt thiết kế | Train <2026 · Calib Q1/26 · Test ≥T4/26 + fold 2 test Q1/26 (Tết) |
-| 4 — Trainer ML.NET | ⬜ | |
-| 5 — Train + tune | ⬜ | |
-| 6 — Conformal interval | ⬜ | |
+| 4 — Trainer ML.NET | ✅ 2026-07-08 | Model v1: **MAE 1.338 (−10.3%) · bias −0.007 · PICP 89.4%** · width 5.67 (phình — do calib dính Tết) |
+| 5 — Train + tune | ⬜ | Mục tiêu kéo MAE ≤ 1.27 |
+| 6 — Conformal interval | ⬜ | Mondrian (cửa khẩu × chế-độ-Tết) để hết phình width |
 | 7 — Đánh giá vs baseline | ⬜ | |
 | 8 — Tích hợp AIForecastService | ⬜ | |
 | 9 — Ground truth thật | ⬜ chờ hệ vận hành | |
@@ -151,16 +151,38 @@ Tuyệt đối không shuffle trộn thời gian.
   calibration 12/2025, test Q1/2026 (chứa Tết 2026-02-17) — để chấm điểm riêng
   chế độ Tết, vì fold chính không có mẫu Tết.
 
-### Bước 4 — Pipeline ML.NET (project mới `LG.Module2.Trainer`, console)
+### Bước 4 — Pipeline ML.NET (`LG.Module2.Trainer`) — ✅ DONE 2026-07-08
+
+Project console mới (đã vào solution), chạy: `dotnet run` trong `LG.Module2.Trainer`
+(đọc `../LG.Module2.Seeder/data/transit_50k.csv`). Pipeline:
 ```
-LoadFromTextFile<TransitRow>(csv)
-→ OneHotEncoding(border, province, carrier, season)
-→ Concatenate(features số: weight_kg, month, is_tet_window)
-→ FastTreeRegression (hoặc LightGbmRegression)   // point estimate
+Load CSV thủ công (tự parse, tự kiểm soát feature — tránh vấn đề culture của TextLoader)
+→ derive is_bulk (weight ≥ 500) · LOẠI weekday/congestion_active/is_tet_window (theo Bước 1)
+→ time split: train 39.731 (<2026) | calib 4.943 (Q1/26) | test 5.326 (≥T4/26)
+→ OneHotEncoding(border, province, carrier, season) + Concatenate(weight, month, is_bulk)
+→ FastTreeRegression (400 trees, 32 leaves, lr 0.05, seed 42)
+→ conformal q80 residual theo cửa khẩu trên calib → khoảng min–max
+→ xuất models/leadtime.zip + conformal.csv (gitignore)
 ```
-Lưu ý: **không đưa `congestion_active` vào feature** — lúc dự báo tương lai ta không
-biết trước có tắc hay không (leakage!). Thông tin đó đi vào model qua đường khác:
-feature "đang có border alert active" tại thời điểm dự báo (như heuristic đang làm).
+
+**Kết quả lần train đầu (chưa tune) vs baseline:**
+
+| Metric | Heuristic (Bước 2) | Model v1 | Mốc | Đánh giá |
+|---|---|---|---|---|
+| MAE | 1.491 | **1.338** (−10.3%) | ≤1.27 (−15%) | ⚠️ gần đạt — chờ Bước 5 tune |
+| Bias | +1.033 | **−0.007** | ≈0 | ✅ hết hụt hệ thống (học được chặng nội địa TQ) |
+| PICP | 58.9% | **89.4%** | ≥80% | ✅ nhưng over-cover |
+| Width TB | 2.22 | 5.67 | ≤3.5 | ❌ khoảng phình to |
+| Theo cửa khẩu | | HN 0.84/97.9% · LC 2.03/71.7% · MC 1.84/88.9% | | Lào Cai vẫn khó nhất |
+
+**Chẩn đoán width phình + coverage lệch giữa cửa khẩu:** tập calibration Q1/2026
+**chứa cửa sổ Tết** (residual to bất thường) trong khi test toàn mùa thường →
+q80 bị thổi phồng, đúng bài **covariate shift giữa calib và test**. Hướng xử lý ở
+Bước 6: **Mondrian conformal** — calibrate theo nhóm (cửa khẩu × chế-độ-Tết) thay vì
+chỉ cửa khẩu; dự báo mùa thường dùng q từ mẫu calib mùa thường.
+
+Lưu ý giữ nguyên: **không đưa `congestion_active` vào feature** (leakage) — thông tin
+tắc biên đi vào lúc serve qua "border alert đang active" (như heuristic đang làm).
 
 ### Bước 5 — Train + tune
 Early stopping trên validation; tune sơ numberOfLeaves / learningRate / numberOfTrees
@@ -200,7 +222,7 @@ tuyến ổn định.
 ```
 Services/Module2/
 ├── LG.Module2.Seeder/     ✅ sinh dữ liệu tổng hợp (CSV / DB local) + eda.py (Bước 1) + baseline.py (Bước 2)
-├── LG.Module2.Trainer/    ⬜ console: load CSV → train → eval vs baseline → xuất model.zip + metrics
+├── LG.Module2.Trainer/    ✅ console: load CSV → FastTree → conformal → eval vs baseline → models/leadtime.zip
 └── LG.Module2.ApplicationServices/
     └── Services/AIForecastService.cs   ⬜ load model.zip, fallback heuristic
 ```

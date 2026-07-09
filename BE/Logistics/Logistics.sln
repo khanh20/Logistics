@@ -84,6 +84,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LG.Module2.Tests", "Service
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LG.Module2.Seeder", "Services\Module2\LG.Module2.Seeder\LG.Module2.Seeder.csproj", "{9F861DF1-091E-4EC8-9D02-44F4B067436D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LG.Module2.Trainer", "Services\Module2\LG.Module2.Trainer\LG.Module2.Trainer.csproj", "{B7590AF2-CC8E-4DD2-AB4A-101FE9C4F13D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -202,6 +204,10 @@ Global
 		{9F861DF1-091E-4EC8-9D02-44F4B067436D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9F861DF1-091E-4EC8-9D02-44F4B067436D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9F861DF1-091E-4EC8-9D02-44F4B067436D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7590AF2-CC8E-4DD2-AB4A-101FE9C4F13D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7590AF2-CC8E-4DD2-AB4A-101FE9C4F13D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7590AF2-CC8E-4DD2-AB4A-101FE9C4F13D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7590AF2-CC8E-4DD2-AB4A-101FE9C4F13D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -242,6 +248,7 @@ Global
 		{20F8E884-202E-4E1F-8DA2-0F21B188CA1A} = {64A5D2D8-274A-43E3-9C5D-3E6A895D45CC}
 		{73626F8F-5F64-49BE-AA22-5B06FE2FD679} = {64A5D2D8-274A-43E3-9C5D-3E6A895D45CC}
 		{9F861DF1-091E-4EC8-9D02-44F4B067436D} = {64A5D2D8-274A-43E3-9C5D-3E6A895D45CC}
+		{B7590AF2-CC8E-4DD2-AB4A-101FE9C4F13D} = {64A5D2D8-274A-43E3-9C5D-3E6A895D45CC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9AEC799D-6416-4C50-8138-A4495FA3A76A}

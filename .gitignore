@@ -28,6 +28,8 @@ note.txt
 
 # Dataset sinh từ seeder (tái lập được bằng --seed, không commit)
 /BE/Logistics/Services/Module2/LG.Module2.Seeder/data/
+# Model artifacts (tái lập được bằng Trainer)
+/BE/Logistics/Services/Module2/LG.Module2.Trainer/models/
 BE/Logistics/search_indexes_mod1.sql
 .claude/launch.json
 
