@@ -15,7 +15,7 @@
 | 5 — Train + tune | ✅ 2026-07-08 | Grid phẳng → config nhỏ 200/16/0.03; **MAE 1.322 (−11.3%)**, mốc 1.27 chưa đạt — dư địa ở feature alert (B7) |
 | 6 — Conformal interval | ✅ 2026-07-08 | Mondrian: **PICP 82.5%, width 4.14** (−27%); coverage lệch cửa khẩu do calib 1 quý |
 | 7 — Đánh giá vs baseline | ✅ 2026-07-08 | **Model v3 (alert trễ 2d) ĐẠT MỌI MỐC: MAE 1.090 (−26.9%) · PICP 80.9% · width 3.13**; fold Tết: v3 thắng, v2 thua heuristic; importance khớp thiết kế |
-| 8 — Tích hợp AIForecastService | ⬜ | |
+| 8 — Tích hợp AIForecastService | ✅ 2026-07-08 | `ILeadTimeModel` + fallback heuristic 3 tầng; `SeasonHelper` cửa sổ Tết thật; alert từ bài toán 2; 85 test pass |
 | 9 — Ground truth thật | ⬜ chờ hệ vận hành | |
 
 ---
@@ -260,16 +260,28 @@ Trainer chạy 2 fold × (heuristic / v2 không-alert / v3 có-alert) + permutat
 Hệ quả cho Bước 8: lúc serve, feature `AlertActive` lấy từ `AIBorderAlert` active của
 cửa khẩu đó (`GetActiveByBorderAsync` — đúng dữ liệu bài toán 2 sinh ra).
 
-### Bước 8 — Tích hợp vào Module 2 (thay ruột, giữ contract)
-- Model `.zip` load bằng `PredictionEnginePool` (thread-safe) trong ApplicationServices.
-- `AIForecastService.ForecastTransitAsync`: có model → dùng model; không có/lỗi →
-  **fallback heuristic** (giống pattern GHTK thật ↔ stub).
-- ⚠️ Sửa `InferSeason` khi tích hợp: BE hiện coi **cả tháng 1+2 = "tet"** trong khi
-  seeder (và thực tế) chỉ tính cửa sổ −14..+7 ngày quanh mùng 1 âm lịch. Serve model
-  với InferSeason thô sẽ gán feature tet sai cho ~6 tuần/năm → thay bằng bảng ngày
-  Tết âm lịch (như `TransitDataGenerator.TetDates`).
-- `BackgroundService` precompute đêm ghi `ai_transit_forecasts`; API lookup.
-- Confidence trả về = coverage đo được trên calibration (con số thật, hết gán tĩnh).
+### Bước 8 — Tích hợp vào Module 2 (thay ruột, giữ contract) — ✅ DONE 2026-07-08
+
+Đã tích hợp vào `AIForecastService`, API contract không đổi:
+- **`ILeadTimeModel` / `LeadTimeModelService`** (`Services/Ml/`, singleton): nạp
+  `leadtime.zip` + `conformal.csv` từ `Ai:ModelDirectory` (config/env `AI__MODELDIRECTORY`);
+  schema input khớp chính xác `TransitSample` lúc train. `PredictionEngine` không
+  thread-safe → khoá quanh predict (chấp nhận: suy luận 8.5µs, kiến trúc chính là precompute).
+- **Fallback 3 tầng**: config trống / thiếu file / nạp lỗi / predict lỗi → `Predict`
+  trả null → `ForecastTransitAsync` tự rơi về heuristic cũ. Log phân biệt `[AI-ML]`
+  vs `[AI-HEURISTIC]`.
+- **Feature `AlertActive` lúc serve** = `GetActiveByBorderAsync` (dữ liệu bài toán 2) —
+  đúng thiết kế Bước 7.
+- **`SeasonHelper` thay `InferSeason` cũ**: cửa sổ Tết âm lịch thật −14..+7 quanh
+  mùng 1 (bảng 2024–2028) thay vì "cả T1+T2 là tet" — hết gán sai ~6 tuần/năm.
+- **`ConformalTable`** tách riêng, parse `border,regime,q80` + fallback `*` — unit-test
+  không cần model. Confidence trả khách = 0.80 nominal (coverage đo được 80.9%).
+- **13 test mới** (tổng 85 pass): cửa sổ Tết, lookup conformal 3 tầng, và test
+  **tích hợp model thật** (nạp zip từ Trainer, predict khoảng hợp lý, alert bật →
+  dự báo dài ra; tự bỏ qua nếu máy chưa chạy Trainer).
+- Cấu hình: `Ai:ModelDirectory` trong appsettings (trống = heuristic) + `.env.example`.
+- ⬜ Còn lại (chuyển sang Bước 9 cùng ground truth): `BackgroundService` precompute
+  đêm ghi `ai_transit_forecasts` — hiện predict trực tiếp trong request (8.5µs, đủ nhanh).
 
 ### Bước 9 — Chuẩn bị cho dữ liệu thật (làm ngay khi hệ vận hành)
 - Job đối chiếu mỗi forecast với actual khi kiện về kho VN → bảng sai số.
@@ -289,7 +301,8 @@ Services/Module2/
 ├── LG.Module2.Seeder/     ✅ sinh dữ liệu tổng hợp (CSV / DB local) + eda.py (Bước 1) + baseline.py (Bước 2)
 ├── LG.Module2.Trainer/    ✅ console: load CSV → FastTree → conformal → eval vs baseline → models/leadtime.zip
 └── LG.Module2.ApplicationServices/
-    └── Services/AIForecastService.cs   ⬜ load model.zip, fallback heuristic
+    ├── Services/Ml/LeadTimeModelService.cs  ✅ ILeadTimeModel + ConformalTable + SeasonHelper
+    └── Services/AIForecastService.cs        ✅ model → fallback heuristic, log [AI-ML]/[AI-HEURISTIC]
 ```
 
 **Nguyên tắc xuyên suốt:** contract Phase 8 đã chốt — mọi bước chỉ "thay ruột",
