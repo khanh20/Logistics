@@ -25,6 +25,11 @@ public class ComplaintService(
         if (order.CustomerId != customerId)
             throw new UnauthorizedAccessException("Đơn hàng không thuộc về khách hàng này.");
 
+        // Chỉ cho khiếu nại sau khi đơn đã được thanh toán (đã đóng cọc).
+        if (!order.IsDepositPaid)
+            throw new ComplaintNotAllowedException(
+                "Chỉ có thể khiếu nại sau khi đơn hàng đã được thanh toán.");
+
         if (!Enum.TryParse<ComplaintType>(req.Type, ignoreCase: true, out var type))
             type = ComplaintType.Other;
 

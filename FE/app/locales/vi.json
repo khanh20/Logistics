@@ -720,7 +720,11 @@
     "also_viewed": "Người xem cũng xem",
     "for_you": "Gợi ý cho bạn",
     "rail_tagline": "Đang được quan tâm",
-    "rail_tagline2": "Có thể bạn thích"
+    "rail_tagline2": "Có thể bạn thích",
+    "personalized_note": "Gợi ý được cá nhân hoá theo hoạt động của bạn",
+    "segment_first_time": "Khách mới",
+    "segment_returning": "Khách quen",
+    "segment_loyal": "Khách thân thiết"
   },
   "favorites": {
     "title": "Sản phẩm yêu thích",

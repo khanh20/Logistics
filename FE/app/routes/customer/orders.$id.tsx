@@ -237,7 +237,7 @@ export default function CustomerOrderDetailPage({
               Hủy đơn
             </Button>
           )}
-          <ComplaintButton order={order} />
+          {order.isDepositPaid && <ComplaintButton order={order} />}
         </div>
       </div>
 

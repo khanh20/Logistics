@@ -85,7 +85,10 @@ public record ProductSearchRequest(
     bool     ActiveOnly  = true,
     ProductSort Sort     = ProductSort.Relevance,
     int      Page        = 1,
-    [Range(1, 100)] int PageSize = 20
+    [Range(1, 100)] int PageSize = 20,
+    // Bật tìm kiếm ngữ nghĩa (hybrid lexical + vector + rerank). Chỉ áp dụng khi có Keyword;
+    // thiếu embedding/service lỗi -> tự fallback về lexical. Sort được bỏ qua khi Semantic.
+    bool     Semantic    = true
 );
 
 public record PagedProductResponse(

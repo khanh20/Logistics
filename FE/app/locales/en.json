@@ -720,7 +720,11 @@
     "also_viewed": "People also viewed",
     "for_you": "For you",
     "rail_tagline": "Trending now",
-    "rail_tagline2": "You may like"
+    "rail_tagline2": "You may like",
+    "personalized_note": "Recommendations personalized to your activity",
+    "segment_first_time": "New customer",
+    "segment_returning": "Returning customer",
+    "segment_loyal": "Loyal customer"
   },
   "favorites": {
     "title": "Favorite products",

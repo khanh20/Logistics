@@ -260,7 +260,7 @@ public class ProductRepository(Module1DbContext db) : IProductRepository
 
         if (!string.IsNullOrWhiteSpace(keyword))
         {
-            var kw = keyword.Trim().ToLower();
+            var kw = EscapeLike(keyword.Trim().ToLower());
             q = q.Where(x => EF.Functions.ILike(x.OriginalTitle, $"%{kw}%")
                            || EF.Functions.ILike(x.TranslatedTitle!, $"%{kw}%"));
         }
@@ -290,6 +290,71 @@ public class ProductRepository(Module1DbContext db) : IProductRepository
 
         return (items, total);
     }
+
+    public async Task<(List<ProductMaster> Items, int LexicalTotal)> SearchHybridAsync(
+        string? keyword, Guid? categoryId, Guid? platformId,
+        decimal? minPriceCny, decimal? maxPriceCny, bool activeOnly,
+        Pgvector.Vector? queryVector, int poolSize, CancellationToken ct = default)
+    {
+        var baseQ = db.ProductMasters.AsQueryable();
+        if (activeOnly) baseQ = baseQ.Where(x => x.IsActive && !x.IsForbidden);
+        if (categoryId.HasValue) baseQ = baseQ.Where(x => x.CategoryId == categoryId);
+        if (platformId.HasValue) baseQ = baseQ.Where(x => x.Shop.PlatformId == platformId);
+        if (minPriceCny.HasValue)
+            baseQ = baseQ.Where(x => x.Variants.Any(v => v.PriceCnyCurrent >= minPriceCny.Value));
+        if (maxPriceCny.HasValue)
+            baseQ = baseQ.Where(x => x.Variants.Any(v => v.PriceCnyCurrent <= maxPriceCny.Value));
+
+        var lexIds = new List<Guid>();
+        var lexTotal = 0;
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var kw = EscapeLike(keyword.Trim().ToLower());
+            var lexQ = baseQ.Where(x => EF.Functions.ILike(x.OriginalTitle, $"%{kw}%")
+                                      || EF.Functions.ILike(x.TranslatedTitle!, $"%{kw}%"));
+            lexTotal = await lexQ.CountAsync(ct);
+            lexIds = await lexQ
+                .OrderByDescending(x => x.IsFeatured).ThenByDescending(x => x.ViewCount)
+                .Take(poolSize).Select(x => x.Id).ToListAsync(ct);
+        }
+
+        var vecIds = new List<Guid>();
+        if (queryVector is not null)
+        {
+            var allowed = baseQ.Select(x => x.Id);
+            vecIds = await db.ProductEmbeddings
+                .Where(e => allowed.Contains(e.ProductId))
+                .OrderBy(e => e.Embedding.CosineDistance(queryVector))
+                .Take(poolSize).Select(e => e.ProductId).ToListAsync(ct);
+        }
+
+        // RRF: score = Σ 1/(k + rank), k=60.
+        const double k = 60.0;
+        var rrf = new Dictionary<Guid, double>();
+        for (int i = 0; i < lexIds.Count; i++)
+            rrf[lexIds[i]] = rrf.GetValueOrDefault(lexIds[i]) + 1.0 / (k + i + 1);
+        for (int i = 0; i < vecIds.Count; i++)
+            rrf[vecIds[i]] = rrf.GetValueOrDefault(vecIds[i]) + 1.0 / (k + i + 1);
+
+        var fusedIds = rrf.OrderByDescending(kv => kv.Value)
+                          .Take(poolSize).Select(kv => kv.Key).ToList();
+        if (fusedIds.Count == 0) return (new(), lexTotal);
+
+        var products = await db.ProductMasters
+            .Where(x => fusedIds.Contains(x.Id))
+            .Include(x => x.Shop).ThenInclude(s => s.Platform)
+            .Include(x => x.Category)
+            .Include(x => x.Images.Where(i => i.IsPrimary))
+            .Include(x => x.Variants.OrderBy(v => v.PriceCnyCurrent).Take(1))
+            .ToListAsync(ct);
+
+        var byId = products.ToDictionary(p => p.Id);
+        return (fusedIds.Where(byId.ContainsKey).Select(id => byId[id]).ToList(), lexTotal);
+    }
+
+    // Escape ký tự wildcard của LIKE/ILIKE để keyword chứa % _ \ khớp literal.
+    private static string EscapeLike(string s) =>
+        s.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
 
     public Task<List<ProductMaster>> GetFeaturedAsync(int limit, CancellationToken ct = default) =>
         db.ProductMasters

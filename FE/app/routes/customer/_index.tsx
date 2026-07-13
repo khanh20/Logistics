@@ -7,6 +7,8 @@ import { exchangeRatesApi } from "~/lib/api/categories";
 import { ProductCard } from "~/components/customer/ProductCard";
 import { RecommendationSections } from "~/components/customer/RecommendationSections";
 import { formatVND } from "~/lib/utils/format";
+import { useAppSelector } from "~/lib/feature/hooks";
+import { selectAuth } from "~/lib/feature/auth/authSelector";
 import type { ProductListItem } from "~/lib/types/product";
 import type { ExchangeRate } from "~/lib/types/category";
 
@@ -81,6 +83,7 @@ export default function CustomerHomePage({
 }) {
   const { t } = useTranslation();
   const { featured, rate } = loaderData;
+  const { token } = useAppSelector(selectAuth);
   const scrollRef = useScrollReveal();
 
   return (
@@ -127,18 +130,20 @@ export default function CustomerHomePage({
                   {t("home.cta_browse")}
                   <PiArrowRightBold className="text-base" />
                 </Link>
-                <Link
-                  to="/register"
-                  className="inline-flex items-center px-6 py-3 text-sm font-medium transition-colors active:scale-[0.98]"
-                  style={{
-                    color: "var(--mu-text)",
-                    border: "1px solid var(--mu-border)",
-                    borderRadius: "6px",
-                    backgroundColor: "var(--mu-surface)",
-                  }}
-                >
-                  {t("home.cta_register")}
-                </Link>
+                {!token && (
+                  <Link
+                    to="/register"
+                    className="inline-flex items-center px-6 py-3 text-sm font-medium transition-colors active:scale-[0.98]"
+                    style={{
+                      color: "var(--mu-text)",
+                      border: "1px solid var(--mu-border)",
+                      borderRadius: "6px",
+                      backgroundColor: "var(--mu-surface)",
+                    }}
+                  >
+                    {t("home.cta_register")}
+                  </Link>
+                )}
               </div>
 
               {/* Exchange rate indicator */}

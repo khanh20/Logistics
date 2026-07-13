@@ -93,6 +93,13 @@ public interface IProductRepository
         decimal? minPriceCny, decimal? maxPriceCny,
         bool activeOnly, ProductSort sort, int page, int pageSize, CancellationToken ct = default);
 
+    // Truy hồi hybrid: lexical (ILIKE) + vector ANN, hợp nhất RRF, cùng bộ filter.
+    // Items = tối đa poolSize ứng viên theo điểm RRF; LexicalTotal = tổng khớp lexical thật (cho phân trang).
+    Task<(List<ProductMaster> Items, int LexicalTotal)> SearchHybridAsync(
+        string? keyword, Guid? categoryId, Guid? platformId,
+        decimal? minPriceCny, decimal? maxPriceCny, bool activeOnly,
+        Pgvector.Vector? queryVector, int poolSize, CancellationToken ct = default);
+
     Task<List<ProductMaster>> GetFeaturedAsync(int limit, CancellationToken ct = default);
 
     /// Nạp nhiều sản phẩm theo danh sách Id (cho recommendation). Chỉ trả active + không cấm.
