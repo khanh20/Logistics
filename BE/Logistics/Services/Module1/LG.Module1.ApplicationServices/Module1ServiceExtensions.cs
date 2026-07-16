@@ -100,15 +100,47 @@ public static class Module1ServiceExtensions
         services.AddScoped<IProductCoViewRepository, ProductCoViewRepository>();
         services.AddScoped<IModule1UnitOfWork, Module1UnitOfWork>();
 
-        // Embedding  — TEI/Qwen3-Embedding. Config: Embedding:BaseUrl, Embedding:Model.
+        // Embedding — Qwen3-Embedding phục vụ bởi serving_pipeline (endpoint /api/v1/embed).
+        // Mặc định dùng chung host với gateway (LlmGateway:BaseUrl); có thể override Embedding:BaseUrl
+        // nếu dùng TEI riêng (khi đó đặt Embedding:Path=/embed).
         services.AddHttpClient<IEmbeddingProvider, HttpEmbeddingService>((sp, client) =>
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
             var baseUrl = cfg["Embedding:BaseUrl"]
                        ?? Environment.GetEnvironmentVariable("EMBEDDING__BASEURL")
-                       ?? "http://localhost:8080";
+                       ?? cfg["LlmGateway:BaseUrl"]
+                       ?? "http://localhost:8000";
             client.BaseAddress = new Uri(baseUrl);
-            client.Timeout     = TimeSpan.FromSeconds(30);
+            // Batch backfill trên CPU có thể chậm; GPU/production giảm qua config.
+            client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("Embedding:TimeoutSeconds", 300));
+        });
+
+        // Các client ML dùng chung host gateway (LlmGateway:BaseUrl + ApiKey); timeout config được.
+        services.AddHttpClient<ISearchReranker, HttpSearchReranker>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            client.BaseAddress = new Uri(cfg["LlmGateway:BaseUrl"] ?? "http://localhost:8000");
+            client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("LlmGateway:RerankTimeoutSeconds", 8));
+        });
+
+        services.AddHttpClient<ICategoryClassifier, HttpCategoryClassifier>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            client.BaseAddress = new Uri(cfg["LlmGateway:BaseUrl"] ?? "http://localhost:8000");
+            client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("LlmGateway:ClassifyTimeoutSeconds", 5));
+        });
+        services.AddScoped<CategoryAutoClassifier>();
+
+        // Recommendation: options từ appsettings (mục "Recommendation"; thiếu -> defaults
+        // = hành vi cũ) + reranker ML (LightGBM bên serving_pipeline, fallback linear).
+        services.AddSingleton(
+            config.GetSection("Recommendation").Get<LG.Module1.ApplicationServices.Configuration.RecommendationOptions>()
+            ?? new LG.Module1.ApplicationServices.Configuration.RecommendationOptions());
+        services.AddHttpClient<IRecoReranker, HttpRecoReranker>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            client.BaseAddress = new Uri(cfg["LlmGateway:BaseUrl"] ?? "http://localhost:8000");
+            client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("LlmGateway:RerankTimeoutSeconds", 8));
         });
 
         services.AddDataProtection()

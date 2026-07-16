@@ -2,6 +2,7 @@ using LG.Module1.ApplicationServices.DTOs.Cart;
 using LG.Module1.ApplicationServices.DTOs.Ingestion;
 using LG.Module1.ApplicationServices.DTOs.Product;
 using LG.Module1.ApplicationServices.Interfaces;
+using LG.Module1.Domain.Adapters;
 using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Exceptions;
 using LG.Module1.Domain.Repositories;
@@ -17,7 +18,7 @@ namespace LG.Module1.ApplicationServices.Services;
 public class ExtensionProductUpserter(
     IPlatformRepository           platformRepo,
     IPlatformShopRepository       shopRepo,
-    IProductCategoryRepository    categoryRepo,
+    CategoryAutoClassifier        autoClassifier,
     IProductService               productService,
     IModule1UnitOfWork            uow,
     ILogger<ExtensionProductUpserter> logger)
@@ -57,9 +58,9 @@ public class ExtensionProductUpserter(
         if (shop.IsBlacklisted)
             throw new BlacklistedShopException(shop.ShopName);
 
-        // 3. Category — fallback category đầu tiên
-        var resolvedCategoryId = categoryId
-            ?? (await categoryRepo.GetAllAsync(activeOnly: true, ct)).First().Id;
+        // 3. Category — explicit hoặc phân loại ML -> fallback mặc định.
+        var resolvedCategoryId = await autoClassifier.ResolveAsync(
+            categoryId, d.TitleTranslated ?? d.TitleOriginal, d.PrimaryImageUrl, null, ct);
 
         // 4. Giá → CNY
         var priceCny = ConvertToCny(d.PricePromotion ?? d.PriceOriginal, d.Currency);

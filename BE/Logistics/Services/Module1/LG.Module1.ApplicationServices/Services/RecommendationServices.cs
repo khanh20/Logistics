@@ -1,15 +1,17 @@
+using LG.Module1.ApplicationServices.Configuration;
 using LG.Module1.ApplicationServices.DTOs.Product;
 using LG.Module1.ApplicationServices.DTOs.Recommendation;
 using LG.Module1.ApplicationServices.Interfaces;
+using LG.Module1.Domain.Adapters;
 using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Repositories;
 using Pgvector;
 
 namespace LG.Module1.ApplicationServices.Services;
 
-// Engine gợi ý theo phân khúc khách (Plan D) + rank đa tín hiệu có trọng số (#1),
-// for_you dùng lịch sử mua + shop yêu thích (#2), co-view (#3).
-// AI vector (Plan G) là 1 nguồn recall; thiếu embedding → fallback heuristic.
+// Engine gợi ý theo phân khúc khách: recall đa nguồn (vector/co-view/
+// trending/category) → xếp hạng. Tầng xếp hạng ưu tiên RERANKER ML (LightGBM bên
+// serving_pipeline, học từ hành vi); lỗi/thiếu model → fallback công thức linear.
 public class RecommendationService(
     IProductRepository          productRepo,
     ITrendingProductRepository  trendingRepo,
@@ -17,10 +19,11 @@ public class RecommendationService(
     IUserFavoriteRepository     favoriteRepo,
     ICustomerOrderRepository    orderRepo,
     IProductEmbeddingRepository embeddingRepo,
-    IProductCoViewRepository    coViewRepo
+    IProductCoViewRepository    coViewRepo,
+    IRecoReranker               recoReranker,
+    RecommendationOptions       opts
 ) : IRecommendationService
 {
-    private const int LoyalMinOrders = 3;
 
     public async Task<RecommendationResponse> GetAsync(
         Guid? customerId, string? sessionKey, int perSection, CancellationToken ct = default)
@@ -41,7 +44,7 @@ public class RecommendationService(
         var recentViewed = await activityRepo.GetRecentlyViewedProductIdsAsync(cid, perSection, ct);
 
         string segment =
-            completed >= LoyalMinOrders                 ? "loyal"
+            completed >= opts.LoyalMinOrders            ? "loyal"
             : (completed > 0 || recentViewed.Count > 0) ? "returning"
             : "first_time";
 
@@ -53,20 +56,25 @@ public class RecommendationService(
                 var purchased = await orderRepo.GetPurchasedProductIdsAsync(cid, 30, ct);
                 var favIds    = (await favoriteRepo.GetByCustomerAsync(cid, ct)).Select(f => f.ProductId).ToList();
                 var seed      = purchased.Concat(favIds).Concat(recentViewed).Distinct().ToList();
+                var pool      = perSection * opts.CandidatePoolMultiplier;
 
-                // for_you: vector (mua + thích + xem) → fallback danh mục theo trọng số; rồi rank.
-                var (vp, vsims) = await RecallVectorAsync(seed, shown, perSection * 4, ct);
-                if (vp.Count > 0)
-                    RankAddLoaded(sections, shown, "for_you", vp, vsims, profile, perSection);
-                else
+                var (forYou, forYouSims) = await RecallVectorAsync(seed, shown, pool, ct);
+                if (forYou.Count == 0)
                 {
                     var topCats = profile.CategoryWeights.OrderByDescending(kv => kv.Value)
                                          .Take(6).Select(kv => kv.Key).ToList();
-                    var cp = await productRepo.GetTopByCategoriesAsync(topCats, shown.Concat(favIds), perSection * 4, ct);
-                    RankAddLoaded(sections, shown, "for_you", cp, null, profile, perSection);
+                    forYou = await productRepo.GetTopByCategoriesAsync(topCats, shown.Concat(favIds), pool, ct);
+                    forYouSims = null;
                 }
+                var coView = await RecallCoViewAsync(seed, shown, pool, ct);
 
-                await AddCoViewAsync(sections, shown, seed, profile, perSection, ct);
+                // ML rerank cả 2 section trong MỘT lượt gọi; null -> rank linear.
+                var ml = await MlRerankAsync(cid,
+                    new[] { ("for_you", forYou), ("also_viewed", coView) }, ct);
+                AddRankedSection(sections, shown, "for_you", forYou, forYouSims, profile, perSection,
+                    ml?.GetValueOrDefault("for_you"));
+                AddRankedSection(sections, shown, "also_viewed", coView, null, profile, perSection,
+                    ml?.GetValueOrDefault("also_viewed"));
                 await AddSection(sections, shown, "recently_viewed", recentViewed, perSection, ct);
                 await AddTrending(sections, shown, perSection, ct);
                 break;
@@ -77,18 +85,22 @@ public class RecommendationService(
                 var profile = await BuildProfileAsync(cid, recentViewed, ct);
                 await AddSection(sections, shown, "recently_viewed", recentViewed, perSection, ct);
 
-                // similar: vector từ sản phẩm đã xem → fallback danh mục; rồi rank.
-                var (vp, vsims) = await RecallVectorAsync(recentViewed, shown, perSection * 4, ct);
-                if (vp.Count > 0)
-                    RankAddLoaded(sections, shown, "similar_to_viewed", vp, vsims, profile, perSection);
-                else
+                var pool = perSection * opts.CandidatePoolMultiplier;
+                var (similar, similarSims) = await RecallVectorAsync(recentViewed, shown, pool, ct);
+                if (similar.Count == 0)
                 {
                     var cats = await activityRepo.GetRecentCategoryIdsAsync(cid, 5, ct);
-                    var cp   = await productRepo.GetTopByCategoriesAsync(cats, shown, perSection * 4, ct);
-                    RankAddLoaded(sections, shown, "similar_to_viewed", cp, null, profile, perSection);
+                    similar = await productRepo.GetTopByCategoriesAsync(cats, shown, pool, ct);
+                    similarSims = null;
                 }
+                var coView = await RecallCoViewAsync(recentViewed, shown, pool, ct);
 
-                await AddCoViewAsync(sections, shown, recentViewed, profile, perSection, ct);
+                var ml = await MlRerankAsync(cid,
+                    new[] { ("similar_to_viewed", similar), ("also_viewed", coView) }, ct);
+                AddRankedSection(sections, shown, "similar_to_viewed", similar, similarSims, profile, perSection,
+                    ml?.GetValueOrDefault("similar_to_viewed"));
+                AddRankedSection(sections, shown, "also_viewed", coView, null, profile, perSection,
+                    ml?.GetValueOrDefault("also_viewed"));
                 await AddTrending(sections, shown, perSection, ct);
                 break;
             }
@@ -126,9 +138,9 @@ public class RecommendationService(
                 if (byId.TryGetValue(id, out var p))
                     profile.CategoryWeights[p.CategoryId] = profile.CategoryWeights.GetValueOrDefault(p.CategoryId) + w;
         }
-        AddCat(purchased, 3.0);
-        AddCat(favIds, 2.0);
-        AddCat(recentViewed, 1.0);
+        AddCat(purchased, opts.SignalWeights.Purchase);
+        AddCat(favIds, opts.SignalWeights.Favorite);
+        AddCat(recentViewed, opts.SignalWeights.View);
 
         // Shop yêu thích = shop đã mua + shop của sản phẩm đã thích.
         foreach (var s in await orderRepo.GetPurchasedShopIdsAsync(cid, ct)) profile.PreferredShopIds.Add(s);
@@ -140,8 +152,8 @@ public class RecommendationService(
         return profile;
     }
 
-    // ── Rank đa tín hiệu (#1) ───────────────────────────────────────────────────
-    private static List<ProductMaster> Rank(List<ProductMaster> candidates, UserProfile profile,
+    // ── Rank linear (fallback + baseline) ──
+    private List<ProductMaster> Rank(List<ProductMaster> candidates, UserProfile profile,
         IReadOnlyDictionary<Guid, double>? sims, int take)
     {
         if (candidates.Count == 0) return candidates;
@@ -151,13 +163,14 @@ public class RecommendationService(
         double maxPop = candidates.Max(p => Math.Log(1 + p.ViewCount + p.TotalSoldLocal));
         if (maxPop <= 0) maxPop = 1;
         var now = DateTime.UtcNow;
+        var w = opts.RankWeights;
 
         double Score(ProductMaster p)
         {
             double sim     = sims != null && sims.TryGetValue(p.Id, out var s) ? s : 0;
             double cat     = profile.CategoryWeights.GetValueOrDefault(p.CategoryId) / maxCatW;
             double pop     = Math.Log(1 + p.ViewCount + p.TotalSoldLocal) / maxPop;
-            double recency = 1.0 / (1.0 + Math.Max(0, (now - p.CreatedAt).TotalDays) / 30.0);
+            double recency = 1.0 / (1.0 + Math.Max(0, (now - p.CreatedAt).TotalDays) / opts.RecencyHalflifeDays);
             double price   = 1.0;
             if (profile.PreferredPriceCny is double pref && pref > 0)
             {
@@ -167,20 +180,35 @@ public class RecommendationService(
             double featured = p.IsFeatured ? 1 : 0;
             double shop     = profile.PreferredShopIds.Contains(p.ShopId) ? 1 : 0;
 
-            return 0.35 * sim + 0.20 * cat + 0.15 * pop + 0.10 * recency
-                 + 0.10 * price + 0.05 * featured + 0.05 * shop;
+            return w.Sim * sim + w.Category * cat + w.Pop * pop + w.Recency * recency
+                 + w.Price * price + w.Featured * featured + w.Shop * shop;
         }
 
         return candidates.OrderByDescending(Score).Take(take).ToList();
     }
 
-    private void RankAddLoaded(List<RecSection> sections, HashSet<Guid> shown, string key,
-        List<ProductMaster> products, IReadOnlyDictionary<Guid, double>? sims, UserProfile profile, int perSection)
+    // Gọi ML reranker cho nhiều section một lượt; tắt cờ/rỗng -> null (dùng rank linear).
+    private async Task<IReadOnlyDictionary<string, IReadOnlyList<Guid>>?> MlRerankAsync(
+        Guid customerId, (string Key, List<ProductMaster> Products)[] secs, CancellationToken ct)
+    {
+        if (!opts.UseMlReranker) return null;
+        var payload = secs.Where(s => s.Products.Count > 0)
+            .Select(s => (s.Key, (IReadOnlyList<Guid>)s.Products.Select(p => p.Id).ToList()))
+            .ToList();
+        return payload.Count == 0 ? null : await recoReranker.RerankAsync(customerId, payload, ct);
+    }
+
+    // Xếp 1 section: theo thứ tự ML nếu có, ngược lại rank linear.
+    private void AddRankedSection(List<RecSection> sections, HashSet<Guid> shown, string key,
+        List<ProductMaster> products, IReadOnlyDictionary<Guid, double>? sims, UserProfile profile,
+        int perSection, IReadOnlyList<Guid>? mlOrder)
     {
         var pick = products.Where(p => !shown.Contains(p.Id)).ToList();
         if (pick.Count == 0) return;
 
-        var ranked = Rank(pick, profile, sims, perSection);
+        var ranked = mlOrder is { Count: > 0 }
+            ? Common.RankingHelpers.ReorderByIds(pick, mlOrder).Take(perSection).ToList()
+            : Rank(pick, profile, sims, perSection);
         if (ranked.Count == 0) return;
 
         foreach (var p in ranked) shown.Add(p.Id);
@@ -208,14 +236,12 @@ public class RecommendationService(
         return (products, sims);
     }
 
-    // Co-view (#3): "người xem X cũng xem Y" từ cache, rồi rank.
-    private async Task AddCoViewAsync(List<RecSection> sections, HashSet<Guid> shown,
-        List<Guid> seedIds, UserProfile profile, int perSection, CancellationToken ct)
+    // Co-view: "người xem X cũng xem Y" từ cache.
+    private async Task<List<ProductMaster>> RecallCoViewAsync(
+        List<Guid> seedIds, HashSet<Guid> shown, int pool, CancellationToken ct)
     {
-        var ids = await coViewRepo.GetRelatedAsync(seedIds, shown, perSection * 4, ct);
-        if (ids.Count == 0) return;
-        var products = await productRepo.GetByIdsAsync(ids, ct);
-        RankAddLoaded(sections, shown, "also_viewed", products, null, profile, perSection);
+        var ids = await coViewRepo.GetRelatedAsync(seedIds, shown, pool, ct);
+        return ids.Count == 0 ? new() : await productRepo.GetByIdsAsync(ids, ct);
     }
 
     private static Vector AverageVectors(List<Vector> vectors)

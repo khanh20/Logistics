@@ -57,6 +57,9 @@ public class VariantUnavailableException(string variantName)
 public class ComplaintNotFoundException(object id)
     : Module1DomainException($"Không tìm thấy khiếu nại: {id}.", "COMPLAINT_NOT_FOUND");
 
+public class ComplaintNotAllowedException(string message)
+    : Module1DomainException(message, "COMPLAINT_NOT_ALLOWED");
+
 public class ReviewNotFoundException(object id)
     : Module1DomainException($"Không tìm thấy đánh giá: {id}.", "REVIEW_NOT_FOUND");
 

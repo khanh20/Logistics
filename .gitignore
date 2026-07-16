@@ -32,3 +32,8 @@ BE/Logistics/search_indexes_mod1.sql
 .claude/launch.json
 
 backup_db/
+<<<<<<< HEAD
+=======
+docs/
+docs.zip
+>>>>>>> 3801181a5372d0f3def41658286ea99e4ea7cd2b

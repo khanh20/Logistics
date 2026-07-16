@@ -51,6 +51,9 @@ function buildCartSummary(cart: CartResponse | null): string {
 // Markdown tối giản cho câu trả lời bot: **đậm**, [text](url), `code`.
 // Ký tự \n giữ nguyên nhờ bubble có whitespace-pre-wrap → khỏi tự thêm <br/>.
 function renderRich(text: string): ReactNode[] {
+  text = text
+    .replace(/^[ \t]*[*-]\s+/gm, "•  ")
+    .replace(/^#{1,4}\s+(.+)$/gm, "**$1**");
   const re = /\*\*([^*\n]+)\*\*|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|`([^`]+)`/g;
   const out: ReactNode[] = [];
   let last = 0;

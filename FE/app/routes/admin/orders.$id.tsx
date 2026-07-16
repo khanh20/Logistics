@@ -13,14 +13,15 @@ import { FadeIn } from "~/components/shared/Motion";
 import { ArrowLeft, CheckCircle, Package, WarningCircle, UserCircle, Phone } from "~/components/shared/icons";
 import { useFetch } from "~/lib/hooks/useFetch";
 import { usersApi } from "~/lib/api/auth";
+import { isAssignable } from "~/lib/constants/roles";
 import { formatCNY, formatVND, formatDate } from "~/lib/utils/format";
 import type { OrderDetailResponse, OrderStatus, StaffAssignmentDto } from "~/lib/types/order";
 import type { StaffUserDto } from "~/lib/types/auth";
 import type { Route } from "./+types/orders.$id";
 
-// Nhân viên có thể nhận đơn = user đang Active và có role khác "Customer".
+// Nhân viên có thể nhận/chuyển đơn = user đang Active và có role nghiệp vụ được phân công
 function isAssignableStaff(u: StaffUserDto): boolean {
-  return u.status === "Active" && u.roles.some((r) => r.toLowerCase() !== "customer");
+  return u.status === "Active" && isAssignable(u.roles);
 }
 
 function staffLabel(u: StaffUserDto): string {

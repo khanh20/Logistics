@@ -1,6 +1,7 @@
 using LG.Module1.ApplicationServices.DTOs.Category;
 using LG.Module1.ApplicationServices.DTOs.Product;
 using LG.Module1.ApplicationServices.Interfaces;
+using LG.Module1.Domain.Adapters;
 using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Exceptions;
 using LG.Module1.Domain.Repositories;
@@ -184,12 +185,25 @@ public class ProductService(
     IProductPriceTierRepository tierRepo,
     IProductImageRepository imageRepo,
     IForbiddenCategoryService forbiddenSvc,
+    IEmbeddingProvider embeddingProvider,
+    ISearchReranker searchReranker,
     IModule1UnitOfWork uow,
     ILogger<ProductService> logger
 ) : IProductService
 {
+    private const int SemanticPoolSize = 50;
+
     public async Task<PagedProductResponse> SearchAsync(ProductSearchRequest req, CancellationToken ct = default)
     {
+        // Semantic chỉ khi khách không chọn sort cụ thể và trang nằm trong pool;
+        // ngoài phạm vi đó dùng lexical để Sort + phân trang sâu hoạt động như cũ.
+        var useSemantic = req.Semantic
+            && !string.IsNullOrWhiteSpace(req.Keyword)
+            && req.Sort == ProductSort.Relevance
+            && req.Page * req.PageSize <= SemanticPoolSize;
+        if (useSemantic)
+            return await SearchSemanticAsync(req, ct);
+
         var (items, total) = await productRepo.SearchAsync(
             req.Keyword, req.CategoryId, req.PlatformId,
             req.MinPriceCny, req.MaxPriceCny,
@@ -200,6 +214,49 @@ public class ProductService(
             req.Page, req.PageSize, total,
             (int)Math.Ceiling(total / (double)req.PageSize)
         );
+    }
+
+    // Hybrid (lexical + vector, RRF) → cross-encoder rerank → phân trang trong pool.
+    private async Task<PagedProductResponse> SearchSemanticAsync(ProductSearchRequest req, CancellationToken ct)
+    {
+        Pgvector.Vector? qVec = null;
+        try
+        {
+            var emb = await embeddingProvider.EmbedAsync(req.Keyword!, ct);
+            if (emb.Length > 0) qVec = new Pgvector.Vector(emb);
+        }
+        catch (Exception ex) { logger.LogWarning(ex, "Embed query lỗi — tìm kiếm lexical-only."); }
+
+        var (candidates, lexTotal) = await productRepo.SearchHybridAsync(
+            req.Keyword, req.CategoryId, req.PlatformId,
+            req.MinPriceCny, req.MaxPriceCny, req.ActiveOnly, qVec, SemanticPoolSize, ct);
+
+        var total = Math.Max(lexTotal, candidates.Count);
+        if (candidates.Count == 0)
+            return new PagedProductResponse(new(), req.Page, req.PageSize, total,
+                (int)Math.Ceiling(total / (double)req.PageSize));
+
+        var docs = candidates.Select(p => (p.Id, Text: BuildRerankText(p))).ToList();
+        var order = await searchReranker.RerankAsync(req.Keyword!, docs, ct);
+        if (order is not null)
+            candidates = Common.RankingHelpers.ReorderByIds(candidates, order);
+
+        var pageItems = candidates
+            .Skip((req.Page - 1) * req.PageSize)
+            .Take(req.PageSize)
+            .Select(ProductMapper.ToListItem)
+            .ToList();
+
+        return new PagedProductResponse(
+            pageItems, req.Page, req.PageSize, total,
+            (int)Math.Ceiling(total / (double)req.PageSize));
+    }
+
+    private static string BuildRerankText(ProductMaster p)
+    {
+        var title = string.IsNullOrWhiteSpace(p.TranslatedTitle) ? p.OriginalTitle : p.TranslatedTitle!;
+        var cat = p.Category?.NameVn;
+        return string.IsNullOrWhiteSpace(cat) ? title : $"{title} · {cat}";
     }
 
     public async Task<ProductDetailResponse> GetByIdAsync(Guid id, CancellationToken ct = default)
