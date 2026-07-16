@@ -102,6 +102,15 @@ public interface ICarrierGateway
     /// Tạo vận đơn bên carrier, trả về mã tracking + phí carrier báo về.
     Task<CarrierWaybillResult> CreateWaybillAsync(CarrierShipmentContext ctx, CancellationToken ct = default);
 
+    /// Huỷ vận đơn bên carrier. false = carrier từ chối huỷ (đơn đã được lấy/đang giao).
+    Task<bool> CancelWaybillAsync(string trackingNo, CancellationToken ct = default);
+
+    /// Huỷ đơn theo mã đơn phía mình (compensation khi tạo đơn fail mà chưa có label).
+    Task<bool> CancelByPartnerCodeAsync(string partnerOrderCode, CancellationToken ct = default);
+
+    /// Tra cứu trạng thái vận đơn chủ động (đối soát khi webhook miss). null = carrier không hỗ trợ/tra không được.
+    Task<CarrierWaybillStatus?> GetWaybillStatusAsync(string trackingNo, CancellationToken ct = default);
+
     /// Map mã trạng thái raw của carrier → enum nội bộ.
     DomesticWaybillStatus MapStatus(string rawStatus);
 
@@ -113,6 +122,33 @@ public interface ICarrierGateway
 public interface ICarrierGatewayResolver
 {
     ICarrierGateway Resolve(string carrierName);
+}
+
+/// Token JWT của request hiện tại — forward sang Core khi gọi API [Authorize] theo user.
+/// Implement ở API project (HttpUserTokenAccessor, dùng IHttpContextAccessor).
+public interface IUserTokenAccessor
+{
+    string? BearerToken { get; }
+}
+
+// ── ICustomerAddressService (sổ địa chỉ khách — Core Finance) ─────────────────
+public interface ICustomerAddressService
+{
+    /// Địa chỉ trong sổ của khách hiện tại (Core lọc theo JWT forward — không lộ sổ người khác).
+    /// null = không tồn tại / không thuộc khách / đã ngừng dùng.
+    Task<CustomerAddressInfo?> GetMyAddressAsync(Guid addressId, CancellationToken ct = default);
+}
+
+// ── IWalletService (ví khách — gọi Core Finance, cùng pattern Module1) ────────
+public interface IWalletService
+{
+    /// Trừ ví khách. Thiếu số dư / ví đóng băng / Core lỗi → WalletOperationFailedException (422).
+    Task DeductAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId,
+                     string note, CancellationToken ct = default);
+
+    /// Hoàn tiền về ví khách.
+    Task RefundAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId,
+                     string note, CancellationToken ct = default);
 }
 
 // ── IDeliveryService (UC-2.08) ────────────────────────────────────────────────
@@ -128,6 +164,9 @@ public interface IDeliveryService
 public interface ITrackingService
 {
     Task<WebhookResult> ProcessWebhookAsync(string carrierName, CarrierWebhookRequest req, CancellationToken ct = default);
+
+    /// Đối soát chủ động: query trạng thái từ carrier rồi áp dụng như webhook (GHTK chỉ retry webhook 1 lần).
+    Task<WebhookResult> SyncWaybillAsync(string trackingNo, CancellationToken ct = default);
 }
 
 // ── IClaimService (UC-2.10 — khiếu nại & bảo hiểm) ────────────────────────────
@@ -135,7 +174,8 @@ public interface IClaimService
 {
     // MissingClaim
     Task<MissingClaimResponse>       CreateMissingClaimAsync(Guid customerId, CreateMissingClaimRequest req, CancellationToken ct = default);
-    Task<MissingClaimResponse>       GetMissingClaimAsync(Guid id, CancellationToken ct = default);
+    /// `requesterCustomerId` != null → chỉ trả claim của đúng khách đó (khác chủ → 404, không lộ tồn tại).
+    Task<MissingClaimResponse>       GetMissingClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default);
     Task<List<MissingClaimResponse>> GetMyMissingClaimsAsync(Guid customerId, CancellationToken ct = default);
     Task<List<MissingClaimResponse>> GetMissingClaimsByStatusAsync(MissingClaimStatus status, CancellationToken ct = default);
     Task<MissingClaimResponse>       InvestigateMissingClaimAsync(Guid id, InvestigateClaimRequest req, CancellationToken ct = default);
@@ -144,7 +184,9 @@ public interface IClaimService
 
     // InsuranceClaim
     Task<InsuranceClaimResponse>     CreateInsuranceClaimAsync(CreateInsuranceClaimRequest req, CancellationToken ct = default);
-    Task<InsuranceClaimResponse>     GetInsuranceClaimAsync(Guid id, CancellationToken ct = default);
+    /// `requesterCustomerId` != null → chỉ trả claim có kiện thuộc đúng khách đó (khác chủ → 404).
+    Task<InsuranceClaimResponse>     GetInsuranceClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default);
+    Task<List<InsuranceClaimResponse>> GetMyInsuranceClaimsAsync(Guid customerId, CancellationToken ct = default);
     Task<InsuranceClaimResponse>     UpdateInsuranceClaimAsync(Guid id, UpdateInsuranceClaimRequest req, CancellationToken ct = default);
     Task<InsuranceClaimResponse>     PayInsuranceClaimAsync(Guid id, CancellationToken ct = default);
 }
@@ -177,4 +219,6 @@ public interface IPackageService
     Task<List<PackageSummaryResponse>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default);
     Task<PackageImageResponse>    UploadImageAsync(Guid staffId, UploadPackageImageRequest req, CancellationToken ct = default);
     Task<List<TrackingEventResponse>> GetTrackingAsync(Guid packageId, CancellationToken ct = default);
+    /// Tracking cho khách: kiểm tra kiện thuộc đúng khách trước khi trả (khác chủ → 404).
+    Task<List<TrackingEventResponse>> GetTrackingForCustomerAsync(Guid customerId, Guid packageId, CancellationToken ct = default);
 }

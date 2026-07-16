@@ -89,12 +89,12 @@ public class MyPackagesController(IPackageService packageService) : Module2BaseC
         return Ok(ApiResponse<object>.Ok(list));
     }
 
-    // GET /api/my/packages/{id}/tracking
+    // GET /api/my/packages/{id}/tracking  (chỉ kiện của chính khách — khác chủ → 404)
     [HttpGet("{id:guid}/tracking")]
     [Authorize(Policy = Permissions.OrderRead)]
     public async Task<IActionResult> GetTracking(Guid id, CancellationToken ct)
     {
-        var events = await packageService.GetTrackingAsync(id, ct);
+        var events = await packageService.GetTrackingForCustomerAsync(CurrentUserId, id, ct);
         return Ok(ApiResponse<object>.Ok(events));
     }
 }

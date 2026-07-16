@@ -107,12 +107,100 @@ public class GhtkCarrierGateway(
         var dto  = Deserialize<GhtkOrderResponse>(body);
 
         if (dto is not { Success: true } || dto.Order is null || string.IsNullOrWhiteSpace(dto.Order.Label))
+        {
+            // Idempotency theo PartnerOrderCode: lần gọi trước có thể đã tạo thành công
+            // (timeout/commit fail) — GHTK báo trùng id thì trace lấy lại label thay vì fail.
+            if (IsDuplicateOrderMessage(dto?.Message))
+            {
+                var existing = await TraceByPartnerCodeAsync(ctx.PartnerOrderCode, ct);
+                if (existing is not null)
+                {
+                    logger.LogInformation("[GHTK] order {PartnerCode} đã tồn tại → dùng lại label={Label}",
+                        ctx.PartnerOrderCode, existing);
+                    return new CarrierWaybillResult(existing, null, null);
+                }
+            }
             throw new InvalidOperationException($"GHTK tạo đơn thất bại: {dto?.Message ?? body}");
+        }
 
         logger.LogInformation("[GHTK] order created: label={Label}, fee={Fee}", dto.Order.Label, dto.Order.Fee);
 
         decimal? fee = decimal.TryParse(dto.Order.Fee, out var f) ? f : null;
         return new CarrierWaybillResult(dto.Order.Label!, fee, dto.Order.EstimatedDeliverTime);
+    }
+
+    private static bool IsDuplicateOrderMessage(string? message) =>
+        message is not null &&
+        (message.Contains("tồn tại", StringComparison.OrdinalIgnoreCase) ||
+         message.Contains("exist", StringComparison.OrdinalIgnoreCase) ||
+         message.Contains("trùng", StringComparison.OrdinalIgnoreCase));
+
+    // Trace theo mã đơn phía mình: GET /services/shipment/v2/partner_id:{code} → label GHTK.
+    private async Task<string?> TraceByPartnerCodeAsync(string partnerOrderCode, CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get,
+            $"/services/shipment/v2/partner_id:{Uri.EscapeDataString(partnerOrderCode)}");
+        AddAuthHeaders(req);
+
+        var res  = await httpClient.SendAsync(req, ct);
+        var body = await res.Content.ReadAsStringAsync(ct);
+        var dto  = Deserialize<GhtkTraceResponse>(body);
+        return dto is { Success: true } ? dto.Order?.LabelId : null;
+    }
+
+    // ── Huỷ đơn: POST /services/shipment/cancel/{label} ──────────────────────────
+    // GHTK chỉ cho huỷ khi đơn chưa được lấy hàng; quá thời điểm đó trả success=false.
+    public Task<bool> CancelWaybillAsync(string trackingNo, CancellationToken ct = default) =>
+        CancelByPathAsync(Uri.EscapeDataString(trackingNo), ct);
+
+    // Huỷ theo mã đơn phía mình khi chưa biết label (GHTK hỗ trợ prefix `partner_id:`).
+    public Task<bool> CancelByPartnerCodeAsync(string partnerOrderCode, CancellationToken ct = default) =>
+        CancelByPathAsync($"partner_id:{Uri.EscapeDataString(partnerOrderCode)}", ct);
+
+    private async Task<bool> CancelByPathAsync(string idSegment, CancellationToken ct)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post,
+            $"/services/shipment/cancel/{idSegment}");
+        AddAuthHeaders(req);
+
+        var res  = await httpClient.SendAsync(req, ct);
+        var body = await res.Content.ReadAsStringAsync(ct);
+        var dto  = Deserialize<GhtkBaseResponse>(body);
+
+        if (dto is { Success: true })
+        {
+            logger.LogInformation("[GHTK] cancelled waybill {IdSegment}", idSegment);
+            return true;
+        }
+
+        logger.LogWarning("[GHTK] cancel waybill {IdSegment} refused: {Message}",
+            idSegment, dto?.Message ?? body);
+        return false;
+    }
+
+    // ── Tra trạng thái: GET /services/shipment/v2/{label} ────────────────────────
+    // Đối soát chủ động khi webhook miss (GHTK chỉ retry webhook 1 lần).
+    public async Task<CarrierWaybillStatus?> GetWaybillStatusAsync(string trackingNo, CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get,
+            $"/services/shipment/v2/{Uri.EscapeDataString(trackingNo)}");
+        AddAuthHeaders(req);
+
+        var res  = await httpClient.SendAsync(req, ct);
+        var body = await res.Content.ReadAsStringAsync(ct);
+        var dto  = Deserialize<GhtkTraceResponse>(body);
+
+        if (dto is not { Success: true } || dto.Order is null || string.IsNullOrWhiteSpace(dto.Order.Status))
+        {
+            logger.LogWarning("[GHTK] trace {TrackingNo} failed: {Message}", trackingNo, dto?.Message ?? body);
+            return null;
+        }
+
+        logger.LogInformation("[GHTK] trace {TrackingNo} → status={Status} ({Text})",
+            trackingNo, dto.Order.Status, dto.Order.StatusText);
+
+        decimal? fee = decimal.TryParse(dto.Order.ShipMoney, out var f) ? f : null;
+        return new CarrierWaybillStatus(dto.Order.Status, dto.Order.StatusText, fee);
     }
 
     // ── Map status_id GHTK → enum nội bộ ─────────────────────────────────────────
@@ -163,6 +251,12 @@ public class GhtkCarrierGateway(
     }
 
     // ── GHTK JSON models ─────────────────────────────────────────────────────────
+    private sealed class GhtkBaseResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+    }
+
     private sealed class GhtkFeeResponse
     {
         public bool Success { get; set; }
@@ -214,6 +308,20 @@ public class GhtkCarrierGateway(
         public bool Success { get; set; }
         public string? Message { get; set; }
         public GhtkOrderInfo? Order { get; set; }
+    }
+
+    private sealed class GhtkTraceResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public GhtkTraceOrder? Order { get; set; }
+    }
+    private sealed class GhtkTraceOrder
+    {
+        [JsonPropertyName("label_id")]    public string? LabelId { get; set; }
+        public string? Status { get; set; }   // status_id dạng chuỗi
+        [JsonPropertyName("status_text")] public string? StatusText { get; set; }
+        [JsonPropertyName("ship_money")]  public string? ShipMoney { get; set; }
     }
     private sealed class GhtkOrderInfo
     {

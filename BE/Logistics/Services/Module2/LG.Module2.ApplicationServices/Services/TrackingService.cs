@@ -22,7 +22,37 @@ public class TrackingService(
 {
     private const int MaxDeliveryAttempts = 2;
 
-    public async Task<WebhookResult> ProcessWebhookAsync(string carrierName, CarrierWebhookRequest req, CancellationToken ct = default)
+    public Task<WebhookResult> ProcessWebhookAsync(string carrierName, CarrierWebhookRequest req, CancellationToken ct = default) =>
+        ApplyStatusUpdateAsync(carrierName, req, verifySignature: true, ct);
+
+    // ── Đối soát chủ động (webhook miss — GHTK chỉ retry 1 lần) ──────────────────
+    public async Task<WebhookResult> SyncWaybillAsync(string trackingNo, CancellationToken ct = default)
+    {
+        // Query carrier NGOÀI transaction (HTTP call)
+        var waybill = await waybillRepo.GetByTrackingNoAsync(trackingNo, ct)
+                      ?? throw new DomesticWaybillNotFoundException(trackingNo);
+        var carrier = await carrierRepo.GetByIdAsync(waybill.CarrierId, ct);
+        var gateway = gatewayResolver.Resolve(carrier?.Name ?? "");
+
+        var traced = await gateway.GetWaybillStatusAsync(trackingNo, ct);
+        if (traced is null)
+        {
+            logger.LogInformation("Sync {TrackingNo}: carrier không trả trạng thái, giữ nguyên {Status}",
+                trackingNo, waybill.Status);
+            return new WebhookResult(trackingNo, waybill.Status.ToString(), false, 0);
+        }
+
+        // Trạng thái không đổi → không xử lý lại (tránh ghi trùng TrackingEvent/notify)
+        if (gateway.MapStatus(traced.RawStatus) == waybill.Status)
+            return new WebhookResult(trackingNo, waybill.Status.ToString(), false, 0);
+
+        var req = new CarrierWebhookRequest(trackingNo, traced.RawStatus, traced.FeeVnd, traced.Reason);
+        return await ApplyStatusUpdateAsync(carrier?.Name ?? "", req, verifySignature: false, ct);
+    }
+
+    // Pipeline chung cho webhook + đối soát: cập nhật waybill, package, tracking, notify.
+    private async Task<WebhookResult> ApplyStatusUpdateAsync(string carrierName, CarrierWebhookRequest req,
+        bool verifySignature, CancellationToken ct)
     {
         return await uow.ExecuteInTransactionAsync(async innerCt =>
         {
@@ -32,12 +62,19 @@ public class TrackingService(
             var carrier = await carrierRepo.GetByIdAsync(waybill.CarrierId, innerCt);
             var gateway = gatewayResolver.Resolve(carrierName);
 
-            // Xác thực webhook theo secret của carrier
-            if (!gateway.VerifySignature(carrier?.WebhookSecret, req))
+            // Xác thực webhook theo secret của carrier (bỏ qua khi đối soát chủ động — mình gọi carrier)
+            if (verifySignature && !gateway.VerifySignature(carrier?.WebhookSecret, req))
                 throw new InvalidWebhookSignatureException(carrierName);
 
             var newStatus = gateway.MapStatus(req.Status);
-            waybill.UpdateFromWebhook(newStatus, req.FeeVnd, req.Reason);
+
+            // Webhook trùng (carrier retry) hoặc đến trễ → bỏ qua, tránh double-transition/notify
+            if (!waybill.UpdateFromWebhook(newStatus, req.FeeVnd, req.Reason))
+            {
+                logger.LogInformation("Webhook {Carrier} {TrackingNo}: bỏ qua trạng thái trùng/đi lùi {Current} ← {New}",
+                    carrierName, req.TrackingNo, waybill.Status, newStatus);
+                return new WebhookResult(req.TrackingNo, waybill.Status.ToString(), false, 0);
+            }
             await waybillRepo.UpdateAsync(waybill, innerCt);
 
             var request  = await deliveryRepo.GetByIdAsync(waybill.DeliveryRequestId, innerCt);

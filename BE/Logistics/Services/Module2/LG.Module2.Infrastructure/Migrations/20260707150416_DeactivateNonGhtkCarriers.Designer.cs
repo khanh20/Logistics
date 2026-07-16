@@ -3,6 +3,7 @@ using System;
 using LG.Module2.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LG.Module2.Infrastructure.Migrations
 {
     [DbContext(typeof(Module2DbContext))]
-    partial class Module2DbContextModelSnapshot : ModelSnapshot
+    [Migration("20260707150416_DeactivateNonGhtkCarriers")]
+    partial class DeactivateNonGhtkCarriers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -385,6 +388,36 @@ namespace LG.Module2.Infrastructure.Migrations
                             MaxValueVnd = 20000000m,
                             MaxWeightKg = 30m,
                             Name = "GHTK"
+                        },
+                        new
+                        {
+                            Id = new Guid("b0000000-0000-0000-0000-000000000002"),
+                            ApiEndpoint = "https://online-gateway.ghn.vn",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = false,
+                            MaxValueVnd = 20000000m,
+                            MaxWeightKg = 30m,
+                            Name = "GHN"
+                        },
+                        new
+                        {
+                            Id = new Guid("b0000000-0000-0000-0000-000000000003"),
+                            ApiEndpoint = "https://partner.viettelpost.vn",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = false,
+                            MaxValueVnd = 50000000m,
+                            MaxWeightKg = 50m,
+                            Name = "Viettel Post"
+                        },
+                        new
+                        {
+                            Id = new Guid("b0000000-0000-0000-0000-000000000004"),
+                            ApiEndpoint = "https://api.jtexpress.vn",
+                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = false,
+                            MaxValueVnd = 30000000m,
+                            MaxWeightKg = 50m,
+                            Name = "J&T Express"
                         });
                 });
 

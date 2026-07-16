@@ -356,6 +356,11 @@ public class InsuranceClaimRepository(Module2DbContext db) : IInsuranceClaimRepo
     public Task<List<InsuranceClaim>> GetByPackageAsync(Guid packageId, CancellationToken ct = default) =>
         db.InsuranceClaims.Where(x => x.PackageId == packageId).ToListAsync(ct);
 
+    public Task<List<InsuranceClaim>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default) =>
+        db.InsuranceClaims.Where(x => x.Package.CustomerId == customerId)
+                          .OrderByDescending(x => x.CreatedAt)
+                          .ToListAsync(ct);
+
     public async Task AddAsync(InsuranceClaim claim, CancellationToken ct = default) =>
         await db.InsuranceClaims.AddAsync(claim, ct);
 

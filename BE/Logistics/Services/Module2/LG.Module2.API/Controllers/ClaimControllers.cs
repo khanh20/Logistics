@@ -22,11 +22,13 @@ public class MissingClaimsController(IClaimService claimService) : Module2BaseCo
     }
 
     // GET /api/missing-claims/{id}
+    // Staff (complaint.manage) xem mọi claim; khách chỉ xem claim của mình (khác chủ → 404).
     [HttpGet("{id:guid}")]
     [Authorize(Policy = Permissions.ComplaintRead)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var result = await claimService.GetMissingClaimAsync(id, ct);
+        var restrictTo = HasPermission(Permissions.ComplaintManage) ? (Guid?)null : CurrentUserId;
+        var result = await claimService.GetMissingClaimAsync(id, restrictTo, ct);
         return Ok(ApiResponse<object>.Ok(result));
     }
 
@@ -81,6 +83,20 @@ public class MyMissingClaimsController(IClaimService claimService) : Module2Base
     }
 }
 
+// ── Insurance Claims (Customer view) ──────────────────────────────────────────
+[Route("api/my/insurance-claims")]
+public class MyInsuranceClaimsController(IClaimService claimService) : Module2BaseController
+{
+    // GET /api/my/insurance-claims  (khách xem lại các yêu cầu bồi thường của mình)
+    [HttpGet]
+    [Authorize(Policy = Permissions.OrderRead)]
+    public async Task<IActionResult> GetMine(CancellationToken ct)
+    {
+        var list = await claimService.GetMyInsuranceClaimsAsync(CurrentUserId, ct);
+        return Ok(ApiResponse<object>.Ok(list));
+    }
+}
+
 // ── Insurance Claims (UC-2.10) ────────────────────────────────────────────────
 [Route("api/insurance-claims")]
 public class InsuranceClaimsController(IClaimService claimService) : Module2BaseController
@@ -96,11 +112,13 @@ public class InsuranceClaimsController(IClaimService claimService) : Module2Base
     }
 
     // GET /api/insurance-claims/{id}
+    // Staff (complaint.manage) xem mọi claim; khách chỉ xem claim có kiện của mình (khác chủ → 404).
     [HttpGet("{id:guid}")]
     [Authorize(Policy = Permissions.ComplaintRead)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var result = await claimService.GetInsuranceClaimAsync(id, ct);
+        var restrictTo = HasPermission(Permissions.ComplaintManage) ? (Guid?)null : CurrentUserId;
+        var result = await claimService.GetInsuranceClaimAsync(id, restrictTo, ct);
         return Ok(ApiResponse<object>.Ok(result));
     }
 

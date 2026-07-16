@@ -18,6 +18,8 @@ import type {
   MissingClaimStatus,
   MissingClaimResolution,
   InsuranceClaimStatus,
+  AlertSeverity,
+  AlertSource,
 } from "~/lib/types/logistics";
 
 // ── Package status ────────────────────────────────────────────────────────────
@@ -186,7 +188,8 @@ export const WAYBILL_STATUS_COLOR: Record<WaybillStatus, string> = {
 };
 
 // ── Domestic carriers (BE không có endpoint list → seed theo EntityConfigurations) ─
-// ⚠️ Chỉ GHTK là API thật; GHN/Viettel Post/J&T hiện là stub ở BE → ưu tiên GHTK khi demo.
+// Scope Phase 6: CHỈ tích hợp GHTK. GHN/Viettel Post/J&T đã XOÁ hẳn khỏi BE
+// (migration RemoveNonGhtkCarriers) — hệ thống chỉ còn 1 carrier.
 export interface CarrierOption {
   id: string;
   name: string;
@@ -196,10 +199,7 @@ export interface CarrierOption {
 }
 
 export const DOMESTIC_CARRIERS: CarrierOption[] = [
-  { id: "B0000000-0000-0000-0000-000000000001", name: "GHTK",         maxWeightKg: 30, maxValueVnd: 20_000_000, isReal: true },
-  { id: "B0000000-0000-0000-0000-000000000002", name: "GHN",          maxWeightKg: 30, maxValueVnd: 20_000_000, isReal: false },
-  { id: "B0000000-0000-0000-0000-000000000003", name: "Viettel Post", maxWeightKg: 50, maxValueVnd: 50_000_000, isReal: false },
-  { id: "B0000000-0000-0000-0000-000000000004", name: "J&T Express",  maxWeightKg: 50, maxValueVnd: 30_000_000, isReal: false },
+  { id: "B0000000-0000-0000-0000-000000000001", name: "GHTK", maxWeightKg: 30, maxValueVnd: 20_000_000, isReal: true },
 ];
 
 // ── Sack status (UC-2.03) ─────────────────────────────────────────────────────
@@ -299,6 +299,10 @@ export const DELIVERY_ERROR_MESSAGE: Record<string, string> = {
   DOMESTIC_CARRIER_NOT_FOUND:     "Không tìm thấy đơn vị vận chuyển.",
   DELIVERY_REQUEST_NOT_FOUND:     "Không tìm thấy yêu cầu giao hàng.",
   DELIVERY_NOT_CANCELLABLE:       "Yêu cầu không thể huỷ ở trạng thái hiện tại.",
+  CARRIER_CANCEL_FAILED:          "Hãng vận chuyển từ chối huỷ — đơn có thể đã được lấy hàng.",
+  WALLET_OPERATION_FAILED:        "Thao tác với ví thất bại — kiểm tra số dư hoặc thử lại sau.",
+  DELIVERY_ADDRESS_NOT_FOUND:     "Địa chỉ nhận không có trong sổ địa chỉ của bạn.",
+  ADDRESS_LOOKUP_FAILED:          "Không kiểm tra được sổ địa chỉ, vui lòng thử lại sau.",
 };
 
 // ── Map errorCode BE → message (UC-2.03/2.04/2.05) ────────────────────────────
@@ -380,3 +384,34 @@ export const CLAIM_ERROR_MESSAGE: Record<string, string> = {
   PACKAGE_NOT_INSURED:       "Kiện không mua bảo hiểm nên không thể bồi thường.",
   PACKAGE_NOT_FOUND:         "Không tìm thấy kiện hàng.",
 };
+
+// ── AI Phase 8 — Border alerts & forecast ─────────────────────────────────────
+export const ALERT_SEVERITIES: AlertSeverity[] = ["Low", "Medium", "High", "Critical"];
+
+export const ALERT_SEVERITY_LABEL: Record<AlertSeverity, string> = {
+  Low:      "Thấp",
+  Medium:   "Trung bình",
+  High:     "Cao",
+  Critical: "Nghiêm trọng",
+};
+
+export const ALERT_SEVERITY_COLOR: Record<AlertSeverity, string> = {
+  Low:      "bg-blue-100 text-blue-700",
+  Medium:   "bg-yellow-100 text-yellow-700",
+  High:     "bg-orange-100 text-orange-700",
+  Critical: "bg-red-100 text-red-700",
+};
+
+export const ALERT_SOURCE_LABEL: Record<AlertSource, string> = {
+  NewsScrape:   "Tin tức",
+  InternalData: "Dữ liệu vận hành",
+};
+
+// Season cho forecast — bỏ trống BE tự suy từ tháng hiện tại
+export const SEASON_OPTIONS = [
+  { value: "spring", label: "Xuân" },
+  { value: "summer", label: "Hè" },
+  { value: "autumn", label: "Thu" },
+  { value: "winter", label: "Đông" },
+  { value: "tet",    label: "Cận Tết (cao điểm)" },
+];

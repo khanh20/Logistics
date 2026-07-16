@@ -13,4 +13,8 @@ public abstract class Module2BaseController : ControllerBase
     protected string? ClientIp =>
         HttpContext.Connection.RemoteIpAddress?.ToString()
         ?? Request.Headers["X-Forwarded-For"].FirstOrDefault();
+
+    /// User hiện tại có permission này không (claim type "permission" — khớp policy trong Program.cs).
+    protected bool HasPermission(string code) =>
+        HttpContext.User.HasClaim(UserClaimTypes.Permission, code);
 }

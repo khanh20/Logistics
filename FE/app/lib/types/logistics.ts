@@ -468,3 +468,68 @@ export interface UpdateInsuranceClaimBody {
   approvedAmountVnd?: number;
   notes?: string;
 }
+
+// ── AI Phase 8 — Transit forecast & Border alerts ─────────────────────────────
+export type AlertSeverity = "Low" | "Medium" | "High" | "Critical";
+export type AlertSource = "NewsScrape" | "InternalData";
+
+// TransitForecastResponse (POST /api/ai/transit-forecasts)
+export interface TransitForecast {
+  id: string;
+  originProvinceCn: string;
+  weightKg: number;
+  carrierCn: string;
+  borderCrossing: string;
+  season: string | null;
+  estDaysMin: number;
+  estDaysMax: number;
+  confidencePct: number;
+  borderAlertApplied: boolean; // đang có cảnh báo tắc biên trên cửa khẩu này
+  forecastedAt: string;
+}
+
+// TransitForecastRequest body
+export interface TransitForecastBody {
+  originProvinceCn: string;
+  weightKg: number;
+  carrierCn: string;
+  borderCrossing: BorderCrossing;
+  season?: string; // spring/summer/autumn/winter/tet — bỏ trống BE tự suy từ tháng
+}
+
+// BorderAlertResponse
+export interface BorderAlert {
+  id: string;
+  affectedBorder: BorderCrossing;
+  severity: AlertSeverity;
+  source: AlertSource;
+  estimatedDelayDays: number | null;
+  description: string | null;
+  notifiedCustomersCount: number;
+  isActive: boolean;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+// CreateBorderAlertRequest body (staff)
+export interface CreateBorderAlertBody {
+  affectedBorder: BorderCrossing;
+  severity: AlertSeverity;
+  estimatedDelayDays?: number;
+  description?: string;
+}
+
+// CongestionScanResult (POST /api/ai/border-alerts/scan)
+export interface CongestionScanResult {
+  bordersScanned: number;
+  alertsCreated: number;
+  alerts: BorderAlert[];
+}
+
+// WebhookResult (POST /api/domestic-waybills/{trackingNo}/sync)
+export interface WaybillSyncResult {
+  trackingNo: string;
+  newStatus: string;
+  processed: boolean;
+  affectedPackages: number;
+}

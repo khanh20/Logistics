@@ -41,6 +41,12 @@ import type {
   InsuranceClaim,
   CreateInsuranceClaimBody,
   UpdateInsuranceClaimBody,
+  TransitForecast,
+  TransitForecastBody,
+  BorderAlert,
+  CreateBorderAlertBody,
+  CongestionScanResult,
+  WaybillSyncResult,
 } from "~/lib/types/logistics";
 
 // ── Customer-facing (UC tracking) ─────────────────────────────────────────────
@@ -343,14 +349,20 @@ export const missingClaimsApi = {
 };
 
 // ── Insurance claims (UC-2.10) ────────────────────────────────────────────────
-// ⚠️ BE KHÔNG có endpoint list — chỉ tra theo id (từ missingClaim.insuranceClaimId
-// hoặc dán ID trực tiếp). review/pay: complaint.manage (staff).
+// Khách: listMine + getDetail (chỉ claim của mình — khác chủ BE trả 404).
+// Staff không có list-all — tra theo id / link từ missing claim. review/pay: complaint.manage.
 export const insuranceClaimsApi = {
   // POST /api/insurance-claims — kiện phải insuranceOpted (PACKAGE_NOT_INSURED)
   create: (body: CreateInsuranceClaimBody) =>
     apiModule2Client.post<unknown, ApiResponse<InsuranceClaim>>(
       "/api/insurance-claims",
       body
+    ),
+
+  // GET /api/my/insurance-claims — yêu cầu bồi thường của khách hiện tại
+  listMine: () =>
+    apiModule2Client.get<unknown, ApiResponse<InsuranceClaim[]>>(
+      "/api/my/insurance-claims"
     ),
 
   // GET /api/insurance-claims/{id}
@@ -370,5 +382,57 @@ export const insuranceClaimsApi = {
   pay: (id: string) =>
     apiModule2Client.post<unknown, ApiResponse<InsuranceClaim>>(
       `/api/insurance-claims/${id}/pay`
+    ),
+};
+
+// ── AI Phase 8 (UC AItransit / AIborder) ──────────────────────────────────────
+export const aiApi = {
+  // POST /api/ai/transit-forecasts — khách/staff dự báo lead time TQ→VN
+  forecast: (body: TransitForecastBody) =>
+    apiModule2Client.post<unknown, ApiResponse<TransitForecast>>(
+      "/api/ai/transit-forecasts",
+      body
+    ),
+
+  // GET /api/ai/transit-forecasts/recent?limit= (staff — shipment.read)
+  recentForecasts: (limit = 20) =>
+    apiModule2Client.get<unknown, ApiResponse<TransitForecast[]>>(
+      "/api/ai/transit-forecasts/recent",
+      { params: { limit } }
+    ),
+
+  // GET /api/ai/border-alerts — cảnh báo đang active (khách xem được)
+  listBorderAlerts: () =>
+    apiModule2Client.get<unknown, ApiResponse<BorderAlert[]>>(
+      "/api/ai/border-alerts"
+    ),
+
+  // POST /api/ai/border-alerts (staff — shipment.manage)
+  createBorderAlert: (body: CreateBorderAlertBody) =>
+    apiModule2Client.post<unknown, ApiResponse<BorderAlert>>(
+      "/api/ai/border-alerts",
+      body
+    ),
+
+  // POST /api/ai/border-alerts/{id}/resolve (staff)
+  resolveBorderAlert: (id: string) =>
+    apiModule2Client.post<unknown, ApiResponse<BorderAlert>>(
+      `/api/ai/border-alerts/${id}/resolve`
+    ),
+
+  // POST /api/ai/border-alerts/scan — quét dữ liệu nội bộ tìm tắc biên (staff)
+  scanBorderCongestion: () =>
+    apiModule2Client.post<unknown, ApiResponse<CongestionScanResult>>(
+      "/api/ai/border-alerts/scan"
+    ),
+};
+
+// ── Domestic waybills (đối soát carrier — A2 Phase 6) ─────────────────────────
+export const domesticWaybillsApi = {
+  // POST /api/domestic-waybills/{trackingNo}/sync — query trạng thái từ carrier
+  // rồi áp dụng như webhook (dùng khi nghi webhook miss). Staff shipment.manage.
+  sync: (trackingNo: string) =>
+    apiModule2Client.post<unknown, ApiResponse<WaybillSyncResult>>(
+      `/api/domestic-waybills/${encodeURIComponent(trackingNo)}/sync`
     ),
 };

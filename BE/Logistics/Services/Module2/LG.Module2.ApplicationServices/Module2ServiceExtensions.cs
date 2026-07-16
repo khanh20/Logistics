@@ -82,6 +82,23 @@ public static class Module2ServiceExtensions
         services.AddScoped<IClaimService,        ClaimService>();
         services.AddScoped<IAIForecastService,   AIForecastService>();  // Phase 8: stub rule-based
 
+        // ── Core Finance (ví khách + sổ địa chỉ — cùng pattern Module1) ────────
+        // Lưu ý: ICustomerAddressService cần IUserTokenAccessor — API project phải đăng ký
+        // AddHttpContextAccessor + HttpUserTokenAccessor (xem Program.cs).
+        var coreBaseUrl = config["Core:BaseUrl"]
+                       ?? Environment.GetEnvironmentVariable("CORE__BASEURL")
+                       ?? "https://localhost:7215";
+        services.AddHttpClient<IWalletService, WalletHttpService>(c =>
+        {
+            c.BaseAddress = new Uri(coreBaseUrl);
+            c.Timeout     = TimeSpan.FromSeconds(10);
+        });
+        services.AddHttpClient<ICustomerAddressService, CustomerAddressHttpService>(c =>
+        {
+            c.BaseAddress = new Uri(coreBaseUrl);
+            c.Timeout     = TimeSpan.FromSeconds(10);
+        });
+
         // ── Carrier gateways (GHTK API thật + fallback stub) ──────────────────
         var ghtk = BuildGhtkOptions(config);
         services.AddSingleton(ghtk);

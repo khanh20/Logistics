@@ -78,6 +78,15 @@ public class PackageService(
         return events.Select(MapTrackingEvent).ToList();
     }
 
+    // Tracking cho khách — kiện không thuộc khách trả 404 như không tồn tại (không lộ kiện người khác)
+    public async Task<List<TrackingEventResponse>> GetTrackingForCustomerAsync(Guid customerId, Guid packageId, CancellationToken ct = default)
+    {
+        var pkg = await packageRepo.GetByIdAsync(packageId, ct);
+        if (pkg is null || pkg.CustomerId != customerId)
+            throw new PackageNotFoundException(packageId);
+        return await GetTrackingAsync(packageId, ct);
+    }
+
     // ── Mappers ───────────────────────────────────────────────────────────────
     internal static PackageSummaryResponse MapToSummary(Package p) => new(
         Id:             p.Id,

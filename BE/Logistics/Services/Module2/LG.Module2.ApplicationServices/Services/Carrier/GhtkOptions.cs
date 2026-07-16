@@ -17,5 +17,6 @@ public class GhtkOptions
     public string PickWard     { get; set; } = "";
 
     /// Đã cấu hình đủ để gọi API thật chưa.
-    public bool Enabled => !string.IsNullOrWhiteSpace(Token) && !string.IsNullOrWhiteSpace(ClientSource);
+    /// Token shop thường chỉ cần header Token; X-Client-Source chỉ bắt buộc với tài khoản đối tác.
+    public bool Enabled => !string.IsNullOrWhiteSpace(Token);
 }

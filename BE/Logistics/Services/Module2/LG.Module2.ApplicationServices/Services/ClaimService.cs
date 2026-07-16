@@ -14,6 +14,7 @@ public class ClaimService(
     IInsuranceClaimRepository  insuranceRepo,
     IPackageRepository         packageRepo,
     ITrackingEventRepository   trackingRepo,
+    IWalletService             walletService,
     INotificationService       notifyService,
     IModule2UnitOfWork         uow,
     ILogger<ClaimService>      logger
@@ -40,9 +41,14 @@ public class ClaimService(
         return MapMissing(claim, package.Barcode, null);
     }
 
-    public async Task<MissingClaimResponse> GetMissingClaimAsync(Guid id, CancellationToken ct = default)
+    public async Task<MissingClaimResponse> GetMissingClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default)
     {
-        var claim   = await missingRepo.GetByIdAsync(id, ct) ?? throw new MissingClaimNotFoundException(id);
+        var claim = await missingRepo.GetByIdAsync(id, ct) ?? throw new MissingClaimNotFoundException(id);
+
+        // Khách chỉ xem được claim của mình — khác chủ trả 404 như không tồn tại
+        if (requesterCustomerId.HasValue && claim.CustomerId != requesterCustomerId.Value)
+            throw new MissingClaimNotFoundException(id);
+
         var package = await packageRepo.GetByIdAsync(claim.PackageId, ct);
         var insId   = await FindLinkedInsuranceClaimIdAsync(claim, ct);
         return MapMissing(claim, package?.Barcode ?? "", insId);
@@ -74,10 +80,14 @@ public class ClaimService(
         return MapMissing(claim, package?.Barcode ?? "", null);
     }
 
-    // Xác nhận thất lạc → bồi thường: tạo InsuranceClaim + hoàn tiền (stub) theo % bảo hiểm.
+    // Xác nhận thất lạc → bồi thường: tạo InsuranceClaim + hoàn tiền thật về ví theo % bảo hiểm.
     public async Task<MissingClaimResponse> ResolveMissingClaimAsync(Guid id, ResolveMissingClaimRequest req, CancellationToken ct = default)
     {
-        return await uow.ExecuteInTransactionAsync(async innerCt =>
+        // Hoàn ví là HTTP call (Core Finance) → thực hiện SAU khi transaction commit (không giữ tx
+        // qua HTTP). Fail → log ERROR đối soát tay qua Core; trạng thái claim vẫn Resolved.
+        (Guid customerId, decimal amount, Guid insuranceClaimId, string barcode)? pendingRefund = null;
+
+        var response = await uow.ExecuteInTransactionAsync(async innerCt =>
         {
             var claim = await missingRepo.GetByIdAsync(id, innerCt) ?? throw new MissingClaimNotFoundException(id);
             if (claim.Status is MissingClaimStatus.Resolved or MissingClaimStatus.Rejected)
@@ -117,7 +127,7 @@ public class ClaimService(
                         note: "Xác nhận thất lạc — xử lý bồi thường bảo hiểm"), innerCt);
                 }
 
-                // Tạo InsuranceClaim tự động + duyệt + hoàn tiền (stub RefundProcess → Module3)
+                // Tạo InsuranceClaim tự động + duyệt + đánh dấu chi trả (hoàn ví thật sau khi commit)
                 var ins = InsuranceClaim.Submit(package.Id, package.OrderId, claim.Id,
                     claimedAmountVnd: claimedValue,
                     description: $"Bồi thường thất lạc (coverage {coverage:P0})");
@@ -126,8 +136,7 @@ public class ClaimService(
                 await insuranceRepo.AddAsync(ins, innerCt);
                 insuranceClaimId = ins.Id;
 
-                logger.LogInformation("[REFUND-STUB] MissingClaim {Id} → hoàn {Amount} VND về ví khách {Customer}",
-                    claim.Id, resolvedAmount, claim.CustomerId);
+                pendingRefund = (claim.CustomerId, resolvedAmount, ins.Id, package.Barcode);
                 await notifyService.SendRefundIssuedAsync(claim.CustomerId, resolvedAmount,
                     $"Bồi thường thất lạc kiện {package.Barcode}", innerCt);
             }
@@ -140,6 +149,27 @@ public class ClaimService(
             await notifyService.SendClaimResolvedAsync(claim.CustomerId, "MissingClaim", req.Resolution.ToString(), innerCt);
             return MapMissing(claim, package.Barcode, insuranceClaimId);
         }, ct);
+
+        if (pendingRefund is { } refund)
+            await TryRefundWalletAsync(refund.customerId, refund.amount, refund.insuranceClaimId,
+                $"Bồi thường thất lạc kiện {refund.barcode}");
+
+        return response;
+    }
+
+    // Hoàn ví qua Core Finance — best-effort sau commit; fail → log ERROR để đối soát tay.
+    private async Task TryRefundWalletAsync(Guid customerId, decimal amount, Guid insuranceClaimId, string note)
+    {
+        try
+        {
+            await walletService.RefundAsync(customerId, amount, "InsuranceClaim", insuranceClaimId,
+                note, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Không hoàn được {Amount} VND bồi thường cho khách {CustomerId} (InsuranceClaim {ClaimId}) — cần đối soát tay",
+                amount, customerId, insuranceClaimId);
+        }
     }
 
     public async Task<MissingClaimResponse> RejectMissingClaimAsync(Guid id, RejectClaimRequest req, CancellationToken ct = default)
@@ -174,11 +204,28 @@ public class ClaimService(
         return MapInsurance(claim, package.Barcode);
     }
 
-    public async Task<InsuranceClaimResponse> GetInsuranceClaimAsync(Guid id, CancellationToken ct = default)
+    public async Task<InsuranceClaimResponse> GetInsuranceClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default)
     {
         var claim   = await insuranceRepo.GetByIdAsync(id, ct) ?? throw new InsuranceClaimNotFoundException(id);
         var package = await packageRepo.GetByIdAsync(claim.PackageId, ct);
+
+        // InsuranceClaim không có CustomerId riêng — ownership xét qua kiện hàng
+        if (requesterCustomerId.HasValue && package?.CustomerId != requesterCustomerId.Value)
+            throw new InsuranceClaimNotFoundException(id);
+
         return MapInsurance(claim, package?.Barcode ?? "");
+    }
+
+    public async Task<List<InsuranceClaimResponse>> GetMyInsuranceClaimsAsync(Guid customerId, CancellationToken ct = default)
+    {
+        var claims = await insuranceRepo.GetByCustomerAsync(customerId, ct);
+        var result = new List<InsuranceClaimResponse>(claims.Count);
+        foreach (var claim in claims)
+        {
+            var package = await packageRepo.GetByIdAsync(claim.PackageId, ct);
+            result.Add(MapInsurance(claim, package?.Barcode ?? ""));
+        }
+        return result;
     }
 
     public async Task<InsuranceClaimResponse> UpdateInsuranceClaimAsync(Guid id, UpdateInsuranceClaimRequest req, CancellationToken ct = default)
@@ -223,8 +270,11 @@ public class ClaimService(
         await insuranceRepo.UpdateAsync(claim, ct);
         await uow.SaveChangesAsync(ct);
 
-        logger.LogInformation("[REFUND-STUB] InsuranceClaim {Id} → hoàn {Amount} VND về ví khách {Customer}",
-            claim.Id, claim.ApprovedAmount, package.CustomerId);
+        // Hoàn ví thật sau khi trạng thái Paid đã chốt (best-effort, xem TryRefundWalletAsync)
+        if (claim.ApprovedAmount is > 0m)
+            await TryRefundWalletAsync(package.CustomerId, claim.ApprovedAmount.Value, claim.Id,
+                $"Bồi thường bảo hiểm kiện {package.Barcode}");
+
         await notifyService.SendRefundIssuedAsync(package.CustomerId, claim.ApprovedAmount ?? 0m,
             $"Bồi thường bảo hiểm kiện {package.Barcode}", ct);
 

@@ -22,3 +22,6 @@ public record CarrierItem(string Name, decimal WeightKg, int Quantity);
 public record CarrierQuote(decimal ShipFeeVnd, decimal InsuranceFeeVnd);
 
 public record CarrierWaybillResult(string TrackingNo, decimal? FeeVnd, string? EstimatedDeliverTime);
+
+/// Trạng thái vận đơn tra cứu chủ động từ carrier (đối soát khi webhook miss).
+public record CarrierWaybillStatus(string RawStatus, string? Reason = null, decimal? FeeVnd = null);

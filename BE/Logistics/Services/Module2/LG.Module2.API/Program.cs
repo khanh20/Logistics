@@ -27,6 +27,8 @@ builder.Services.AddModule2(builder.Configuration,
     migrationsAssembly: "LG.Module2.Infrastructure");
 
 builder.Services.AddHttpContextAccessor();
+// Forward JWT của khách sang Core (sổ địa chỉ) — dùng bởi CustomerAddressHttpService
+builder.Services.AddScoped<LG.Module2.ApplicationServices.Interfaces.IUserTokenAccessor, LG.Module2.API.HttpUserTokenAccessor>();
 
 // ── Controllers + JSON ────────────────────────────────────────────────────────
 builder.Services.AddControllers()

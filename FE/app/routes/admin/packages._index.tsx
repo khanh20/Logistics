@@ -11,7 +11,7 @@ import {
   message,
   Typography,
 } from "antd";
-import { packagesApi } from "~/lib/api/logistics";
+import { packagesApi, domesticWaybillsApi } from "~/lib/api/logistics";
 import { BarcodeScanInput } from "~/components/admin/BarcodeScanInput";
 import { useAuth } from "~/lib/hooks/useAuth";
 import { normalizeError } from "~/lib/utils/errors";
@@ -34,9 +34,13 @@ export default function AdminPackagesPage() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission("warehouse.manage");
 
+  const canSync = hasPermission("shipment.manage");
+
   const [searching, setSearching] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [syncNo, setSyncNo] = useState("");
+  const [syncing, setSyncing] = useState(false);
   const [form] = Form.useForm();
   const insuranceOpted = Form.useWatch("insuranceOpted", form);
 
@@ -59,6 +63,32 @@ export default function AdminPackagesPage() {
       );
     } finally {
       setSearching(false);
+    }
+  };
+
+  // Đối soát trạng thái vận đơn với carrier (dùng khi nghi webhook miss — GHTK chỉ retry 1 lần)
+  const handleSyncWaybill = async () => {
+    const trackingNo = syncNo.trim();
+    if (!trackingNo) return;
+    setSyncing(true);
+    try {
+      const res = await domesticWaybillsApi.sync(trackingNo);
+      if (res.data?.processed) {
+        message.success(
+          `Đã đối soát: vận đơn chuyển sang "${res.data.newStatus}" (${res.data.affectedPackages} kiện cập nhật).`
+        );
+      } else {
+        message.info("Trạng thái không đổi hoặc carrier không trả dữ liệu.");
+      }
+    } catch (err) {
+      const norm = normalizeError(err);
+      message.error(
+        norm.status === 404
+          ? "Không tìm thấy vận đơn với mã này."
+          : norm.message || "Đối soát thất bại."
+      );
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -113,6 +143,29 @@ export default function AdminPackagesPage() {
           placeholder="Quét hoặc nhập mã vạch để tra cứu..."
         />
       </div>
+
+      {canSync && (
+        <div className="mt-8 max-w-md">
+          <Title level={5} className="!mb-1">
+            Đối soát vận đơn carrier
+          </Title>
+          <Text type="secondary" className="block mb-3 text-sm">
+            Query trạng thái mới nhất từ GHTK khi nghi webhook bị miss (GHTK chỉ
+            retry 1 lần) — áp dụng như webhook nếu trạng thái tiến lên.
+          </Text>
+          <div className="flex gap-2">
+            <Input
+              value={syncNo}
+              onChange={(e) => setSyncNo(e.target.value)}
+              onPressEnter={handleSyncWaybill}
+              placeholder="Mã vận đơn (label GHTK)..."
+            />
+            <Button loading={syncing} onClick={handleSyncWaybill}>
+              Đối soát
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Modal
         open={createOpen}
