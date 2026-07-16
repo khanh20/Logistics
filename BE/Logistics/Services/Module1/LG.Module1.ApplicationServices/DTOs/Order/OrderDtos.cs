@@ -217,3 +217,14 @@ public record OrderListFilter(
     int         Page          = 1,
     int         PageSize      = 20
 );
+
+public record DailyRevenueSummaryDto(
+    int TotalOrders,
+    decimal ServiceFeeVnd,
+    decimal ShippingFeeVnd,
+    decimal InspectionFeeVnd,
+    decimal InsuranceFeeVnd,
+    decimal ImportEntrustmentFeeVnd,
+    decimal ImportVatVnd,
+    decimal ImportDutyVnd
+);

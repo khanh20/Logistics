@@ -101,11 +101,11 @@ public class CustomerOrderService(
         {
             try
             {
-                await walletService.RefundAsync(customerId, depositVnd, "OrderCancelRefund", order.Id, $"Hoàn tiền cọc đơn {order.OrderCode} do khách hủy đơn", ct);
+                await walletService.ReleaseFundsByOrderAsync(orderId, "OrderCancelled", ct);
             }
             catch (Exception ex)
             {
-                logger.LogCritical(ex, "CRITICAL: Lỗi hoàn tiền ví cho khách {CustomerId} sau khi hủy đơn {OrderId} (Số tiền: {Amount})", 
+                logger.LogCritical(ex, "CRITICAL: Lỗi giải phóng tiền cọc đóng băng cho khách {CustomerId} sau khi hủy đơn {OrderId} (Số tiền: {Amount})", 
                     customerId, orderId, depositVnd);
             }
         }
@@ -123,8 +123,8 @@ public class CustomerOrderService(
         if (order.Status != OrderStatus.PendingPayment)
             throw new Exception("Đơn hàng không ở trạng thái chờ thanh toán đặt cọc.");
 
-        // 1. Trừ tiền ví thực tế
-        await walletService.DeductAsync(customerId, order.DepositVnd, "OrderDeposit", order.Id, $"Thanh toán đặt cọc đơn hàng {order.OrderCode}", ct);
+        // 1. Đóng băng tiền cọc (thay vì trừ trực tiếp)
+        await walletService.LockFundsAsync(customerId, order.Id, order.DepositVnd, ct);
 
         try
         {
@@ -145,11 +145,11 @@ public class CustomerOrderService(
             logger.LogError(ex, "Thanh toán cọc cho đơn {OrderId} thất bại ở Module1. Đang tiến hành hoàn tiền...", orderId);
             try
             {
-                await walletService.RefundAsync(customerId, order.DepositVnd, "OrderDepositRefund", order.Id, $"Hoàn tiền cọc lỗi hệ thống đơn {order.OrderCode}", ct);
+                await walletService.ReleaseFundsByOrderAsync(orderId, "OrderCancelled", ct);
             }
             catch (Exception refundEx)
             {
-                logger.LogCritical(refundEx, "CRITICAL: Hoàn cọc thất bại cho đơn {OrderId} sau khi lỗi ghi nhận database!", orderId);
+                logger.LogCritical(refundEx, "CRITICAL: Giải phóng cọc đóng băng thất bại cho đơn {OrderId} sau khi lỗi ghi nhận database!", orderId);
             }
             throw;
         }
@@ -191,10 +191,13 @@ public class CustomerOrderService(
 
         var remainingAmount = order.FinalAmountVnd - order.DepositVnd;
 
+        // Giải phóng tiền cọc đã đóng băng (OrderCompleted) để tính vào doanh thu chi tiêu
+        await walletService.ReleaseFundsByOrderAsync(order.Id, "OrderCompleted", ct);
+
         if (remainingAmount > 0)
         {
-            // 1. Trừ tiền ví thực tế cho phần còn lại
-            await walletService.DeductAsync(customerId, remainingAmount, "OrderFinalPayment", order.Id, $"Thanh toán cuối kỳ đơn hàng {order.OrderCode}", ct);
+            // 1. Trừ tiền ví thực tế cho phần còn thiếu
+            await walletService.DeductAsync(customerId, remainingAmount, "OrderFinalPayment", order.Id, $"Thanh toán phần còn lại đơn hàng {order.OrderCode}", ct);
         }
 
         try
@@ -343,6 +346,14 @@ public class OrderManagementService(
         return CustomerOrderService.MapToDetail(order);
     }
 
+    public async Task<OrderDetailResponse> GetOrderDetailByCodeAsync(string orderCode, CancellationToken ct = default)
+    {
+        var order = await orderRepo.GetByOrderCodeAsync(orderCode, ct)
+                    ?? throw new OrderNotFoundException(Guid.Empty); // Hoặc bạn có thể tạo custom exception cho OrderCode
+        
+        return await GetOrderDetailAsync(order.Id, ct);
+    }
+
     public Task<OrderDetailResponse> AssignOrderAsync(Guid orderId, Guid staffId, CancellationToken ct = default)
     {
         return uow.ExecuteInTransactionAsync(async innerCt =>
@@ -366,7 +377,7 @@ public class OrderManagementService(
         return uow.ExecuteInTransactionAsync(async innerCt =>
         {
             var order = await RequireOrderAsync(orderId, innerCt);
-            var po    = PlatformOrder.CreateManual(order.Id, staffId, req.PlatformOrderId, req.Note);
+            var po    = PlatformOrder.CreateManual(order.Id, staffId, req.PlatformOrderId, notes: req.Note);
             order.MarkOrderedOnPlatform(staffId, req.Note);
             order.AttachPlatformOrder(po);
             await platformOrderRepo.AddAsync(po, innerCt);
@@ -466,12 +477,59 @@ public class OrderManagementService(
     }
 
     public Task<OrderDetailResponse> CancelByStaffAsync(Guid orderId, Guid staffId,
-        CancelOrderRequest req, CancellationToken ct = default) =>
-        SimpleTransitionAsync(orderId, staffId, ct, (o, note) => o.CancelByStaff(staffId, req.Reason), null);
+        CancelOrderRequest req, CancellationToken ct = default)
+    {
+        // Giải phóng tiền cọc nếu có
+        return uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            var order = await RequireOrderAsync(orderId, innerCt);
+            var wasPaid = order.IsDepositPaid;
+
+            order.CancelByStaff(staffId, req.Reason);
+            await historyRepo.AddAsync(order.History.Last(), innerCt);
+            await orderRepo.UpdateAsync(order, innerCt);
+            
+            logger.LogInformation("Order {OrderCode} cancelled by staff {StaffId}", order.OrderCode, staffId);
+
+            if (wasPaid && order.DepositVnd > 0)
+            {
+                try
+                {
+                    await walletService.ReleaseFundsByOrderAsync(order.Id, "OrderCancelled", innerCt);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogCritical(ex, "CRITICAL: Lỗi giải phóng tiền cọc đóng băng cho đơn {OrderId} khi Staff hủy đơn", orderId);
+                }
+            }
+
+            return CustomerOrderService.MapToDetail(order);
+        }, ct);
+    }
 
     public Task<OrderDetailResponse> MarkReturnedAsync(Guid orderId, Guid staffId,
         OrderTransitionRequest req, CancellationToken ct = default) =>
         SimpleTransitionAsync(orderId, staffId, ct, (o, note) => o.MarkReturned(staffId, note), req.Note);
+
+    public async Task<decimal> GetDailyPlatformCostAsync(Guid accountId, DateOnly date, CancellationToken ct = default)
+    {
+        return await platformOrderRepo.GetDailyPlatformCostAsync(accountId, date, ct);
+    }
+
+    public async Task<DailyRevenueSummaryDto> GetDailyRevenueSummaryAsync(DateOnly date, CancellationToken ct = default)
+    {
+        var result = await orderRepo.GetDailyRevenueSummaryAsync(date, ct);
+        return new DailyRevenueSummaryDto(
+            TotalOrders: result.TotalOrders,
+            ServiceFeeVnd: result.ServiceFee,
+            ShippingFeeVnd: result.ShippingFee,
+            InspectionFeeVnd: result.InspectionFee,
+            InsuranceFeeVnd: result.InsuranceFee,
+            ImportEntrustmentFeeVnd: result.EntrustmentFee,
+            ImportVatVnd: result.VatFee,
+            ImportDutyVnd: result.DutyFee
+        );
+    }
 
     // ── Private helpers ───────────────────────────────────────────────────────
 

@@ -21,18 +21,16 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.PaymentLock
     public class CreatePaymentLockDto
     {
         [Required]
-        public Guid WalletId { get; set; }
+        public Guid CustomerId { get; set; }
 
         [Required]
         public Guid OrderId { get; set; }
 
-        [Required]
-        public PaymentLockTypeEnum LockType { get; set; }
+        public PaymentLockTypeEnum? LockType { get; set; }
 
         [Required]
         public decimal LockedAmountVnd { get; set; }
 
-        [Required]
-        public DateTime ExpiresAt { get; set; }
+        public DateTime? ExpiresAt { get; set; }
     }
 }

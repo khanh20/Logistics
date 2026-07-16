@@ -12,6 +12,7 @@ import {
 import { selectVipTiers, selectAdminFinanceStatus } from "~/lib/feature/adminFinance/adminFinanceSelector";
 import { ReduxStatus } from "~/lib/feature/const";
 import type { VipTierDto, CreateVipTierDto } from "~/lib/types/adminFinance";
+import { Pagination } from "~/components/ui/Pagination";
 
 export default function AdminVipTiersPage() {
   const dispatch = useAppDispatch();
@@ -87,8 +88,8 @@ export default function AdminVipTiersPage() {
       setSuccessMessage("Xóa hạng VIP thành công!");
       dispatch(fetchVipTiers());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (err: any) {
-      setErrorMessage(err || "Không thể xóa hạng VIP");
+    } catch (err: unknown) {
+      setErrorMessage((err as string) || "Không thể xóa hạng VIP");
     }
   };
 
@@ -124,8 +125,8 @@ export default function AdminVipTiersPage() {
       setIsModalVisible(false);
       dispatch(fetchVipTiers());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (err: any) {
-      setErrorMessage(err || "Có lỗi xảy ra");
+    } catch (err: unknown) {
+      setErrorMessage((err as string) || "Có lỗi xảy ra");
     }
   };
 
@@ -254,30 +255,14 @@ export default function AdminVipTiersPage() {
               </table>
             </div>
 
-            {/* Custom Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} thứ hạng
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="thứ hạng"
+            />
           </>
         )}
       </div>

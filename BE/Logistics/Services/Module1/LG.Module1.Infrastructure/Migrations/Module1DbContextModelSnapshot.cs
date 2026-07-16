@@ -920,6 +920,9 @@ namespace LG.Module1.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("ActualPlatformCostCny")
+                        .HasColumnType("numeric");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -928,6 +931,9 @@ namespace LG.Module1.Infrastructure.Migrations
 
                     b.Property<Guid>("CustomerOrderId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("DiscountAmountCny")
+                        .HasColumnType("numeric");
 
                     b.Property<bool>("HasIssue")
                         .HasColumnType("boolean");
@@ -940,9 +946,15 @@ namespace LG.Module1.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid?>("PlatformAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("PlatformOrderId")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<decimal?>("PlatformShippingFeeCny")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("TrackingCarrier")
                         .HasMaxLength(100)

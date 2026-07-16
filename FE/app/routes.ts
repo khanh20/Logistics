@@ -54,6 +54,7 @@ export default [
       route("finance/refunds", "routes/admin/finance.refunds.tsx"),
       route("finance/reconcile", "routes/admin/finance.reconcile.tsx"),
       route("finance/fraud", "routes/admin/finance.fraud.tsx"),
+      route("finance/frozen-wallets", "routes/admin/finance.frozen-wallets.tsx"),
       route("finance/payment-locks", "routes/admin/finance.payment-locks.tsx"),
       route("finance/fee-rules", "routes/admin/finance.fee-rules.tsx"),
       route("finance/vip-tiers", "routes/admin/finance.vip-tiers.tsx"),
@@ -61,6 +62,7 @@ export default [
       route("finance/bank-accounts", "routes/admin/finance.bank-accounts.tsx"),
       route("finance/webhook-logs", "routes/admin/finance.webhook-logs.tsx"),
       route("finance/kyc", "routes/admin/finance.kyc.tsx"),
+      route("finance/revenue", "routes/admin/finance.revenue.tsx"),
 
       // route("orders/:id",      "routes/admin/orders.$id.tsx"),
       // route("staff",           "routes/admin/staff._index.tsx"),

@@ -67,6 +67,11 @@ export const manageOrdersApi = {
       `/api/manage/orders/${id}`
     ),
 
+  getByCode: (orderCode: string) =>
+    apiModule1Client.get<unknown, ApiResponse<OrderDetailResponse>>(
+      `/api/manage/orders/by-code/${orderCode}`
+    ),
+
   assign: (id: string, staffId: string) =>
     apiModule1Client.post<unknown, ApiResponse<OrderDetailResponse>>(
       `/api/manage/orders/${id}/assign`,

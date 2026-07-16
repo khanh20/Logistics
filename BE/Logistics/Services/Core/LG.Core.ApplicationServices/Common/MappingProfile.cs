@@ -22,6 +22,7 @@ using LG.Core.ApplicationServices.Finance.DTOs.FraudDetection;
 using LG.Core.ApplicationServices.Finance.DTOs.PlatformReconcile;
 using LG.Core.ApplicationServices.Finance.DTOs.BankWebhookLog;
 using LG.Core.ApplicationServices.Finance.DTOs.EmailNotification;
+using LG.Core.ApplicationServices.Finance.DTOs.DailyRevenue;
 
 namespace LG.Core.ApplicationServices.Common
 {
@@ -90,6 +91,9 @@ namespace LG.Core.ApplicationServices.Common
             // EmailNotification Mappings
             CreateMap<EmailNotification, EmailNotificationDto>().ReverseMap();
             CreateMap<SendEmailNotificationDto, EmailNotification>();
+
+            // DailyRevenue Mappings
+            CreateMap<DailyRevenueReport, DailyRevenueReportDto>().ReverseMap();
         }
     }
 }

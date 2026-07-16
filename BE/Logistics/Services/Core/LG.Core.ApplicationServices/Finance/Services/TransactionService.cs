@@ -28,11 +28,13 @@ namespace LG.Core.ApplicationServices.Finance.Services
         private readonly CoreDbContext _db;
         private readonly IMapper _mapper;
         private readonly IEmailNotificationService _emailNotificationService;
+        private readonly IFraudDetectionService _fraudService;
        
         public TransactionService(
             CoreDbContext db, 
             IHttpContextAccessor httpContext, 
             IEmailNotificationService emailNotificationService,
+            IFraudDetectionService fraudService,
             LocalizationBase localization,
             IMapper mapper,
             ILogger<TransactionService> logger) 
@@ -41,6 +43,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
             _db = db;
             _mapper = mapper;
             _emailNotificationService = emailNotificationService;
+            _fraudService = fraudService;
         }
 
         private static readonly SemaphoreSlim _walletLock = new SemaphoreSlim(1, 1);
@@ -135,6 +138,52 @@ namespace LG.Core.ApplicationServices.Finance.Services
         {
             var wallet = await GetOrCreateWalletAsync(currentUserId);
 
+            // === KYC CHECK: Yêu cầu KYC trước khi nạp tiền ===
+            var kyc = await _db.CustomerKycs.FirstOrDefaultAsync(k => k.CustomerId == currentUserId);
+            if (kyc == null || kyc.Status != KycStatus.Approved)
+            {
+                throw new CoreException(CoreErrorCode.CoreKycRequired, 400);
+            }
+
+            if (wallet.IsFrozen)
+            {
+                throw new CoreException(CoreErrorCode.CoreWalletFrozen);
+            }
+
+            // === FRAUD CHECK: Rà soát gian lận TRƯỚC KHI tạo yêu cầu nạp tiền ===
+            try
+            {
+                var fraudResult = await _fraudService.EvaluateTransactionAsync(
+                    currentUserId,
+                    dto.Amount,
+                    "TOPUP_REQUEST",
+                    $"Yêu cầu nạp {dto.Amount:N0} VNĐ"
+                );
+
+                if (fraudResult.IsFraud)
+                {
+                    _logger.LogWarning(
+                        "FRAUD BLOCKED: Chặn yêu cầu nạp tiền từ {UserId}. Score={Score}, Reason={Reason}",
+                        currentUserId, fraudResult.RiskScore, fraudResult.Reason);
+
+                    // Lưu bản ghi gian lận vào DB để Admin xem trên Dashboard
+                    await _fraudService.CreateFraudRecordAsync(
+                        currentUserId, fraudResult.RiskScore, fraudResult.Reason);
+
+                    throw new CoreException(CoreErrorCode.CoreFraudDetected, 400,
+                        $"Giao dịch bị từ chối do phát hiện dấu hiệu bất thường (Điểm rủi ro: {fraudResult.RiskScore:F0}/100). Vui lòng liên hệ Admin.");
+                }
+            }
+            catch (CoreException)
+            {
+                throw; // Re-throw CoreException (fraud block)
+            }
+            catch (Exception ex)
+            {
+                // Nếu AI Service lỗi, vẫn cho phép nạp tiền (fail-open) và log cảnh báo
+                _logger.LogError(ex, "Fraud check failed, allowing transaction (fail-open)");
+            }
+
             // Kiểm tra BankAccount có phải của hệ thống không
             var bankAccount = await _db.BankAccounts.FirstOrDefaultAsync(b => b.Id == dto.BankAccountId && b.Type == BankAccountType.System && b.IsActive);
             if (bankAccount == null)
@@ -182,6 +231,13 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
         public async Task<WithdrawResponseDto> CreateWithdrawRequestAsync(CreateWithdrawDto dto, Guid currentUserId)
         {
+            // === KYC CHECK: Yêu cầu KYC trước khi rút tiền ===
+            var kyc = await _db.CustomerKycs.FirstOrDefaultAsync(k => k.CustomerId == currentUserId);
+            if (kyc == null || kyc.Status != KycStatus.Approved)
+            {
+                throw new CoreException(CoreErrorCode.CoreKycRequired, 400);
+            }
+
             // Bắt đầu Transaction để tránh lỗi đồng bộ (Race Condition) khi trừ tiền
             var strategy = _db.Database.CreateExecutionStrategy();
             return await strategy.ExecuteAsync(async () =>

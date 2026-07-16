@@ -299,14 +299,14 @@ namespace LG.Core.ApplicationServices.Finance.Services
                     {
                         _logger.LogWarning($"Phát hiện gian lận nạp tiền: {fraudResult.Reason}");
                         
-                        var fraudRecord = new LG.Core.Domain.Finance.FraudDetection
+                        var fraudRecord = new FraudDetection
                         {
                             WalletId = wallet.Id,
                             CustomerId = wallet.CustomerId,
                             RiskScore = fraudResult.RiskScore,
                             EvidenceJson = fraudResult.Reason,
-                            Action = LG.Untils.EnumFinance.FraudActionEnum.FreezeWallet,
-                            Status = LG.Untils.EnumFinance.FraudStatusEnum.Open,
+                            Action = FraudActionEnum.FreezeWallet,
+                            Status = FraudStatusEnum.Open,
                             CreatedDate = DateTime.UtcNow
                         };
                         await _db.FraudDetections.AddAsync(fraudRecord);

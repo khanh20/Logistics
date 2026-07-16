@@ -394,7 +394,7 @@ export default function CustomerOrderDetailPage({
           )}
 
           <div className="text-neutral-900 font-serif text-lg border-t border-[#EAEAEA] pt-6 mt-2">
-            Tổng giá trị đơn (Thực tế)
+            Tổng giá trị đơn
           </div>
           <div className="font-mono text-lg font-bold text-right border-t border-[#EAEAEA] pt-6 mt-2 text-neutral-900">
             {formatVND(order.finalAmountVnd)}

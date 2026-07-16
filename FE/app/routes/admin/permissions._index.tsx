@@ -1,3 +1,4 @@
+import { normalizeError } from "~/lib/utils/errors";
 import { useMemo, useRef, useState } from "react";
 import { useRevalidator } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -253,7 +254,7 @@ export default function PermissionsIndexPage({ loaderData }: Route.ComponentProp
       setModalOpen(false);
       revalidate();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t("common.error");
+      const msg = err instanceof Error ? normalizeError(err).message : t("common.error");
       setModalError(msg);
     } finally {
       setSubmitting(false);

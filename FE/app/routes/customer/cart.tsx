@@ -282,8 +282,8 @@ export default function CartPage({
       }
       setIsFormModalOpen(false);
       dispatch(fetchMyAddresses());
-    } catch (err: any) {
-      setFormError(err || "Không thể lưu địa chỉ");
+    } catch (err: unknown) {
+      setFormError((err as string) || "Không thể lưu địa chỉ");
     }
   };
 

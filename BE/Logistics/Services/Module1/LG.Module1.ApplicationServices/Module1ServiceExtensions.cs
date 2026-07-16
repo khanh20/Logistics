@@ -137,9 +137,13 @@ public static class Module1ServiceExtensions
             var baseUrl = cfg["Core:BaseUrl"]
                        ?? Environment.GetEnvironmentVariable("CORE__BASEURL")
                        ?? "https://localhost:7215";
+            var key = cfg["Auth:InternalApiKey"]
+                   ?? Environment.GetEnvironmentVariable("AUTH__INTERNALAPIKEY")
+                   ?? throw new InvalidOperationException("Auth:InternalApiKey is required for cross-service calls.");
 
             client.BaseAddress = new Uri(baseUrl);
             client.Timeout     = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("X-Internal-Key", key);
         })
         .AddPolicyHandler(GetRetryPolicy("Core"));
 

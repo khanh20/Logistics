@@ -12,6 +12,7 @@ import type {
   CreateWithdrawDto,
   PaymentLockDto,
   WalletTransactionDto,
+  DailyRevenueReport,
 } from "~/lib/types/finance";
 
 export const financeApi = {
@@ -46,6 +47,16 @@ export const financeApi = {
   getPaymentLocksByOrder: (orderId: string) =>
     apiModule3Client.get<unknown, ApiResponse<PaymentLockDto[]>>(`/api/PaymentLock/order/${orderId}`),
 
+  searchPaymentLocks: (params: { status?: number; orderId?: string; page?: number; pageSize?: number }) => {
+    const query = new URLSearchParams();
+    if (params.status !== undefined) query.append("status", params.status.toString());
+    if (params.orderId) query.append("orderId", params.orderId);
+    if (params.page) query.append("page", params.page.toString());
+    if (params.pageSize) query.append("pageSize", params.pageSize.toString());
+    
+    return apiModule3Client.get<unknown, ApiResponse<{ items: PaymentLockDto[]; total: number; page: number; pageSize: number }>>(`/api/PaymentLock/search?${query.toString()}`);
+  },
+
   releasePaymentLock: (id: string, reason: string) =>
     apiModule3Client.post<unknown, ApiResponse<PaymentLockDto>>(`/api/PaymentLock/${id}/release?reason=${reason}`),
 
@@ -58,4 +69,11 @@ export const financeApi = {
 
   deleteBankAccount: (id: string) =>
     apiModule3Client.delete<unknown, ApiResponse<any>>(`/api/bank-accounts/${id}`),
+
+  // ── Revenue ──────────────────────────────────────────────────
+  generateDailyRevenue: (date: string) =>
+    apiModule3Client.post<unknown, ApiResponse<DailyRevenueReport>>(`/api/finance/revenue/generate?date=${date}`),
+
+  getDailyRevenueRange: (from: string, to: string) =>
+    apiModule3Client.get<unknown, ApiResponse<DailyRevenueReport[]>>(`/api/finance/revenue/range?from=${from}&to=${to}`),
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
-import { PiPlusBold, PiCheckCircleBold, PiXBold, PiWarningCircleBold } from "react-icons/pi";
+import { PiPlusBold, PiCheckCircleBold, PiXBold, PiWarningCircleBold, PiDotsThreeBold, PiFileTextBold } from "react-icons/pi";
 import { Input } from "~/components/ui/Input";
 import { Textarea } from "~/components/ui/Textarea";
 import { Button } from "~/components/ui/Button";
@@ -15,31 +15,53 @@ import {
   selectAdminFinanceStatus 
 } from "~/lib/feature/adminFinance/adminFinanceSelector";
 import { 
-  RECONCILE_STATUS_COLORS, 
   RECONCILE_STATUS_LABELS 
 } from "~/lib/constants/finance";
 import { ReconcileStatusEnum } from "~/lib/enums/finance";
 import dayjs from "dayjs";
 import { ReduxStatus } from "~/lib/feature/const";
+import { Pagination } from "~/components/ui/Pagination";
 
 function StatusBadge({ status }: { status: ReconcileStatusEnum }) {
   const label = RECONCILE_STATUS_LABELS[status] || status;
-  const color = RECONCILE_STATUS_COLORS[status] || "default";
+  let colorClass = "bg-gray-50 text-gray-700 border-gray-200/60";
+  let dotClass = "bg-gray-400";
 
-  let classes = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ";
-  if (color === "success") {
-    classes += "bg-green-50 text-green-700 border-green-200/60";
-  } else if (color === "processing" || color === "blue" || color === "cyan") {
-    classes += "bg-blue-50 text-blue-700 border-blue-200/60";
-  } else if (color === "warning") {
-    classes += "bg-amber-50 text-amber-700 border-amber-200/60";
-  } else if (color === "error") {
-    classes += "bg-rose-50 text-rose-700 border-rose-200/60";
-  } else {
-    classes += "bg-gray-50 text-gray-700 border-gray-200/60";
+  if (status === ReconcileStatusEnum.Matched) {
+    colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200/60";
+    dotClass = "bg-emerald-500";
+  } else if (status === ReconcileStatusEnum.Pending) {
+    colorClass = "bg-amber-50 text-amber-700 border-amber-200/60";
+    dotClass = "bg-amber-500";
+  } else if (status === ReconcileStatusEnum.Discrepancy) {
+    colorClass = "bg-rose-50 text-rose-700 border-rose-200/60";
+    dotClass = "bg-rose-500";
   }
 
-  return <span className={classes}>{label}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${colorClass}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+      {label}
+    </span>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <div className="animate-pulse flex flex-col">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="flex items-center gap-4 py-4 px-6 border-b border-[#EAEAEA]">
+          <div className="h-4 bg-gray-100 rounded w-24"></div>
+          <div className="h-4 bg-gray-100 rounded w-20"></div>
+          <div className="h-4 bg-gray-100 rounded w-32"></div>
+          <div className="h-4 bg-gray-100 rounded w-24 ml-auto"></div>
+          <div className="h-4 bg-gray-100 rounded w-24 ml-auto"></div>
+          <div className="h-4 bg-gray-100 rounded w-20"></div>
+          <div className="h-6 bg-gray-100 rounded-full w-20"></div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function ReconcilePage() {
@@ -55,14 +77,14 @@ export default function ReconcilePage() {
   const [reconcileDate, setReconcileDate] = useState("");
   const [platformId, setPlatformId] = useState("");
   const [platformAccountId, setPlatformAccountId] = useState("");
-  const [cnySpent, setCnySpent] = useState<number>(0);
-  const [vndEquivalent, setVndEquivalent] = useState<number>(0);
-  const [serviceFeeCollectedVnd, setServiceFeeCollectedVnd] = useState<number>(0);
+  const [cnySpent, setCnySpent] = useState<number | "">("");
+  const [vndEquivalent, setVndEquivalent] = useState<number | "">("");
+  const [serviceFeeCollectedVnd, setServiceFeeCollectedVnd] = useState<number | "">("");
   const [alipayStatementUrl, setAlipayStatementUrl] = useState("");
   const [notes, setNotes] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10);
 
   useEffect(() => {
     dispatch(fetchReconciles());
@@ -79,9 +101,9 @@ export default function ReconcilePage() {
         reconcileDate: new Date(reconcileDate).toISOString(),
         platformId: platformId.trim(),
         platformAccountId: platformAccountId.trim(),
-        cnySpent,
-        vndEquivalent,
-        serviceFeeCollectedVnd,
+        cnySpent: Number(cnySpent),
+        vndEquivalent: Number(vndEquivalent),
+        serviceFeeCollectedVnd: Number(serviceFeeCollectedVnd),
         alipayStatementUrl: alipayStatementUrl.trim(),
         notes: notes.trim(),
       };
@@ -93,14 +115,14 @@ export default function ReconcilePage() {
       setReconcileDate("");
       setPlatformId("");
       setPlatformAccountId("");
-      setCnySpent(0);
-      setVndEquivalent(0);
-      setServiceFeeCollectedVnd(0);
+      setCnySpent("");
+      setVndEquivalent("");
+      setServiceFeeCollectedVnd("");
       setAlipayStatementUrl("");
       setNotes("");
       dispatch(fetchReconciles());
-    } catch (error: any) {
-      toast.error(error || "Có lỗi xảy ra khi tạo đối soát");
+    } catch (error: unknown) {
+      toast.error((error as string) || "Có lỗi xảy ra khi tạo đối soát");
     }
   };
 
@@ -109,8 +131,8 @@ export default function ReconcilePage() {
     try {
       await dispatch(confirmReconcile(id)).unwrap();
       toast.success("Đã xác nhận khớp đối soát!");
-    } catch (error: any) {
-      toast.error(error || "Lỗi khi xác nhận đối soát");
+    } catch (error: unknown) {
+      toast.error((error as string) || "Lỗi khi xác nhận đối soát");
     }
   };
 
@@ -131,73 +153,72 @@ export default function ReconcilePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-serif font-bold text-black mb-1">Quản lý đối soát nền tảng</h1>
-          <p className="text-sm text-gray-500">Đồng bộ hóa dữ liệu tài chính với các bên nền tảng trung gian</p>
+          <h1 className="text-2xl font-serif font-bold text-black tracking-tight">Đối soát nền tảng</h1>
+          <p className="text-sm text-gray-500 mt-1">Quản lý và đồng bộ dữ liệu tài chính với các bên trung gian</p>
         </div>
         <Button
           onClick={() => setIsModalVisible(true)}
-          className="px-4.5 py-2.5"
+          className="px-4.5 py-2"
         >
           <PiPlusBold />
-          Tạo đối soát mới
+          Tạo đối soát
         </Button>
       </div>
 
-
       {/* Reconcile Table Card */}
-      <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white border border-[#EAEAEA] rounded-lg overflow-hidden">
         {loading && reconciles.length === 0 ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
-          </div>
+          <TableSkeleton />
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-[#EAEAEA]">
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Ngày đối soát</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Nền tảng</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Tài khoản</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Chi tiêu CNY</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Tương đương VND</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Phí dịch vụ VND</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Trạng thái</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6 text-right">Hành động</th>
+                  <tr className="bg-gray-50/50 border-b border-[#EAEAEA]">
+                    <th className="font-medium text-xs text-gray-500 py-3.5 px-6 whitespace-nowrap">Ngày đối soát</th>
+                    <th className="font-medium text-xs text-gray-500 py-3.5 px-6 whitespace-nowrap">Nền tảng</th>
+                    <th className="font-medium text-xs text-gray-500 py-3.5 px-6 whitespace-nowrap">Tài khoản</th>
+                    <th className="font-medium text-xs text-gray-500 py-3.5 px-6 whitespace-nowrap text-right">Chi tiêu CNY</th>
+                    <th className="font-medium text-xs text-gray-500 py-3.5 px-6 whitespace-nowrap text-right">Tương đương VND</th>
+                    <th className="font-medium text-xs text-gray-500 py-3.5 px-6 whitespace-nowrap text-right">Phí dịch vụ VND</th>
+                    <th className="font-medium text-xs text-gray-500 py-3.5 px-6 whitespace-nowrap">Trạng thái</th>
+                    <th className="font-medium text-xs text-gray-500 py-3.5 px-6 text-right">Hành động</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#EAEAEA]">
                   {paginatedReconciles.map((record) => (
-                    <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="py-3.5 px-6">
+                    <tr key={record.id} className="hover:bg-gray-50/30 transition-colors group">
+                      <td className="py-3 px-6 text-gray-600 font-mono text-[13px]">
                         {dayjs(record.reconcileDate).format("DD/MM/YYYY")}
                       </td>
-                      <td className="py-3.5 px-6 font-semibold text-black">
-                        {record.platformId}
+                      <td className="py-3 px-6 font-medium text-black">
+                        {record.platformId.substring(0, 8)}...
                       </td>
-                      <td className="py-3.5 px-6">
-                        {record.platformAccountId}
+                      <td className="py-3 px-6 text-gray-600 font-mono text-[13px]">
+                        {record.platformAccountId.substring(0, 8)}...
                       </td>
-                      <td className="py-3.5 px-6 font-mono">
+                      <td className="py-3 px-6 font-mono text-[13px] text-right">
                         {record.cnySpent != null ? `${record.cnySpent.toLocaleString()} ¥` : "-"}
                       </td>
-                      <td className="py-3.5 px-6 font-mono text-black font-medium">
+                      <td className="py-3 px-6 font-mono text-[13px] text-black font-medium text-right">
                         {record.vndEquivalent != null ? `${record.vndEquivalent.toLocaleString()} ₫` : "-"}
                       </td>
-                      <td className="py-3.5 px-6 font-mono text-gray-500">
+                      <td className="py-3 px-6 font-mono text-[13px] text-gray-500 text-right">
                         {record.serviceFeeCollectedVnd != null ? `${record.serviceFeeCollectedVnd.toLocaleString()} ₫` : "-"}
                       </td>
-                      <td className="py-3.5 px-6">
+                      <td className="py-3 px-6">
                         <StatusBadge status={record.status} />
                       </td>
-                      <td className="py-3.5 px-6 text-right">
-                        <div className="inline-flex gap-3 justify-end items-center">
+                      <td className="py-3 px-6 text-right">
+                        <div className="inline-flex gap-2 justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
                           {record.status === ReconcileStatusEnum.Pending && (
                             <Button
                               size="sm"
+                              variant="secondary"
                               onClick={() => handleConfirm(record.id)}
+                              className="h-7 text-xs px-2.5"
                             >
-                              <PiCheckCircleBold />
+                              <PiCheckCircleBold className="mr-1" />
                               Khớp
                             </Button>
                           )}
@@ -206,9 +227,10 @@ export default function ReconcilePage() {
                               href={record.alipayStatementUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs text-blue-600 hover:underline font-semibold"
+                              className="inline-flex items-center justify-center h-7 w-7 rounded border border-[#EAEAEA] text-gray-500 hover:text-black hover:border-gray-300 transition-colors bg-white"
+                              title="Xem sao kê"
                             >
-                              Xem sao kê
+                              <PiFileTextBold />
                             </a>
                           )}
                         </div>
@@ -217,7 +239,7 @@ export default function ReconcilePage() {
                   ))}
                   {reconciles.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="text-center py-12 text-gray-400">
+                      <td colSpan={8} className="text-center py-16 text-gray-400 text-sm">
                         Không có dữ liệu đối soát.
                       </td>
                     </tr>
@@ -226,51 +248,46 @@ export default function ReconcilePage() {
               </table>
             </div>
 
-            {/* Custom Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} đối soát
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
           </>
         )}
       </div>
 
-      {/* Modal Tạo đối soát */}
+      {/* Slide-over Overlay for Creation */}
       {isModalVisible && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-2xl w-full p-6 shadow-2xl flex flex-col font-sans">
-            <div className="flex items-center justify-between pb-3 border-b border-[#EAEAEA] mb-5">
-              <h3 className="text-base font-serif font-bold text-black">Tạo đối soát mới</h3>
+        <div className="fixed inset-0 z-50 flex justify-end font-sans">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity" 
+            onClick={() => setIsModalVisible(false)}
+          />
+          
+          {/* Panel */}
+          <div className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col transform transition-transform duration-300 translate-x-0 border-l border-[#EAEAEA]">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#EAEAEA]">
+              <div>
+                <h3 className="text-lg font-serif font-bold text-black tracking-tight">Tạo đối soát mới</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Nhập thông tin đối soát từ sao kê nền tảng</p>
+              </div>
               <button
                 onClick={() => setIsModalVisible(false)}
-                className="text-gray-400 hover:text-black transition-colors"
+                className="text-gray-400 hover:text-black transition-colors rounded-full p-1 hover:bg-gray-100"
               >
                 <PiXBold className="text-lg" />
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              <form id="create-form" onSubmit={handleCreate} className="space-y-5">
+                
+                <div className="space-y-4">
+                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Thông tin chung</h4>
                   <Input
                     label="Ngày đối soát *"
                     type="date"
@@ -278,100 +295,94 @@ export default function ReconcilePage() {
                     value={reconcileDate}
                     onChange={(e) => setReconcileDate(e.target.value)}
                   />
-                </div>
-                <div>
                   <Input
-                    label="Mã nền tảng *"
+                    label="Mã nền tảng (ID) *"
                     type="text"
                     required
                     value={platformId}
                     onChange={(e) => setPlatformId(e.target.value)}
-                    placeholder="VD: 1688, Taobao..."
+                    placeholder="VD: 550e8400-e29b-41d4..."
                   />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
                   <Input
-                    label="Tài khoản nền tảng *"
+                    label="Tài khoản nền tảng (ID) *"
                     type="text"
                     required
                     value={platformAccountId}
                     onChange={(e) => setPlatformAccountId(e.target.value)}
-                    placeholder="Tài khoản mua hàng..."
+                    placeholder="VD: 550e8400-e29b-41d4..."
                   />
                 </div>
-                <div>
-                  <Input
-                    label="Đường dẫn sao kê"
-                    type="text"
-                    value={alipayStatementUrl}
-                    onChange={(e) => setAlipayStatementUrl(e.target.value)}
-                    placeholder="URL file sao kê..."
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <Input
-                    label="Chi tiêu CNY *"
-                    type="number"
-                    required
-                    min={0}
-                    value={cnySpent}
-                    onChange={(e) => setCnySpent(Number(e.target.value))}
-                  />
-                </div>
-                <div>
-                  <Input
-                    label="Tương đương VND *"
-                    type="number"
-                    required
-                    min={0}
-                    value={vndEquivalent}
-                    onChange={(e) => setVndEquivalent(Number(e.target.value))}
-                  />
-                </div>
-                <div>
+                <div className="pt-4 border-t border-[#EAEAEA] space-y-4">
+                  <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Số liệu sao kê</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="Chi tiêu CNY *"
+                      type="number"
+                      required
+                      min={0}
+                      value={cnySpent}
+                      onChange={(e) => setCnySpent(e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="0.00"
+                    />
+                    <Input
+                      label="Tương đương VND *"
+                      type="number"
+                      required
+                      min={0}
+                      value={vndEquivalent}
+                      onChange={(e) => setVndEquivalent(e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="0"
+                    />
+                  </div>
                   <Input
                     label="Phí dịch vụ VND *"
                     type="number"
                     required
                     min={0}
                     value={serviceFeeCollectedVnd}
-                    onChange={(e) => setServiceFeeCollectedVnd(Number(e.target.value))}
+                    onChange={(e) => setServiceFeeCollectedVnd(e.target.value === "" ? "" : Number(e.target.value))}
+                    placeholder="0"
+                  />
+                  <Input
+                    label="Đường dẫn sao kê"
+                    type="text"
+                    value={alipayStatementUrl}
+                    onChange={(e) => setAlipayStatementUrl(e.target.value)}
+                    placeholder="https://..."
                   />
                 </div>
-              </div>
 
-              <div>
-                <Textarea
-                  label="Ghi chú"
-                  rows={3}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ghi chú thêm nếu có..."
-                />
-              </div>
+                <div className="pt-4 border-t border-[#EAEAEA]">
+                  <Textarea
+                    label="Ghi chú"
+                    rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Ghi chú thêm nếu có..."
+                  />
+                </div>
+              </form>
+            </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setIsModalVisible(false)}
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="submit"
-                  loading={loading}
-                >
-                  Tạo đối soát
-                </Button>
-              </div>
-            </form>
+            <div className="p-5 border-t border-[#EAEAEA] bg-gray-50 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsModalVisible(false)}
+                className="w-24"
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                form="create-form"
+                loading={loading}
+                className="flex-1"
+              >
+                Tạo đối soát
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -382,14 +393,14 @@ export default function ReconcilePage() {
           <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-sm w-full p-6 shadow-2xl flex flex-col font-sans">
             <div className="space-y-3">
               <h4 className="text-base font-serif font-bold text-black flex items-center gap-1.5">
-                <PiWarningCircleBold className="text-primary text-lg" />
+                <PiWarningCircleBold className="text-amber-500 text-lg" />
                 Xác nhận đối soát
               </h4>
-              <p className="text-xs text-gray-600 leading-normal">
-                Bạn có chắc chắn muốn xác nhận khớp đối soát này không? Thao tác này sẽ cập nhật trạng thái đối soát thành công.
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Bạn có chắc chắn muốn xác nhận khớp đối soát này không? Thao tác này sẽ tự động cập nhật số dư thực tế của tài khoản nền tảng.
               </p>
             </div>
-            <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA] mt-5">
+            <div className="flex justify-end gap-3 pt-5 mt-2">
               <Button
                 type="button"
                 variant="secondary"
@@ -399,10 +410,10 @@ export default function ReconcilePage() {
               </Button>
               <Button
                 type="button"
-                variant="primary"
                 onClick={() => executeConfirmReconcile(confirmingReconcileId)}
+                className="bg-black hover:bg-gray-900 text-white"
               >
-                Xác nhận
+                Xác nhận khớp
               </Button>
             </div>
           </div>

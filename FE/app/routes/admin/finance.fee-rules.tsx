@@ -19,6 +19,7 @@ import {
 import dayjs from "dayjs";
 import type { FeeRuleDto, CreateFeeRuleDto } from "~/lib/types/adminFinance";
 import { ReduxStatus } from "~/lib/feature/const";
+import { Pagination } from "~/components/ui/Pagination";
 
 function StatusBadge({ active }: { active: boolean }) {
   return (
@@ -161,8 +162,8 @@ export default function AdminFeeRulesPage() {
       handleCloseModal();
       dispatch(fetchFeeRules());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (error: any) {
-      setErrorMessage(error || "Có lỗi xảy ra khi lưu quy tắc phí");
+    } catch (error: unknown) {
+      setErrorMessage((error as string) || "Có lỗi xảy ra khi lưu quy tắc phí");
     }
   };
 
@@ -175,8 +176,8 @@ export default function AdminFeeRulesPage() {
       setSuccessMessage("Xóa quy tắc phí thành công");
       dispatch(fetchFeeRules());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (error: any) {
-      setErrorMessage(error || "Có lỗi xảy ra khi xóa quy tắc phí");
+    } catch (error: unknown) {
+      setErrorMessage((error as string) || "Có lỗi xảy ra khi xóa quy tắc phí");
     }
   };
 
@@ -315,30 +316,14 @@ export default function AdminFeeRulesPage() {
               </table>
             </div>
 
-            {/* Custom Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} quy tắc
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="quy tắc"
+            />
           </>
         )}
       </div>

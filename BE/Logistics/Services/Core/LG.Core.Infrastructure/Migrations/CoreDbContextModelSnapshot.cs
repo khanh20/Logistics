@@ -493,8 +493,26 @@ namespace LG.Core.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DutyFeeRevenueVnd")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("EntrustmentFeeRevenueVnd")
+                        .HasColumnType("numeric");
 
                     b.Property<decimal?>("ExchangeProfitLossVnd")
                         .HasColumnType("numeric");
@@ -511,6 +529,12 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("InsuranceFeeRevenueVnd")
                         .HasColumnType("numeric");
 
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<decimal>("PenaltyRevenueVnd")
                         .HasColumnType("numeric");
 
@@ -526,6 +550,9 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<decimal>("TotalCnyPurchased")
                         .HasColumnType("numeric");
 
+                    b.Property<decimal>("TotalCollectedOnBehalfVnd")
+                        .HasColumnType("numeric");
+
                     b.Property<int>("TotalOrdersCompleted")
                         .HasColumnType("integer");
 
@@ -533,6 +560,9 @@ namespace LG.Core.Infrastructure.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<decimal>("TotalVndCollected")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("VatFeeRevenueVnd")
                         .HasColumnType("numeric");
 
                     b.HasKey("Id");
@@ -859,6 +889,21 @@ namespace LG.Core.Infrastructure.Migrations
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("Deleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ModifiedDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
@@ -1138,6 +1183,9 @@ namespace LG.Core.Infrastructure.Migrations
 
                     b.Property<string>("FrozenReason")
                         .HasColumnType("text");
+
+                    b.Property<bool>("IgnoreFraudDetection")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsFrozen")
                         .HasColumnType("boolean");

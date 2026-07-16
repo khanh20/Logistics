@@ -12,7 +12,7 @@ using LG.EntitiesBase;
 namespace LG.Core.Domain.Finance
 {
     [Table(nameof(PlatformReconcile), Schema = DbSchemas.LGFinance)]
-    public class PlatformReconcile : ICreatedBy
+    public class PlatformReconcile : IFullAudited
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -54,7 +54,12 @@ namespace LG.Core.Domain.Finance
 
         public DateTime? ReconciledAt { get; set; }           // Thời điểm hoàn tất đối soát
 
+        public DateTime? DeletedDate { get; set; }
+        public bool Deleted { get; set; }
+        public Guid? DeletedBy { get; set; }
         public DateTime? CreatedDate { get; set; }
         public Guid? CreatedBy { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+        public Guid? ModifiedBy { get; set; }
     }
 }

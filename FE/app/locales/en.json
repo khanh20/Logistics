@@ -603,6 +603,7 @@
     "finance_refunds": "Refunds",
     "finance_reconcile": "Reconciliation",
     "finance_fraud": "Fraud Detection",
+    "finance_frozen_wallets": "Frozen Wallets",
     "finance_payment_locks": "Payment Locks",
     "finance_fee_rules": "Fee Rules",
     "finance_vip_tiers": "VIP Tiers",

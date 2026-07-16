@@ -637,6 +637,39 @@ public class CustomerOrderRepository(Module1DbContext db) : ICustomerOrderReposi
             db.CustomerOrders.Update(order);
         return Task.CompletedTask;
     }
+
+    public async Task<(int TotalOrders, decimal ServiceFee, decimal ShippingFee, decimal InspectionFee, decimal InsuranceFee, decimal EntrustmentFee, decimal VatFee, decimal DutyFee)> GetDailyRevenueSummaryAsync(DateOnly date, CancellationToken ct = default)
+    {
+        var minDate = date.ToDateTime(TimeOnly.MinValue);
+        var maxDate = minDate.AddDays(1);
+
+        var orders = await db.CustomerOrders
+            .Include(o => o.Fees)
+            .Where(o => o.PaidAt >= minDate && o.PaidAt < maxDate)
+            .ToListAsync(ct);
+
+        var totalOrders = orders.Count;
+        var allFees = orders.SelectMany(o => o.Fees).ToList();
+
+        var serviceFee = allFees.Where(f => f.FeeType == "service").Sum(f => f.AmountVnd);
+        var shippingFee = allFees.Where(f => f.FeeType == "shipping_cn_to_vn" || f.FeeType == "storage" || f.FeeType == "ship_local").Sum(f => f.AmountVnd);
+        var inspectionFee = allFees.Where(f => f.FeeType == "inspection").Sum(f => f.AmountVnd);
+        var insuranceFee = allFees.Where(f => f.FeeType == "insurance").Sum(f => f.AmountVnd);
+        var entrustmentFee = allFees.Where(f => f.FeeType == "import_entrustment").Sum(f => f.AmountVnd);
+        var vatFee = allFees.Where(f => f.FeeType == "import_vat").Sum(f => f.AmountVnd);
+        var dutyFee = allFees.Where(f => f.FeeType == "import_duty").Sum(f => f.AmountVnd);
+
+        return (
+            TotalOrders: totalOrders,
+            ServiceFee: serviceFee,
+            ShippingFee: shippingFee,
+            InspectionFee: inspectionFee,
+            InsuranceFee: insuranceFee,
+            EntrustmentFee: entrustmentFee,
+            VatFee: vatFee,
+            DutyFee: dutyFee
+        );
+    }
 }
 
 // ── OrderStatusHistory ────────────────────────────────────────────────────────
@@ -681,6 +714,18 @@ public class PlatformOrderRepository(Module1DbContext db) : IPlatformOrderReposi
     {
         db.PlatformOrders.Update(order);
         return Task.CompletedTask;
+    }
+
+    public async Task<decimal> GetDailyPlatformCostAsync(Guid accountId, DateOnly date, CancellationToken ct = default)
+    {
+        var minDate = date.ToDateTime(TimeOnly.MinValue);
+        var maxDate = minDate.AddDays(1);
+        
+        return await db.PlatformOrders
+            .Where(o => o.PlatformAccountId == accountId &&
+                        o.CreatedAt >= minDate && 
+                        o.CreatedAt < maxDate)
+            .SumAsync(o => o.ActualPlatformCostCny ?? 0m, ct);
     }
 }
 

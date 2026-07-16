@@ -11,6 +11,7 @@ using System;
 using LG.Core.Infrastructure;
 using LG.Core.API.Middleware;
 using LG.Core.ApplicationServices;
+using LG.Core.API.BackgroundJobs;
 
 // 1. CREATE BUILDER
 var builder = WebApplication.CreateBuilder(args);
@@ -43,6 +44,9 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddEndpointsApiExplorer();
+
+// ── Background Jobs ───────────────────────────────────────────────────────────
+builder.Services.AddHostedService<DailyRevenueJob>();
 
 // ── JWT Authentication ────────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:SecretKey"]

@@ -206,6 +206,9 @@ public interface ICustomerOrderRepository
 
     Task AddAsync(CustomerOrder order, CancellationToken ct = default);
     Task UpdateAsync(CustomerOrder order, CancellationToken ct = default);
+
+    /// Lấy tổng doanh thu phí của hệ thống trong 1 ngày (dựa theo ngày thanh toán - PaidAt).
+    Task<(int TotalOrders, decimal ServiceFee, decimal ShippingFee, decimal InspectionFee, decimal InsuranceFee, decimal EntrustmentFee, decimal VatFee, decimal DutyFee)> GetDailyRevenueSummaryAsync(DateOnly date, CancellationToken ct = default);
 }
 
 // ── PlatformOrder repos ───────────────────────────────────────────────────────
@@ -216,6 +219,7 @@ public interface IPlatformOrderRepository
     Task<List<PlatformOrder>> GetByStaffAsync(Guid staffId, OrderStatus? status, int page, int pageSize, CancellationToken ct = default);
     Task AddAsync(PlatformOrder order, CancellationToken ct = default);
     Task UpdateAsync(PlatformOrder order, CancellationToken ct = default);
+    Task<decimal> GetDailyPlatformCostAsync(Guid accountId, DateOnly date, CancellationToken ct = default);
 }
 
 // ── StaffAssignment repos ─────────────────────────────────────────────────────

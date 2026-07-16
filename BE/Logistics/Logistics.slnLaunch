@@ -17,6 +17,10 @@
       {
         "Path": "Services\\Module2\\LG.Module2.API\\LG.Module2.API.csproj",
         "Action": "Start"
+      },
+      {
+        "Path": "Services\\PlatformOrder\\LG.PlatformOrder.API\\LG.PlatformOrder.API.csproj",
+        "Action": "Start"
       }
     ]
   }

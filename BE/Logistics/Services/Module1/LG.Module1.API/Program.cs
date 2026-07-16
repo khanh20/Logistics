@@ -1,10 +1,11 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using LG.Module1.API.BackgroundJobs;
 using LG.Module1.API.Middleware;
 using LG.Module1.Infrastructure;
 using LG.Module1.Infrastructure.Data;
+using LG.Module1.API.Ai;
 using LG.Shared.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -39,9 +40,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient("llm-gateway", c => c.Timeout = TimeSpan.FromMinutes(5));
 var gwTransport = (builder.Configuration["LlmGateway:Transport"] ?? "rest").ToLowerInvariant();
 if (gwTransport == "grpc")
-    builder.Services.AddSingleton<LG.Module1.API.Ai.ILlmGateway, LG.Module1.API.Ai.LlmGatewayGrpcClient>();
+    builder.Services.AddSingleton<ILlmGateway, LlmGatewayGrpcClient>();
 else
-    builder.Services.AddScoped<LG.Module1.API.Ai.ILlmGateway, LG.Module1.API.Ai.LlmGatewayRestClient>();
+    builder.Services.AddScoped<ILlmGateway, LlmGatewayRestClient>();
 
 // gRPC server (FE gọi qua gRPC-web).
 builder.Services.AddGrpc();
@@ -321,7 +322,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapGrpcService<LG.Module1.API.Ai.AiAssistantGrpcService>()
+app.MapGrpcService<AiAssistantGrpcService>()
    .EnableGrpcWeb()
    .RequireCors("FE");
 

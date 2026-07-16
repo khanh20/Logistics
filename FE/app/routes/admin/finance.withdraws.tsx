@@ -1,3 +1,4 @@
+import { normalizeError } from "~/lib/utils/errors";
 import React, { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import {
@@ -105,8 +106,8 @@ export default function AdminFinanceWithdraws() {
       setApproveModalVisible(false);
       setTransferRef("");
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (error: any) {
-      setErrorMessage(error?.message || "Đã xảy ra lỗi khi duyệt");
+    } catch (error: unknown) {
+      setErrorMessage(normalizeError(error).message || "Đã xảy ra lỗi khi duyệt");
     } finally {
       setActionLoading(false);
     }
@@ -127,8 +128,8 @@ export default function AdminFinanceWithdraws() {
       setRejectModalVisible(false);
       setRejectReason("");
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (error: any) {
-      setErrorMessage(error?.message || "Đã xảy ra lỗi khi từ chối");
+    } catch (error: unknown) {
+      setErrorMessage(normalizeError(error).message || "Đã xảy ra lỗi khi từ chối");
     } finally {
       setActionLoading(false);
     }
@@ -248,6 +249,7 @@ export default function AdminFinanceWithdraws() {
                       <div className="inline-flex gap-2">
                         <Button
                           size="sm"
+                          className="bg-green-600 text-white hover:bg-green-700 border-transparent"
                           onClick={() => openApproveModal(record)}
                         >
                           <PiCheckBold />

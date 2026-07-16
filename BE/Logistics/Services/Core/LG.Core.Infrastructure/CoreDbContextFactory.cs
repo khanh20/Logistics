@@ -14,7 +14,10 @@ namespace LG.Core.Infrastructure
         {
             var optionsBuilder = new DbContextOptionsBuilder<CoreDbContext>();
 
-            optionsBuilder.UseNpgsql("Host=ep-icy-surf-andzhy8z-pooler.c-6.us-east-1.aws.neon.tech;Port=5432;Database=neondb;Username=neondb_owner;Password=npg_yZkI7NaMF9tX;SSL Mode=Require;Trust Server Certificate=true");
+            var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
+                ?? "Host=localhost;Database=dummy_core;Username=postgres;Password=postgres";
+
+            optionsBuilder.UseNpgsql(connectionString);
 
             return new CoreDbContext(optionsBuilder.Options, null);
         }

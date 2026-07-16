@@ -11,6 +11,7 @@ namespace LG.Untils.EnumFinance
         Open = 1,
         Investigating = 2,
         Confirmed = 3,
-        FalsePositive = 4
+        FalsePositive = 4,
+        Resolved = 5
     }
 }

@@ -1,3 +1,4 @@
+import { normalizeError } from "~/lib/utils/errors";
 import { useRef, useState } from "react";
 import { Link, useRevalidator } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -204,7 +205,7 @@ export default function RolesIndexPage({ loaderData }: Route.ComponentProps) {
       setModalOpen(false);
       revalidate();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t("common.error");
+      const msg = err instanceof Error ? normalizeError(err).message : t("common.error");
       setModalError(msg);
     } finally {
       setSubmitting(false);

@@ -7,6 +7,7 @@ import { Select } from "~/components/ui/Select";
 import { TransactionDirectionEnum } from "~/lib/enums/finance";
 import { TRANSACTION_DIRECTION_COLORS, TRANSACTION_DIRECTION_LABELS } from "~/lib/constants/finance";
 import type { TransactionTypeDto } from "~/lib/types/adminFinance";
+import { Pagination } from "~/components/ui/Pagination";
 
 function DirectionBadge({ direction }: { direction?: TransactionDirectionEnum }) {
   if (!direction) {
@@ -263,30 +264,14 @@ export default function AdminTransactionTypesPage() {
               </table>
             </div>
 
-            {/* Custom Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} loại giao dịch
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="loại giao dịch"
+            />
           </>
         )}
       </div>

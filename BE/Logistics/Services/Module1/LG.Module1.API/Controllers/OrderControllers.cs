@@ -90,6 +90,15 @@ public class OrderManagementController(IOrderManagementService mgmtService) : Mo
         return Ok(ApiResponse<OrderDetailResponse>.Ok(detail));
     }
 
+    // GET /api/manage/orders/by-code/{orderCode}
+    [HttpGet("by-code/{orderCode}")]
+    [Authorize(Policy = Permissions.OrderManage)]
+    public async Task<IActionResult> GetOrderDetailByCode(string orderCode, CancellationToken ct)
+    {
+        var detail = await mgmtService.GetOrderDetailByCodeAsync(orderCode, ct);
+        return Ok(ApiResponse<OrderDetailResponse>.Ok(detail));
+    }
+
     // POST /api/manage/orders/{id}/assign
     [HttpPost("{id:guid}/assign")]
     [Authorize(Policy = Permissions.OrderManage)]
@@ -187,5 +196,36 @@ public class OrderManagementController(IOrderManagementService mgmtService) : Mo
     {
         var detail = await mgmtService.MarkReturnedAsync(id, CurrentUserId, req, ct);
         return Ok(ApiResponse<OrderDetailResponse>.Ok(detail, "Đã ghi nhận hoàn hàng."));
+    }
+
+    /// Internal API: Lấy tổng chi tiêu thực tế trên sàn của 1 tài khoản trong 1 ngày.
+    [HttpGet("internal/platform-cost")]
+    [AllowAnonymous] 
+    [ProducesResponseType(typeof(ApiResponse<decimal>), 200)]
+    public async Task<IActionResult> GetDailyPlatformCost(
+        [FromQuery] Guid accountId,
+        [FromQuery] string date,
+        CancellationToken ct)
+    {
+        if (!DateOnly.TryParse(date, out var parsedDate))
+            return BadRequest(ApiResponse.Fail("Invalid date format. Expected yyyy-MM-dd."));
+
+        var cost = await mgmtService.GetDailyPlatformCostAsync(accountId, parsedDate, ct);
+        return Ok(ApiResponse<decimal>.Ok(cost));
+    }
+
+    /// Internal API: Lấy tổng doanh thu phí theo ngày thanh toán.
+    [HttpGet("internal/daily-revenue-summary")]
+    [AllowAnonymous] 
+    [ProducesResponseType(typeof(ApiResponse<DailyRevenueSummaryDto>), 200)]
+    public async Task<IActionResult> GetDailyRevenueSummary(
+        [FromQuery] string date,
+        CancellationToken ct)
+    {
+        if (!DateOnly.TryParse(date, out var parsedDate))
+            return BadRequest(ApiResponse.Fail("Invalid date format. Expected yyyy-MM-dd."));
+
+        var summary = await mgmtService.GetDailyRevenueSummaryAsync(parsedDate, ct);
+        return Ok(ApiResponse<DailyRevenueSummaryDto>.Ok(summary));
     }
 }

@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 using AutoMapper;
 using LG.ApplicationBase.Localization;
 using LG.Core.ApplicationServices.Common.Interfaces;
+using LG.Core.Domain.Exceptions;
+using LG.Shared.Constants.ErrorCodes;
 
 namespace LG.Core.ApplicationServices.Finance.Services
 {
@@ -101,6 +103,11 @@ namespace LG.Core.ApplicationServices.Finance.Services
             var profile = await _db.CustomerProfiles
                 .FirstOrDefaultAsync(p => p.UserId == userId);
 
+            if (request.DateOfBirthOnId.HasValue && request.DateOfBirthOnId.Value.Kind != DateTimeKind.Utc)
+            {
+                request.DateOfBirthOnId = DateTime.SpecifyKind(request.DateOfBirthOnId.Value, DateTimeKind.Utc);
+            }
+
             if (profile == null)
             {
                 // Safety net: Tự động tạo CustomerProfile nếu chưa tồn tại
@@ -152,6 +159,21 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
         public async Task<CustomerKycDto> SubmitKycAsync(Guid customerId, UpdateKycFromOcrRequest request)
         {
+            var idNumber = request.IdNumber?.Trim();
+
+            // Kiểm tra trùng lặp CCCD với user khác
+            if (!string.IsNullOrWhiteSpace(idNumber))
+            {
+                var existingDuplicate = await _db.CustomerKycs
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(k => k.IdNumber == idNumber && k.CustomerId != customerId);
+
+                if (existingDuplicate != null)
+                {
+                    throw new CoreException(CoreErrorCode.CoreKycIdNumberAlreadyExists);
+                }
+            }
+
             var kyc = await _db.CustomerKycs
                 .FirstOrDefaultAsync(k => k.CustomerId == customerId);
 

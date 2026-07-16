@@ -21,6 +21,7 @@ import {
 import { TransactionDirectionEnum } from "~/lib/enums/finance";
 import { ReduxStatus } from "~/lib/feature/const";
 import type { WalletTransactionDto } from "~/lib/types/adminFinance";
+import { Pagination } from "~/components/ui/Pagination";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -258,30 +259,14 @@ export default function AdminFinanceTransactionsPage() {
               </table>
             </div>
 
-            {/* Custom Pagination Footer */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} giao dịch
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="giao dịch"
+            />
           </>
         )}
       </div>

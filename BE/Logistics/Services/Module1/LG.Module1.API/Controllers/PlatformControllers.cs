@@ -1,4 +1,4 @@
-﻿using LG.Module1.ApplicationServices.DTOs.Platform;
+using LG.Module1.ApplicationServices.DTOs.Platform;
 using LG.Module1.ApplicationServices.Interfaces;
 using LG.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -255,5 +255,18 @@ public class PlatformAccountsController(IPlatformService platformService) : Modu
     {
         await platformService.UpdateBalanceAsync(accountId, req, ct);
         return Ok(ApiResponse.Ok($"Số dư cập nhật: {req.AlipayBalance} CNY."));
+    }
+
+    /// Internal API: Đồng bộ số dư Alipay từ Core sau khi đối soát thành công.
+    [HttpPatch("{accountId:guid}/sync-balance")]
+    [AllowAnonymous] 
+    [ProducesResponseType(200)]
+    public async Task<IActionResult> SyncBalance(
+        Guid platformId, Guid accountId,
+        [FromBody] decimal spentAmountCny,
+        CancellationToken ct)
+    {
+        await platformService.SyncBalanceAfterReconcileAsync(accountId, spentAmountCny, ct);
+        return Ok(ApiResponse.Ok());
     }
 }

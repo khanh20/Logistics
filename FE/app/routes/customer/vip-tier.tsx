@@ -125,7 +125,7 @@ export default function VipTierPage() {
     },
     {
       key: "freeStorage",
-      benefit: "Số ngày lưu kho miễn phí",
+      benefit: "Số ngày lưu kho",
       ...vipTiers.reduce((acc, t) => {
         acc[t.id] = t.freeStorageDays > 0 ? `${t.freeStorageDays} ngày` : "—";
         return acc;

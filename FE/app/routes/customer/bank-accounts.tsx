@@ -40,8 +40,8 @@ export default function CustomerBankAccountsPage() {
       setIsModalVisible(false);
       form.resetFields();
       dispatch(fetchMyBankAccounts());
-    } catch (error: any) {
-      message.error(error || "Thêm tài khoản thất bại");
+    } catch (error: unknown) {
+      message.error((error as string) || "Thêm tài khoản thất bại");
     } finally {
       setIsSubmitting(false);
     }
@@ -52,8 +52,8 @@ export default function CustomerBankAccountsPage() {
       await dispatch(toggleMyBankAccountStatus(id)).unwrap();
       message.success(`Đã ${checked ? "kích hoạt" : "vô hiệu hóa"} tài khoản`);
       dispatch(fetchMyBankAccounts());
-    } catch (error: any) {
-      message.error(error || "Thay đổi trạng thái thất bại");
+    } catch (error: unknown) {
+      message.error((error as string) || "Thay đổi trạng thái thất bại");
     }
   };
 
@@ -62,8 +62,8 @@ export default function CustomerBankAccountsPage() {
       await dispatch(deleteMyBankAccount(id)).unwrap();
       message.success("Xóa tài khoản thành công");
       dispatch(fetchMyBankAccounts());
-    } catch (error: any) {
-      message.error(error || "Xóa tài khoản thất bại");
+    } catch (error: unknown) {
+      message.error((error as string) || "Xóa tài khoản thất bại");
     }
   };
 

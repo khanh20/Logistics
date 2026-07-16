@@ -394,6 +394,12 @@ public class PlatformOrder
     public bool    HasIssue        { get; private set; }
     public string? IssueNote       { get; private set; }
 
+    // ── Finance / Settlement ──────────────────────────────────────────────────
+    public decimal? ActualPlatformCostCny { get; private set; }
+    public decimal? PlatformShippingFeeCny { get; private set; }
+    public decimal? DiscountAmountCny { get; private set; }
+    public Guid?    PlatformAccountId { get; private set; }
+
     public string? Notes           { get; private set; }
 
     public DateTime  CreatedAt     { get; private set; } = DateTime.UtcNow;
@@ -405,12 +411,21 @@ public class PlatformOrder
 
     /// Manual: NV tự điền mã đơn sàn.
     public static PlatformOrder CreateManual(Guid customerOrderId, Guid staffId,
-                                              string platformOrderId, string? notes = null) =>
+                                              string platformOrderId, 
+                                              decimal? actualPlatformCostCny = null,
+                                              decimal? platformShippingFeeCny = null,
+                                              decimal? discountAmountCny = null,
+                                              Guid? platformAccountId = null,
+                                              string? notes = null) =>
         new()
         {
             CustomerOrderId = customerOrderId,
             CreatedByStaff  = staffId,
             PlatformOrderId = platformOrderId.Trim(),
+            ActualPlatformCostCny = actualPlatformCostCny,
+            PlatformShippingFeeCny = platformShippingFeeCny,
+            DiscountAmountCny = discountAmountCny,
+            PlatformAccountId = platformAccountId,
             Notes           = notes?.Trim(),
         };
 
@@ -435,6 +450,15 @@ public class PlatformOrder
     {
         HasIssue  = true;
         IssueNote = issueNote.Trim();
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateFinancials(decimal costCny, decimal shippingFeeCny, decimal discountCny, Guid accountId)
+    {
+        ActualPlatformCostCny = costCny;
+        PlatformShippingFeeCny = shippingFeeCny;
+        DiscountAmountCny = discountCny;
+        PlatformAccountId = accountId;
         UpdatedAt = DateTime.UtcNow;
     }
 }

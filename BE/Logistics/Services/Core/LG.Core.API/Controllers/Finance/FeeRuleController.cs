@@ -1,5 +1,6 @@
 using LG.Core.ApplicationServices.Finance.DTOs.FeeRule;
 using LG.Core.ApplicationServices.Finance.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -32,6 +33,7 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> Create(CreateFeeRuleDto dto)
         {
             var result = await _feeRuleService.CreateAsync(dto);
@@ -39,6 +41,7 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> Update(Guid id, CreateFeeRuleDto dto)
         {
             var result = await _feeRuleService.UpdateAsync(id, dto);
@@ -47,6 +50,7 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var result = await _feeRuleService.DeleteAsync(id);

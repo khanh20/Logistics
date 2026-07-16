@@ -12,6 +12,7 @@ import {
 } from "react-icons/pi";
 import { Button } from "~/components/ui/Button";
 import { Textarea } from "~/components/ui/Textarea";
+import type { CustomerKycDto } from "~/lib/types/customerProfile";
 
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { ReduxStatus } from "~/lib/feature/const";
@@ -60,7 +61,7 @@ export default function AdminFinanceKycPage() {
   const dispatch = useAppDispatch();
   const { kycs, status } = useAppSelector((state) => state.adminFinanceState);
 
-  const [selectedKyc, setSelectedKyc] = useState<any>(null);
+  const [selectedKyc, setSelectedKyc] = useState<CustomerKycDto | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -78,8 +79,8 @@ export default function AdminFinanceKycPage() {
       await dispatch(approveAdminKyc(id)).unwrap();
       toast.success("Phê duyệt KYC thành công");
       setIsReviewModalOpen(false);
-    } catch (error: any) {
-      toast.error(error || "Lỗi phê duyệt");
+    } catch (error: unknown) {
+      toast.error((error as string) || "Lỗi phê duyệt");
     } finally {
       setActionLoading(false);
     }
@@ -99,8 +100,8 @@ export default function AdminFinanceKycPage() {
       setIsRejectModalOpen(false);
       setIsReviewModalOpen(false);
       setRejectReason("");
-    } catch (error: any) {
-      toast.error(error || "Lỗi từ chối");
+    } catch (error: unknown) {
+      toast.error((error as string) || "Lỗi từ chối");
     } finally {
       setActionLoading(false);
     }
@@ -136,7 +137,7 @@ export default function AdminFinanceKycPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAEAEA]">
-                {kycs.map((record: any) => (
+                {kycs.map((record: CustomerKycDto) => (
                   <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="py-3.5 px-6 text-gray-500">
                       {dayjs(record.createdDate).format("DD/MM/YYYY HH:mm")}
@@ -145,10 +146,10 @@ export default function AdminFinanceKycPage() {
                       {record.fullNameOnId}
                     </td>
                     <td className="py-3.5 px-6">
-                      <CopyableText text={record.idNumber} />
+                      <CopyableText text={record.idNumber || ""} />
                     </td>
                     <td className="py-3.5 px-6">
-                      <StatusBadge status={record.status} />
+                      <StatusBadge status={record.status || ""} />
                     </td>
                     <td className="py-3.5 px-6 text-right">
                       <Button
@@ -227,7 +228,7 @@ export default function AdminFinanceKycPage() {
                   <div className="grid grid-cols-3 py-3 px-4">
                     <span className="text-xs font-mono uppercase text-gray-500">Trạng thái</span>
                     <span className="col-span-2">
-                      <StatusBadge status={selectedKyc.status} />
+                      <StatusBadge status={selectedKyc.status || ""} />
                     </span>
                   </div>
                   {selectedKyc.rejectionReason && (

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using LG.Untils.EnumFinance;
 
 namespace LG.Core.ApplicationServices.Finance.Services
 {
@@ -55,6 +56,13 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
         public async Task<WalletDeductResponse> DeductAsync(WalletDeductRequest request)
         {
+            // === KYC CHECK: Yêu cầu KYC trước khi thanh toán ===
+            var kyc = await _db.CustomerKycs.FirstOrDefaultAsync(k => k.CustomerId == request.CustomerId);
+            if (kyc == null || kyc.Status != KycStatus.Approved)
+            {
+                throw new CoreException(CoreErrorCode.CoreKycRequired, 400);
+            }
+
             var strategy = _db.Database.CreateExecutionStrategy();
             return await strategy.ExecuteAsync(async () =>
             {

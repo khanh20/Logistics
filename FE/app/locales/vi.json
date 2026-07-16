@@ -593,6 +593,7 @@
     "finance_refunds": "Quản lý hoàn tiền",
     "finance_reconcile": "Đối soát nền tảng",
     "finance_fraud": "Phát hiện gian lận",
+    "finance_frozen_wallets": "Ví bị khóa",
     "finance_payment_locks": "Khóa giữ tiền",
     "finance_fee_rules": "Quy tắc tính phí",
     "finance_vip_tiers": "Quản lý hạng VIP",

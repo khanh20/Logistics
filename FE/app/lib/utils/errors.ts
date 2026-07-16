@@ -92,8 +92,8 @@ export function normalizeError(error: unknown): NormalizedError {
   if (error instanceof Error) {
     return {
       status: 0,
-      message: error.message,
-      rawMessage: error.message,
+      message: (error as any).message,
+      rawMessage: (error as any).message,
       stack: error.stack,
     };
   }
@@ -122,7 +122,7 @@ export function getErrorDisplay(
   else if (err.status >= 500) titleKey = "errors.server_title";
 
   // Description: ưu tiên message từ BE (nếu có & là text dễ hiểu), fallback theo i18n
-  const beMessage = err.message?.trim();
+  const beMessage = (err as any).message?.trim();
   const description =
     beMessage && beMessage.length > 0 && beMessage.length < 300
       ? beMessage

@@ -8,6 +8,10 @@ import { WEBHOOK_PROCESSING_STATUS_LABELS } from "~/lib/constants/finance";
 import { WebhookProcessingStatusEnum } from "~/lib/enums/finance";
 import type { BankWebhookLogDto } from "~/lib/types/adminFinance";
 import dayjs from "dayjs";
+import { Pagination } from "~/components/ui/Pagination";
+import { Select } from "~/components/ui/Select";
+import { Input } from "~/components/ui/Input";
+import { Button } from "~/components/ui/Button";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -70,6 +74,9 @@ export default function AdminWebhookLogsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -78,13 +85,30 @@ export default function AdminWebhookLogsPage() {
     dispatch(fetchWebhookLogs());
   }, [dispatch]);
 
-  const totalItems = webhookLogs.length;
+  const filteredLogs = useMemo(() => {
+    return webhookLogs.filter((log) => {
+      // Filter by status
+      if (statusFilter !== "all" && log.processingStatus?.toString() !== statusFilter) {
+        return false;
+      }
+      // Filter by date range
+      if (startDate && dayjs(log.transactionDate).isBefore(dayjs(startDate).startOf("day"))) {
+        return false;
+      }
+      if (endDate && dayjs(log.transactionDate).isAfter(dayjs(endDate).endOf("day"))) {
+        return false;
+      }
+      return true;
+    });
+  }, [webhookLogs, statusFilter, startDate, endDate]);
+
+  const totalItems = filteredLogs.length;
   const totalPages = Math.ceil(totalItems / pageSize);
 
   const paginatedLogs = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return webhookLogs.slice(start, start + pageSize);
-  }, [webhookLogs, currentPage, pageSize]);
+    return filteredLogs.slice(start, start + pageSize);
+  }, [filteredLogs, currentPage, pageSize]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto font-sans">
@@ -119,10 +143,56 @@ export default function AdminWebhookLogsPage() {
         </div>
       )}
 
-      {/* Webhook Logs Table Card */}
-      <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm overflow-hidden">
+      {/* Filters & Table Card */}
+      <div className="bg-white border border-[#EAEAEA] rounded-lg p-6 shadow-sm mb-8">
+        {/* Filter Bar */}
+        <div className="flex flex-wrap gap-3 mb-6 items-end">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Từ ngày</label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Đến ngày</label>
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Trạng thái</label>
+            <Select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="w-48 mb-0"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              {Object.entries(WEBHOOK_PROCESSING_STATUS_LABELS).map(([val, label]) => (
+                <option key={val} value={val}>{label}</option>
+              ))}
+            </Select>
+          </div>
+          {(startDate || endDate || statusFilter !== "all") && (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+                setStatusFilter("all");
+                setCurrentPage(1);
+              }}
+            >
+              Xóa bộ lọc
+            </Button>
+          )}
+        </div>
+
         {loading && webhookLogs.length === 0 ? (
-          <div className="flex justify-center items-center py-20">
+          <div className="flex justify-center items-center py-10">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
           </div>
         ) : (
@@ -132,11 +202,12 @@ export default function AdminWebhookLogsPage() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-[#EAEAEA]">
                     <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6 w-40">Thời gian</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6 w-36">Trạng thái xử lý</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Mã GD Ứng dụng</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Tham chiếu Ngân hàng</th>
                     <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Số tiền (VND)</th>
                     <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Nội dung CK</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Tham chiếu NH</th>
                     <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Topup ID đã khớp</th>
+                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6 w-36">Trạng thái xử lý</th>
                     <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6 text-center w-28">Payload</th>
                   </tr>
                 </thead>
@@ -146,8 +217,11 @@ export default function AdminWebhookLogsPage() {
                       <td className="py-3.5 px-6 font-mono text-xs whitespace-nowrap">
                         {dayjs(record.transactionDate).format("DD/MM/YYYY HH:mm:ss")}
                       </td>
-                      <td className="py-3.5 px-6">
-                        <StatusBadge status={record.processingStatus} />
+                      <td className="py-3.5 px-6 font-mono text-xs text-gray-500">
+                        {record.idempotencyKey || "—"}
+                      </td>
+                      <td className="py-3.5 px-6 font-mono text-xs text-gray-500">
+                        {record.bankRef || "—"}
                       </td>
                       <td className="py-3.5 px-6 font-mono font-semibold text-green-700">
                         {record.amountVnd ? `+${record.amountVnd.toLocaleString()} ₫` : "—"}
@@ -155,15 +229,15 @@ export default function AdminWebhookLogsPage() {
                       <td className="py-3.5 px-6 text-gray-600 max-w-xs truncate" title={record.transferContent}>
                         {record.transferContent || "—"}
                       </td>
-                      <td className="py-3.5 px-6 font-mono text-xs text-gray-500">
-                        {record.bankRef || "—"}
-                      </td>
                       <td className="py-3.5 px-6">
                         {record.matchedTopupId ? (
                           <CopyableText text={record.matchedTopupId} />
                         ) : (
                           <span className="text-gray-400">—</span>
                         )}
+                      </td>
+                      <td className="py-3.5 px-6">
+                        <StatusBadge status={record.processingStatus} />
                       </td>
                       <td className="py-3.5 px-6 text-center">
                         <button
@@ -186,30 +260,14 @@ export default function AdminWebhookLogsPage() {
               </table>
             </div>
 
-            {/* Custom Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} log phản hồi
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="log phản hồi"
+            />
           </>
         )}
       </div>

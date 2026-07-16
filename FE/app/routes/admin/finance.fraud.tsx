@@ -16,6 +16,7 @@ import dayjs from "dayjs";
 import { Button } from "~/components/ui/Button";
 import { Select } from "~/components/ui/Select";
 import { Textarea } from "~/components/ui/Textarea";
+import { Pagination } from "~/components/ui/Pagination";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -109,8 +110,8 @@ export default function AdminFraudPage() {
       setIsModalVisible(false);
       dispatch(fetchFraudCases());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (err: any) {
-      setErrorMessage(err || "Có lỗi xảy ra");
+    } catch (err: unknown) {
+      setErrorMessage((err as string) || "Có lỗi xảy ra");
     }
   };
 
@@ -142,6 +143,15 @@ export default function AdminFraudPage() {
           <PiArrowClockwiseBold className={loading ? "animate-spin" : ""} />
           Làm mới
         </Button>
+      </div>
+
+      {/* AI Fallback Warning */}
+      <div className="mb-6 p-4 text-sm rounded-lg bg-amber-50 border border-amber-200 text-amber-800 flex items-start gap-3">
+        <PiWarningBold className="text-lg shrink-0 mt-0.5" />
+        <div>
+          <p className="font-semibold mb-1">Chế độ dự phòng (Heuristic Fallback)</p>
+          <p>Dịch vụ AI phân tích gian lận hiện không khả dụng. Hệ thống đang tự động sử dụng các quy tắc đánh giá cơ bản (Heuristics) để phát hiện rủi ro.</p>
+        </div>
       </div>
 
       {/* Alert Messages */}
@@ -223,30 +233,14 @@ export default function AdminFraudPage() {
               </table>
             </div>
 
-            {/* Custom Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} sự vụ
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="sự vụ"
+            />
           </>
         )}
       </div>
