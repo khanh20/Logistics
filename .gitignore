@@ -26,6 +26,7 @@ Thumbs.db
 /BE/Logistics/Services/Core/LG.Core.API/.env
 note.txt
 /Note.md
+/Manual.md
 
 # Dataset sinh từ seeder (tái lập được bằng --seed, không commit)
 /BE/Logistics/Services/Module2/LG.Module2.Seeder/data/
