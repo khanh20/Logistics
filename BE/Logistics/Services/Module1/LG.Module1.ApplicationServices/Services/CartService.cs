@@ -170,14 +170,17 @@ public class CartService(
         var totalSubtotalVnd = groups.Sum(g => g.SubtotalVnd);
 
         // Gọi Core API để tính toán phí thực tế từ FeeRule
-        var feeCalc = await walletService.CalculateCheckoutFeesAsync(customerId, totalSubtotalVnd, req.InsuranceOption, ct);
+        var feeCalc = await walletService.CalculateCheckoutFeesAsync(customerId, totalSubtotalVnd, req.InsuranceOption, req.ShippingLine, ct);
         var serviceFeeVnd = feeCalc.ServiceFeeVnd;
         var inspectionFeeVnd = feeCalc.InspectionFeeVnd;
         var insuranceFeeVnd = feeCalc.InsuranceFeeVnd;
+        var importEntrustmentFeeVnd = feeCalc.ImportEntrustmentFeeVnd;
+        var importVatVnd = feeCalc.ImportVatVnd;
+        var importDutyVnd = feeCalc.ImportDutyVnd;
 
         const decimal shippingFeeVnd = 0m; // Phí ship quốc tế ước tính lúc này tạm để 0 (sẽ tính sau khi có cân nặng thực tế)
         
-        var totalVnd = totalSubtotalVnd + serviceFeeVnd + inspectionFeeVnd + insuranceFeeVnd + shippingFeeVnd;
+        var totalVnd = totalSubtotalVnd + serviceFeeVnd + inspectionFeeVnd + insuranceFeeVnd + importEntrustmentFeeVnd + importVatVnd + importDutyVnd + shippingFeeVnd;
         var depositVnd = Math.Round(totalVnd * depositCfg.DepositPct, 0);
         var remainingVnd = totalVnd - depositVnd;
 
@@ -194,13 +197,18 @@ public class CartService(
             ServiceFeeVnd:           serviceFeeVnd,
             InspectionFeeVnd:        inspectionFeeVnd,
             InsuranceFeeVnd:         insuranceFeeVnd,
+            ImportEntrustmentFeeVnd: importEntrustmentFeeVnd,
+            ImportVatVnd:            importVatVnd,
+            ImportDutyVnd:           importDutyVnd,
             EstimatedShippingFeeVnd: shippingFeeVnd,
             TotalVnd:                totalVnd,
             DepositVnd:              depositVnd,
             RemainingPaymentVnd:     remainingVnd,
             WalletBalanceSufficient: isSufficient,
             WalletBalanceVnd:        walletBalance,
-            WalletShortageVnd:       shortageVnd
+            WalletShortageVnd:       shortageVnd,
+            ServiceFeeDiscountVnd:   feeCalc.ServiceFeeDiscountVnd,
+            InspectionFeeDiscountVnd: feeCalc.InspectionFeeDiscountVnd
         );
     }
 
@@ -219,16 +227,77 @@ public class CartService(
 
             var (rate, depositCfg) = await LoadRateAndDepositAsync(innerCt);
 
-            var createdOrderIds = new List<string>();
-            DateTime?  firstDeadline = null;
+            // ── 1. Tính tổng subtotalVnd chung cho toàn bộ checkout ──────────────
+            var shopGroups = items.GroupBy(i => i.ShopId).ToList();
+            var shopSubtotals = new Dictionary<Guid, decimal>();
 
-            foreach (var shopGroup in items.GroupBy(i => i.ShopId))
+            foreach (var sg in shopGroups)
+            {
+                var subtotalCny = sg.Sum(ci => ci.Quantity * ci.PriceCnySnapshot);
+                shopSubtotals[sg.Key] = Math.Round(subtotalCny * rate.RateVndPerCny, 0);
+            }
+
+            var totalSubtotalVnd = shopSubtotals.Values.Sum();
+
+            // ── 2. Gọi CalculateCheckoutFeesAsync MỘT LẦN DUY NHẤT ──────────────
+            var feeCalc = await walletService.CalculateCheckoutFeesAsync(
+                customerId, totalSubtotalVnd, req.InsuranceOption, req.ShippingLine, innerCt);
+
+            // ── 3. Phân bổ (prorate) phí cho từng shop theo tỉ trọng ─────────────
+            var shopCount = shopGroups.Count;
+            var allocatedFees = new Dictionary<Guid, (decimal service, decimal inspection, decimal insurance, 
+                                                      decimal importEntrustment, decimal importVat, decimal importDuty)>();
+            decimal sumService = 0, sumInspection = 0, sumInsurance = 0, 
+                    sumImportEntrustment = 0, sumImportVat = 0, sumImportDuty = 0;
+
+            for (int i = 0; i < shopGroups.Count; i++)
+            {
+                var shopId = shopGroups[i].Key;
+                var shopVnd = shopSubtotals[shopId];
+
+                if (i < shopGroups.Count - 1)
+                {
+                    // Tính tỉ lệ phí theo tỉ trọng giá trị shop
+                    var ratio = totalSubtotalVnd > 0 ? shopVnd / totalSubtotalVnd : 1m / shopCount;
+                    var svc  = Math.Round(feeCalc.ServiceFeeVnd * ratio, 0);
+                    var insp = Math.Round(feeCalc.InspectionFeeVnd * ratio, 0);
+                    var ins  = Math.Round(feeCalc.InsuranceFeeVnd * ratio, 0);
+                    var ie   = Math.Round(feeCalc.ImportEntrustmentFeeVnd * ratio, 0);
+                    var iv   = Math.Round(feeCalc.ImportVatVnd * ratio, 0);
+                    var id   = Math.Round(feeCalc.ImportDutyVnd * ratio, 0);
+
+                    allocatedFees[shopId] = (svc, insp, ins, ie, iv, id);
+                    sumService += svc; sumInspection += insp; sumInsurance += ins;
+                    sumImportEntrustment += ie; sumImportVat += iv; sumImportDuty += id;
+                }
+                else
+                {
+                    // Đơn cuối cùng: gán phần DƯ rounding để tổng khớp chính xác
+                    allocatedFees[shopId] = (
+                        feeCalc.ServiceFeeVnd - sumService,
+                        feeCalc.InspectionFeeVnd - sumInspection,
+                        feeCalc.InsuranceFeeVnd - sumInsurance,
+                        feeCalc.ImportEntrustmentFeeVnd - sumImportEntrustment,
+                        feeCalc.ImportVatVnd - sumImportVat,
+                        feeCalc.ImportDutyVnd - sumImportDuty
+                    );
+                }
+            }
+
+            // ── 4. Tạo đơn hàng cho từng shop với phí đã phân bổ ─────────────────
+            var createdOrderIds = new List<string>();
+            DateTime? firstDeadline = null;
+
+            foreach (var shopGroup in shopGroups)
             {
                 var shop = await shopRepo.GetByIdAsync(shopGroup.Key, innerCt)
                            ?? throw new ProductNotFoundException($"Shop {shopGroup.Key}");
 
                 if (shop.IsBlacklisted)
                     throw new BlacklistedShopException(shop.ShopName);
+
+                if (!Enum.TryParse<ShippingLine>(req.ShippingLine, true, out var parsedShippingLine))
+                    parsedShippingLine = ShippingLine.Tmdt;
 
                 var order = CustomerOrder.Create(
                     customerId:          customerId,
@@ -239,6 +308,7 @@ public class CartService(
                     placementMode:       shop.IntegrationMode == ShopIntegrationMode.ShopifyAuto
                                              ? PlacementMode.AutoApi
                                              : PlacementMode.Manual,
+                    shippingLine:        parsedShippingLine,
                     deliveryAddressNote: req.DeliveryAddressNote,
                     customerNote:        req.CustomerNote
                 );
@@ -255,11 +325,9 @@ public class CartService(
                     );
                 }
 
-                var subtotalCny = shopGroup.Sum(ci => ci.Quantity * ci.PriceCnySnapshot);
-                var subtotalVnd = Math.Round(subtotalCny * rate.RateVndPerCny, 0);
-
-                var feeCalc = await walletService.CalculateCheckoutFeesAsync(customerId, subtotalVnd, req.InsuranceOption, innerCt);
-                order.CalculateDeposit(feeCalc.ServiceFeeVnd, feeCalc.InspectionFeeVnd, feeCalc.InsuranceFeeVnd);
+                var fees = allocatedFees[shopGroup.Key];
+                order.CalculateDeposit(fees.service, fees.inspection, fees.insurance,
+                                       fees.importEntrustment, fees.importVat, fees.importDuty);
 
                 await orderRepo.AddAsync(order, innerCt);
 
@@ -267,8 +335,8 @@ public class CartService(
                 firstDeadline ??= order.PaymentDeadline;
 
                 logger.LogInformation(
-                    "CustomerOrder {OrderCode} created for customer {CustomerId}, shop {ShopName}",
-                    order.OrderCode, customerId, shop.ShopName);
+                    "CustomerOrder {OrderCode} created for customer {CustomerId}, shop {ShopName}. Fees: svc={Svc}, insp={Insp}, ins={Ins}",
+                    order.OrderCode, customerId, shop.ShopName, fees.service, fees.inspection, fees.insurance);
             }
 
             // Xóa item đã checkout hoặc mark cart Converted nếu checkout toàn bộ

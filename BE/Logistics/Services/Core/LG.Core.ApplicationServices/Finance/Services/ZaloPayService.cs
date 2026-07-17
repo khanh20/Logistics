@@ -29,6 +29,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
         private readonly ZaloPayConfig _config;
         private readonly CoreDbContext _db;
         private readonly IEmailNotificationService _emailNotificationService;
+        private readonly IFraudDetectionService _fraudService;
 
         public ZaloPayService(
             HttpClient httpClient, 
@@ -36,6 +37,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
             IConfiguration configuration, 
             CoreDbContext db, 
             IEmailNotificationService emailNotificationService,
+            IFraudDetectionService fraudService,
             LocalizationBase localization,
             IMapper mapper,
             ILogger<ZaloPayService> logger) : base(logger, httpContext, db, localization, mapper)
@@ -43,6 +45,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
             _httpClient = httpClient;
             _db = db;
             _emailNotificationService = emailNotificationService;
+            _fraudService = fraudService;
             _config = configuration.GetSection("ZaloPay").Get<ZaloPayConfig>()
                       ?? throw new InvalidOperationException("Chưa cấu hình ZaloPay trong appsettings.json");
         }
@@ -133,6 +136,19 @@ namespace LG.Core.ApplicationServices.Finance.Services
         public async Task<bool> ProcessCallbackAsync(ZaloPayCallbackDto callback)
         {
             _logger.LogInformation("Bắt đầu xử lý ZaloPay callback...");
+            
+            var systemBank = await _db.BankAccounts.FirstOrDefaultAsync(b => b.WebhookService == WebhookServiceEnum.ZaloPay);
+            
+            // Khởi tạo đối tượng log để lưu vết
+            var log = new BankWebhookLog
+            {
+                BankAccountId = systemBank?.Id ?? Guid.Empty,
+                RawPayload = callback.Data ?? "",
+                IdempotencyKey = "", // Sẽ cập nhật sau khi parse
+                CreatedDate = DateTime.UtcNow,
+                ProcessingStatus = WebhookProcessingStatusEnum.Pending
+            };
+
             // 1. Xác thực chữ ký bằng Key2
             _logger.LogInformation("ZaloPay callback data to hash: {Data}", callback.Data);
             var expectedMac = HmacSha256(_config.Key2, callback.Data);
@@ -141,6 +157,11 @@ namespace LG.Core.ApplicationServices.Finance.Services
             if (expectedMac != callback.Mac)
             {
                 _logger.LogWarning("ZaloPay callback: Chữ ký không hợp lệ! Expected: {Exp}, Received: {Rec}", expectedMac, callback.Mac);
+                log.ProcessingStatus = WebhookProcessingStatusEnum.Failed;
+                log.TransferContent = "Xác thực chữ ký thất bại";
+                log.ProcessedAt = DateTime.UtcNow;
+                _db.BankWebhookLogs.Add(log);
+                await _db.SaveChangesAsync();
                 return false;
             }
 
@@ -155,10 +176,29 @@ namespace LG.Core.ApplicationServices.Finance.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "ZaloPay callback: Lỗi parse data JSON");
+                log.ProcessingStatus = WebhookProcessingStatusEnum.Error;
+                log.TransferContent = $"Lỗi parse data JSON: {ex.Message}";
+                log.ProcessedAt = DateTime.UtcNow;
+                _db.BankWebhookLogs.Add(log);
+                await _db.SaveChangesAsync();
                 return false;
             }
 
-            if (callbackData == null) return false;
+            if (callbackData == null)
+            {
+                log.ProcessingStatus = WebhookProcessingStatusEnum.Error;
+                log.TransferContent = "Dữ liệu callback (data) rỗng";
+                log.ProcessedAt = DateTime.UtcNow;
+                _db.BankWebhookLogs.Add(log);
+                await _db.SaveChangesAsync();
+                return false;
+            }
+
+            // Cập nhật thông tin giao dịch nhận từ ZaloPay
+            log.IdempotencyKey = callbackData.AppTransId ?? "";
+            log.BankRef = callbackData.ZpTransId.ToString();
+            log.AmountVnd = callbackData.Amount;
+            log.TransactionDate = DateTimeOffset.FromUnixTimeMilliseconds(callbackData.ServerTime).UtcDateTime;
 
             // 3. Parse embed_data để biết loại thanh toán
             ZaloPayEmbedData? embedData;
@@ -170,23 +210,61 @@ namespace LG.Core.ApplicationServices.Finance.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "ZaloPay callback: Lỗi parse embed_data JSON");
+                log.ProcessingStatus = WebhookProcessingStatusEnum.Error;
+                log.TransferContent = $"Lỗi parse embed_data JSON: {ex.Message}";
+                log.ProcessedAt = DateTime.UtcNow;
+                _db.BankWebhookLogs.Add(log);
+                await _db.SaveChangesAsync();
                 return false;
             }
 
-            if (embedData == null) return false;
+            if (embedData == null)
+            {
+                log.ProcessingStatus = WebhookProcessingStatusEnum.Error;
+                log.TransferContent = "Dữ liệu embed_data rỗng";
+                log.ProcessedAt = DateTime.UtcNow;
+                _db.BankWebhookLogs.Add(log);
+                await _db.SaveChangesAsync();
+                return false;
+            }
+
+            log.TransferContent = $"ZaloPay PaymentType: {embedData.PaymentType} | RefId: {embedData.ReferenceId}";
+            if (Guid.TryParse(embedData.ReferenceId, out var refGuid))
+            {
+                log.MatchedTopupId = refGuid;
+            }
 
             // 4. Định tuyến xử lý theo PaymentType
+            bool success = false;
             if (embedData.PaymentType == "TOPUP")
             {
-                return await ProcessTopupCallbackInternalAsync(callbackData, embedData);
+                success = await ProcessTopupCallbackInternalAsync(callbackData, embedData);
             }
             else if (embedData.PaymentType == "ORDER")
             {
-                return await ProcessOrderCallbackInternalAsync(callbackData, embedData);
+                success = await ProcessOrderCallbackInternalAsync(callbackData, embedData);
+            }
+            else
+            {
+                _logger.LogWarning("ZaloPay callback: Loại thanh toán không xác định: {Type}", embedData.PaymentType);
+                log.ProcessingStatus = WebhookProcessingStatusEnum.Ignored;
             }
 
-            _logger.LogWarning("ZaloPay callback: Loại thanh toán không xác định: {Type}", embedData.PaymentType);
-            return true;
+            // Cập nhật trạng thái xử lý cuối cùng của Log
+            if (success)
+            {
+                log.ProcessingStatus = WebhookProcessingStatusEnum.Matched;
+            }
+            else if (log.ProcessingStatus == WebhookProcessingStatusEnum.Pending)
+            {
+                log.ProcessingStatus = WebhookProcessingStatusEnum.Unmatched;
+            }
+
+            log.ProcessedAt = DateTime.UtcNow;
+            _db.BankWebhookLogs.Add(log);
+            await _db.SaveChangesAsync();
+
+            return success;
         }
 
         private async Task<bool> ProcessTopupCallbackInternalAsync(ZaloPayCallbackData callbackData, ZaloPayEmbedData embedData)
@@ -208,6 +286,31 @@ namespace LG.Core.ApplicationServices.Finance.Services
                 {
                     var wallet = await _db.Wallets.FindAsync(topup.WalletId);
                     if (wallet == null) return false;
+
+                    // AI Fraud Evaluation
+                    var fraudResult = await _fraudService.EvaluateTransactionAsync(
+                        wallet.CustomerId, 
+                        topup.AmountVnd, 
+                        "TOPUP_ZALOPAY", 
+                        $"Nạp {topup.AmountVnd} VND qua ZaloPay."
+                    );
+
+                    if (fraudResult.IsFraud)
+                    {
+                        _logger.LogWarning($"Phát hiện gian lận nạp tiền: {fraudResult.Reason}");
+                        
+                        var fraudRecord = new FraudDetection
+                        {
+                            WalletId = wallet.Id,
+                            CustomerId = wallet.CustomerId,
+                            RiskScore = fraudResult.RiskScore,
+                            EvidenceJson = fraudResult.Reason,
+                            Action = FraudActionEnum.FreezeWallet,
+                            Status = FraudStatusEnum.Open,
+                            CreatedDate = DateTime.UtcNow
+                        };
+                        await _db.FraudDetections.AddAsync(fraudRecord);
+                    }
 
                     var balanceBefore = wallet.AvailableBalance;
                     wallet.AvailableBalance += topup.AmountVnd;

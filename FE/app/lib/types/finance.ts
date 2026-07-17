@@ -16,6 +16,19 @@ export interface WalletDto {
   createdDate?: string;
 }
 
+export interface FrozenWalletDto {
+  walletId: string;
+  customerId: string;
+  customerName: string;
+  availableBalance: number;
+  frozenBalance: number;
+  riskScore: number;
+  isFrozen: boolean;
+  ignoreFraudDetection: boolean;
+  reason: string;
+  frozenDate: string;
+}
+
 export interface TopupResponseDto {
   id: string;
   walletId: string;
@@ -57,12 +70,13 @@ export interface PaymentLockDto {
   id: string;
   walletId: string;
   orderId: string;
-  type: PaymentLockTypeEnum;
-  amount: number;
+  lockType: PaymentLockTypeEnum;
+  lockedAmountVnd: number;
   status: PaymentLockStatusEnum;
   expiresAt: string;
   releasedAt?: string;
   releaseReason?: ReleaseReasonEnum;
+  createdDate?: string;
 }
 
 export interface ReleasePaymentLockDto {
@@ -80,5 +94,27 @@ export interface WalletTransactionDto {
   referenceType: string;
   referenceId: string;
   note?: string;
+  createdDate?: string;
+}
+
+export interface DailyRevenueReport {
+  id: string;
+  reportDate: string;
+  serviceFeeRevenueVnd: number;
+  shipFeeRevenueVnd: number;
+  inspectionFeeRevenueVnd: number;
+  penaltyRevenueVnd: number;
+  insuranceFeeRevenueVnd: number;
+  entrustmentFeeRevenueVnd: number;
+  vatFeeRevenueVnd: number;
+  dutyFeeRevenueVnd: number;
+  totalCollectedOnBehalfVnd: number;
+  totalRevenueVnd: number;
+  totalOrdersCompleted: number;
+  totalCnyPurchased: number;
+  totalVndCollected: number;
+  exchangeRateAvg?: number;
+  exchangeProfitLossVnd?: number;
+  generatedAt: string;
   createdDate?: string;
 }

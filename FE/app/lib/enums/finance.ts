@@ -18,12 +18,12 @@ export enum WebhookServiceEnum {
 }
 
 export enum WebhookProcessingStatusEnum {
-  Pending = "Pending",
-  Matched = "Matched",
-  Unmatched = "Unmatched",
-  Error = "Error",
-  Ignored = "Ignored",
-  Failed = "Failed",
+  Pending = 0,
+  Matched = 1,
+  Unmatched = 2,
+  Error = 3,
+  Ignored = 4,
+  Failed = 5,
 }
 
 // ── Transaction ──────────────────────────────────────────────────
@@ -73,8 +73,8 @@ export enum PaymentLockStatusEnum {
 }
 
 export enum PaymentLockTypeEnum {
-  Deposit = "Deposit",
-  FinalPayment = "FinalPayment",
+  Deposit = 0,
+  FinalPayment = 1,
 }
 
 export enum ReleaseReasonEnum {

@@ -8,7 +8,9 @@ namespace LG.Module2.API.Controllers;
 
 // ── Package (Staff/Admin) ─────────────────────────────────────────────────────
 [Route("api/packages")]
-public class PackagesController(IPackageService packageService) : Module2BaseController
+public class PackagesController(
+    IPackageService packageService,
+    IFeeCalculationService feeService) : Module2BaseController
 {
     // POST /api/packages
     [HttpPost]
@@ -54,6 +56,24 @@ public class PackagesController(IPackageService packageService) : Module2BaseCon
         var result = await packageService.UploadImageAsync(CurrentUserId, req with { PackageId = id }, ct);
         return Ok(ApiResponse<object>.Ok(result, "Tải ảnh thành công."));
     }
+
+    // POST /api/packages/{id}/calculate-fee   UC-2.07
+    [HttpPost("{id:guid}/calculate-fee")]
+    [Authorize(Policy = Permissions.WarehouseManage)]
+    public async Task<IActionResult> CalculateFee(Guid id, [FromBody] CalculateFeeRequest req, CancellationToken ct)
+    {
+        var result = await feeService.CalculateAsync(id, req, ct);
+        return Ok(ApiResponse<object>.Ok(result, "Tính cước quốc tế thành công."));
+    }
+
+    // GET /api/packages/{id}/fee
+    [HttpGet("{id:guid}/fee")]
+    [Authorize(Policy = Permissions.WarehouseRead)]
+    public async Task<IActionResult> GetFee(Guid id, CancellationToken ct)
+    {
+        var result = await feeService.GetFeeAsync(id, ct);
+        return Ok(ApiResponse<object>.Ok(result));
+    }
 }
 
 // ── Package tracking (Customer) ───────────────────────────────────────────────
@@ -69,12 +89,12 @@ public class MyPackagesController(IPackageService packageService) : Module2BaseC
         return Ok(ApiResponse<object>.Ok(list));
     }
 
-    // GET /api/my/packages/{id}/tracking
+    // GET /api/my/packages/{id}/tracking  (chỉ kiện của chính khách — khác chủ → 404)
     [HttpGet("{id:guid}/tracking")]
     [Authorize(Policy = Permissions.OrderRead)]
     public async Task<IActionResult> GetTracking(Guid id, CancellationToken ct)
     {
-        var events = await packageService.GetTrackingAsync(id, ct);
+        var events = await packageService.GetTrackingForCustomerAsync(CurrentUserId, id, ct);
         return Ok(ApiResponse<object>.Ok(events));
     }
 }

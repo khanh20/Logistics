@@ -1,4 +1,9 @@
+using LG.Module2.ApplicationServices.DTOs.AI;
+using LG.Module2.ApplicationServices.DTOs.Carrier;
+using LG.Module2.ApplicationServices.DTOs.Claim;
 using LG.Module2.ApplicationServices.DTOs.Container;
+using LG.Module2.ApplicationServices.DTOs.Customs;
+using LG.Module2.ApplicationServices.DTOs.Delivery;
 using LG.Module2.ApplicationServices.DTOs.Package;
 using LG.Module2.ApplicationServices.DTOs.Sack;
 using LG.Module2.ApplicationServices.DTOs.Warehouse;
@@ -18,6 +23,13 @@ public interface INotificationService
 {
     Task SendPackageArrivedVnAsync(Guid customerId, string barcode, string orderCode, CancellationToken ct = default);
     Task SendWeightVarianceAlertAsync(Guid staffId, string barcode, decimal variancePct, CancellationToken ct = default);
+    Task SendCustomsHeldAlertAsync(Guid customerId, string barcode, string reason, CancellationToken ct = default);
+    Task SendOutForDeliveryAsync(Guid customerId, string trackingNo, string carrierName, CancellationToken ct = default);
+    Task SendDeliveredAsync(Guid customerId, string trackingNo, CancellationToken ct = default);
+    Task SendDeliveryFailedAlertAsync(string trackingNo, int attemptCount, string? reason, CancellationToken ct = default);
+    Task SendClaimResolvedAsync(Guid customerId, string claimType, string outcome, CancellationToken ct = default);
+    Task SendRefundIssuedAsync(Guid customerId, decimal amountVnd, string reason, CancellationToken ct = default);
+    Task SendBorderAlertAsync(Guid customerId, string borderName, string severity, int? estimatedDelayDays, CancellationToken ct = default);
 }
 
 // ── IWarehouseService ─────────────────────────────────────────────────────────
@@ -60,6 +72,143 @@ public interface IContainerService
     Task<TripDetailResponse>        ArriveVietnamAsync(Guid tripId, ArriveVietnamRequest req, CancellationToken ct = default);
 }
 
+// ── ICustomsService (UC-2.05) ─────────────────────────────────────────────────
+public interface ICustomsService
+{
+    Task<CustomsClearanceResponse>        CreateAsync(CreateCustomsClearanceRequest req, CancellationToken ct = default);
+    Task<CustomsClearanceResponse>        GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<CustomsClearanceResponse?>       GetByTripAsync(Guid containerTripId, CancellationToken ct = default);
+    Task<List<CustomsClearanceResponse>>  GetByStatusAsync(CustomsClearanceStatus status, CancellationToken ct = default);
+    Task<CustomsClearanceResponse>        UpdateStatusAsync(Guid id, UpdateCustomsClearanceRequest req, CancellationToken ct = default);
+}
+
+// ── IFeeCalculationService (UC-2.07) ──────────────────────────────────────────
+public interface IFeeCalculationService
+{
+    Task<PackageFeeResponse> CalculateAsync(Guid packageId, CalculateFeeRequest req, CancellationToken ct = default);
+    Task<PackageFeeResponse> GetFeeAsync(Guid packageId, CancellationToken ct = default);
+}
+
+// ── ICarrierGateway (tích hợp carrier nội địa) ────────────────────────────────
+public interface ICarrierGateway
+{
+    /// Carrier xử lý được không (theo tên). `IsFallback` = true cho gateway mặc định (stub).
+    bool Supports(string carrierName);
+    bool IsFallback { get; }
+
+    /// Báo giá phí ship nội địa + phí bảo hiểm.
+    Task<CarrierQuote> QuoteAsync(CarrierShipmentContext ctx, CancellationToken ct = default);
+
+    /// Tạo vận đơn bên carrier, trả về mã tracking + phí carrier báo về.
+    Task<CarrierWaybillResult> CreateWaybillAsync(CarrierShipmentContext ctx, CancellationToken ct = default);
+
+    /// Huỷ vận đơn bên carrier. false = carrier từ chối huỷ (đơn đã được lấy/đang giao).
+    Task<bool> CancelWaybillAsync(string trackingNo, CancellationToken ct = default);
+
+    /// Huỷ đơn theo mã đơn phía mình (compensation khi tạo đơn fail mà chưa có label).
+    Task<bool> CancelByPartnerCodeAsync(string partnerOrderCode, CancellationToken ct = default);
+
+    /// Tra cứu trạng thái vận đơn chủ động (đối soát khi webhook miss). null = carrier không hỗ trợ/tra không được.
+    Task<CarrierWaybillStatus?> GetWaybillStatusAsync(string trackingNo, CancellationToken ct = default);
+
+    /// Map mã trạng thái raw của carrier → enum nội bộ.
+    DomesticWaybillStatus MapStatus(string rawStatus);
+
+    /// Xác thực webhook (HMAC hoặc token tuỳ carrier).
+    bool VerifySignature(string? secret, CarrierWebhookRequest payload);
+}
+
+/// Chọn gateway phù hợp theo tên carrier (GHTK → GHTK thật, còn lại → stub).
+public interface ICarrierGatewayResolver
+{
+    ICarrierGateway Resolve(string carrierName);
+}
+
+/// Token JWT của request hiện tại — forward sang Core khi gọi API [Authorize] theo user.
+/// Implement ở API project (HttpUserTokenAccessor, dùng IHttpContextAccessor).
+public interface IUserTokenAccessor
+{
+    string? BearerToken { get; }
+}
+
+// ── ICustomerAddressService (sổ địa chỉ khách — Core Finance) ─────────────────
+public interface ICustomerAddressService
+{
+    /// Địa chỉ trong sổ của khách hiện tại (Core lọc theo JWT forward — không lộ sổ người khác).
+    /// null = không tồn tại / không thuộc khách / đã ngừng dùng.
+    Task<CustomerAddressInfo?> GetMyAddressAsync(Guid addressId, CancellationToken ct = default);
+}
+
+// ── IWalletService (ví khách — gọi Core Finance, cùng pattern Module1) ────────
+public interface IWalletService
+{
+    /// Trừ ví khách. Thiếu số dư / ví đóng băng / Core lỗi → WalletOperationFailedException (422).
+    Task DeductAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId,
+                     string note, CancellationToken ct = default);
+
+    /// Hoàn tiền về ví khách.
+    Task RefundAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId,
+                     string note, CancellationToken ct = default);
+}
+
+// ── IDeliveryService (UC-2.08) ────────────────────────────────────────────────
+public interface IDeliveryService
+{
+    Task<DeliveryRequestResponse>       CreateAsync(Guid customerId, CreateDeliveryRequest req, CancellationToken ct = default);
+    Task<DeliveryRequestResponse>       GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<DeliveryRequestResponse>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default);
+    Task<DeliveryRequestResponse>       CancelAsync(Guid id, Guid customerId, CancellationToken ct = default);
+}
+
+// ── ITrackingService (UC-2.09 — webhook carrier) ──────────────────────────────
+public interface ITrackingService
+{
+    Task<WebhookResult> ProcessWebhookAsync(string carrierName, CarrierWebhookRequest req, CancellationToken ct = default);
+
+    /// Đối soát chủ động: query trạng thái từ carrier rồi áp dụng như webhook (GHTK chỉ retry webhook 1 lần).
+    Task<WebhookResult> SyncWaybillAsync(string trackingNo, CancellationToken ct = default);
+}
+
+// ── IClaimService (UC-2.10 — khiếu nại & bảo hiểm) ────────────────────────────
+public interface IClaimService
+{
+    // MissingClaim
+    Task<MissingClaimResponse>       CreateMissingClaimAsync(Guid customerId, CreateMissingClaimRequest req, CancellationToken ct = default);
+    /// `requesterCustomerId` != null → chỉ trả claim của đúng khách đó (khác chủ → 404, không lộ tồn tại).
+    Task<MissingClaimResponse>       GetMissingClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default);
+    Task<List<MissingClaimResponse>> GetMyMissingClaimsAsync(Guid customerId, CancellationToken ct = default);
+    Task<List<MissingClaimResponse>> GetMissingClaimsByStatusAsync(MissingClaimStatus status, CancellationToken ct = default);
+    Task<MissingClaimResponse>       InvestigateMissingClaimAsync(Guid id, InvestigateClaimRequest req, CancellationToken ct = default);
+    Task<MissingClaimResponse>       ResolveMissingClaimAsync(Guid id, ResolveMissingClaimRequest req, CancellationToken ct = default);
+    Task<MissingClaimResponse>       RejectMissingClaimAsync(Guid id, RejectClaimRequest req, CancellationToken ct = default);
+
+    // InsuranceClaim
+    Task<InsuranceClaimResponse>     CreateInsuranceClaimAsync(CreateInsuranceClaimRequest req, CancellationToken ct = default);
+    /// `requesterCustomerId` != null → chỉ trả claim có kiện thuộc đúng khách đó (khác chủ → 404).
+    Task<InsuranceClaimResponse>     GetInsuranceClaimAsync(Guid id, Guid? requesterCustomerId = null, CancellationToken ct = default);
+    Task<List<InsuranceClaimResponse>> GetMyInsuranceClaimsAsync(Guid customerId, CancellationToken ct = default);
+    Task<InsuranceClaimResponse>     UpdateInsuranceClaimAsync(Guid id, UpdateInsuranceClaimRequest req, CancellationToken ct = default);
+    Task<InsuranceClaimResponse>     PayInsuranceClaimAsync(Guid id, CancellationToken ct = default);
+}
+
+// ── IAIForecastService (Phase 8 — stub, sẽ thay ruột bằng ML.NET/LLM sau) ─────
+public interface IAIForecastService
+{
+    /// Dự báo lead time TQ→VN theo heuristic (baseline cửa khẩu + mùa + cảnh báo tắc biên đang active).
+    Task<TransitForecastResponse> ForecastTransitAsync(TransitForecastRequest req, CancellationToken ct = default);
+    Task<List<TransitForecastResponse>> GetRecentForecastsAsync(int limit = 20, CancellationToken ct = default);
+
+    // Border alerts
+    Task<BorderAlertResponse>       CreateBorderAlertAsync(CreateBorderAlertRequest req, CancellationToken ct = default);
+    Task<List<BorderAlertResponse>> GetActiveBorderAlertsAsync(CancellationToken ct = default);
+    Task<BorderAlertResponse>       GetBorderAlertAsync(Guid id, CancellationToken ct = default);
+    Task<BorderAlertResponse>       ResolveBorderAlertAsync(Guid id, CancellationToken ct = default);
+
+    /// Quét dữ liệu nội bộ (thời gian qua biên của ContainerTrip 7 ngày gần nhất vs baseline 30 ngày trước đó),
+    /// tự tạo AIBorderAlert (source=InternalData) nếu phát hiện chậm bất thường.
+    Task<CongestionScanResult> ScanBorderCongestionAsync(CancellationToken ct = default);
+}
+
 // ── IPackageService ───────────────────────────────────────────────────────────
 public interface IPackageService
 {
@@ -70,4 +219,6 @@ public interface IPackageService
     Task<List<PackageSummaryResponse>> GetByCustomerAsync(Guid customerId, CancellationToken ct = default);
     Task<PackageImageResponse>    UploadImageAsync(Guid staffId, UploadPackageImageRequest req, CancellationToken ct = default);
     Task<List<TrackingEventResponse>> GetTrackingAsync(Guid packageId, CancellationToken ct = default);
+    /// Tracking cho khách: kiểm tra kiện thuộc đúng khách trước khi trả (khác chủ → 404).
+    Task<List<TrackingEventResponse>> GetTrackingForCustomerAsync(Guid customerId, Guid packageId, CancellationToken ct = default);
 }

@@ -1,8 +1,10 @@
+import { normalizeError } from "~/lib/utils/errors";
 import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router";
 import { toast } from "react-toastify";
 import dayjs from "dayjs";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
+import type { RootState } from "~/lib/feature/store";
 import {
   fetchMyProfile,
   updateProfile,
@@ -30,7 +32,8 @@ import {
   PREFERRED_CHANNEL_LABELS,
 } from "~/lib/constants/finance";
 import { VIETNAM_BANKS } from "~/lib/constants/banks";
-import type { UpdateKycFromOcrRequest } from "~/lib/types/customerProfile";
+import type { UpdateKycFromOcrRequest, UpdateCustomerProfileDto } from "~/lib/types/customerProfile";
+import type { BankAccountDto } from "~/lib/types/bankAccount";
 
 import {
   PiCameraBold,
@@ -100,7 +103,7 @@ export default function CustomerProfilePage() {
   const kyc = useAppSelector(selectKyc);
   const status = useAppSelector(selectProfileStatus);
   const addresses = useAppSelector(selectAddresses);
-  const user = useAppSelector((state: any) => state.authState.user);
+  const user = useAppSelector((state: RootState) => state.authState.user);
   const vipTiers = useAppSelector(selectVipTiers);
 
   // Global Page Tabs — declare early so scrollRef can depend on it
@@ -151,7 +154,7 @@ export default function CustomerProfilePage() {
   const [isUpdatingContact, setIsUpdatingContact] = useState(false);
 
   // Bank Form State
-  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountDto[]>([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
   const [showBankForm, setShowBankForm] = useState(false);
   const [bankCode, setBankCode] = useState("");
@@ -187,7 +190,7 @@ export default function CustomerProfilePage() {
       if (res.data) {
         setBankAccounts(res.data);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
     } finally {
       setLoadingBanks(false);
@@ -221,7 +224,7 @@ export default function CustomerProfilePage() {
     }
   }, [user]);
 
-  const handleUpdate = async (payload: any) => {
+  const handleUpdate = async (payload: UpdateCustomerProfileDto & { email?: string; phone?: string; customerCode?: string }) => {
     try {
       setIsUpdatingPersonal(true);
       if (profile?.id) {
@@ -241,8 +244,8 @@ export default function CustomerProfilePage() {
         dispatch(fetchMyProfile());
         toast.success("Tạo thông tin thành công");
       }
-    } catch (error: any) {
-      toast.error(error || "Lỗi cập nhật thông tin");
+    } catch (error: unknown) {
+      toast.error((error as string) || "Lỗi cập nhật thông tin");
     } finally {
       setIsUpdatingPersonal(false);
     }
@@ -293,8 +296,8 @@ export default function CustomerProfilePage() {
       await authApi.updateMe({ fullName: name, phone });
       dispatch(updateUserLocal({ phone }));
       toast.success("Cập nhật thông tin liên hệ thành công");
-    } catch (error: any) {
-      toast.error(error?.message || "Lỗi cập nhật thông tin liên hệ");
+    } catch (error: unknown) {
+      toast.error(normalizeError(error).message || "Lỗi cập nhật thông tin liên hệ");
     } finally {
       setIsUpdatingContact(false);
     }
@@ -349,8 +352,8 @@ export default function CustomerProfilePage() {
       setBranch("");
       setShowBankForm(false);
       fetchBanks();
-    } catch (err: any) {
-      toast.error(err?.message || "Lỗi khi thêm ngân hàng");
+    } catch (err: unknown) {
+      toast.error(normalizeError(err).message || "Lỗi khi thêm ngân hàng");
     } finally {
       setIsAddingBank(false);
     }
@@ -364,8 +367,8 @@ export default function CustomerProfilePage() {
       await financeApi.deleteBankAccount(id);
       toast.success("Đã xóa tài khoản ngân hàng");
       fetchBanks();
-    } catch (err: any) {
-      toast.error(err?.message || "Lỗi khi xóa ngân hàng");
+    } catch (err: unknown) {
+      toast.error(normalizeError(err).message || "Lỗi khi xóa ngân hàng");
     }
   };
 
@@ -408,8 +411,8 @@ export default function CustomerProfilePage() {
 
         toast.success("Quét CCCD thành công. Vui lòng kiểm tra lại thông tin!");
       }
-    } catch (err: any) {
-      toast.error(err?.message || "Lỗi quét CCCD");
+    } catch (err: unknown) {
+      toast.error(normalizeError(err).message || "Lỗi quét CCCD");
     } finally {
       setScanning(false);
     }
@@ -453,8 +456,8 @@ export default function CustomerProfilePage() {
       setBackFile(null);
       setFrontPreviewUrl(null);
       setBackPreviewUrl(null);
-    } catch (err: any) {
-      toast.error(err || "Lỗi gửi hồ sơ KYC");
+    } catch (err: unknown) {
+      toast.error((err as string) || "Lỗi gửi hồ sơ KYC");
     } finally {
       setIsSubmittingKyc(false);
     }
@@ -658,8 +661,8 @@ export default function CustomerProfilePage() {
             <button
               onClick={() => setActivePageTab("account")}
               className={`pb-3 border-b-2 font-semibold transition-all flex items-center gap-2 ${activePageTab === "account"
-                  ? "border-black text-black"
-                  : "border-transparent text-gray-400 hover:text-black"
+                ? "border-black text-black"
+                : "border-transparent text-gray-400 hover:text-black"
                 }`}
             >
               <PiUserBold className="text-base" />
@@ -668,8 +671,8 @@ export default function CustomerProfilePage() {
             <button
               onClick={() => setActivePageTab("kyc")}
               className={`pb-3 border-b-2 font-semibold transition-all flex items-center gap-2 ${activePageTab === "kyc"
-                  ? "border-black text-black"
-                  : "border-transparent text-gray-400 hover:text-black"
+                ? "border-black text-black"
+                : "border-transparent text-gray-400 hover:text-black"
                 }`}
             >
               <PiIdentificationCardBold className="text-base" />

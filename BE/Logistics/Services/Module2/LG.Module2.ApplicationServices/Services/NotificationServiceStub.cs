@@ -19,4 +19,52 @@ public class NotificationServiceStub(ILogger<NotificationServiceStub> logger) : 
             variancePct, barcode, staffId);
         return Task.CompletedTask;
     }
+
+    public Task SendCustomsHeldAlertAsync(Guid customerId, string barcode, string reason, CancellationToken ct = default)
+    {
+        logger.LogWarning("[NOTIFY-STUB] Package {Barcode} held at customs ({Reason}) → customer {CustomerId}",
+            barcode, reason, customerId);
+        return Task.CompletedTask;
+    }
+
+    public Task SendOutForDeliveryAsync(Guid customerId, string trackingNo, string carrierName, CancellationToken ct = default)
+    {
+        logger.LogInformation("[NOTIFY-STUB] Out for delivery {TrackingNo} via {Carrier} → customer {CustomerId}",
+            trackingNo, carrierName, customerId);
+        return Task.CompletedTask;
+    }
+
+    public Task SendDeliveredAsync(Guid customerId, string trackingNo, CancellationToken ct = default)
+    {
+        logger.LogInformation("[NOTIFY-STUB] Delivered {TrackingNo} → customer {CustomerId}", trackingNo, customerId);
+        return Task.CompletedTask;
+    }
+
+    public Task SendDeliveryFailedAlertAsync(string trackingNo, int attemptCount, string? reason, CancellationToken ct = default)
+    {
+        logger.LogWarning("[NOTIFY-STUB] Delivery failed {TrackingNo} (attempt {Attempt}): {Reason} → CSKH",
+            trackingNo, attemptCount, reason);
+        return Task.CompletedTask;
+    }
+
+    public Task SendClaimResolvedAsync(Guid customerId, string claimType, string outcome, CancellationToken ct = default)
+    {
+        logger.LogInformation("[NOTIFY-STUB] {ClaimType} resolved ({Outcome}) → customer {CustomerId}",
+            claimType, outcome, customerId);
+        return Task.CompletedTask;
+    }
+
+    public Task SendRefundIssuedAsync(Guid customerId, decimal amountVnd, string reason, CancellationToken ct = default)
+    {
+        logger.LogInformation("[NOTIFY-STUB] Refund {Amount} VND ({Reason}) → customer {CustomerId}",
+            amountVnd, reason, customerId);
+        return Task.CompletedTask;
+    }
+
+    public Task SendBorderAlertAsync(Guid customerId, string borderName, string severity, int? estimatedDelayDays, CancellationToken ct = default)
+    {
+        logger.LogWarning("[NOTIFY-STUB] Border congestion at {Border} ({Severity}, delay ~{Delay} days) → customer {CustomerId}",
+            borderName, severity, estimatedDelayDays, customerId);
+        return Task.CompletedTask;
+    }
 }

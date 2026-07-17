@@ -1,3 +1,4 @@
+import { normalizeError } from "~/lib/utils/errors";
 // ═══════════════════════════════════════════════════════════════════
 // Customer Profile Thunks
 // ═══════════════════════════════════════════════════════════════════
@@ -19,8 +20,8 @@ export const fetchMyProfile = createAsyncThunk(
     try {
       const res = await customerProfileApi.getMyProfile();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải thông tin cá nhân");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải thông tin cá nhân");
     }
   }
 );
@@ -31,8 +32,8 @@ export const createMyProfile = createAsyncThunk(
     try {
       const res = await customerProfileApi.createMyProfile(data);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tạo thông tin cá nhân");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tạo thông tin cá nhân");
     }
   }
 );
@@ -43,8 +44,8 @@ export const updateProfile = createAsyncThunk(
     try {
       await customerProfileApi.updateProfile(id, data);
       return data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi cập nhật thông tin cá nhân");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi cập nhật thông tin cá nhân");
     }
   }
 );
@@ -56,8 +57,8 @@ export const fetchMyAddresses = createAsyncThunk(
     try {
       const res = await customerProfileApi.getMyAddresses();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải danh sách địa chỉ");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải danh sách địa chỉ");
     }
   }
 );
@@ -68,8 +69,8 @@ export const createAddress = createAsyncThunk(
     try {
       const res = await customerProfileApi.createAddress(data);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi thêm địa chỉ");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi thêm địa chỉ");
     }
   }
 );
@@ -80,8 +81,8 @@ export const updateAddress = createAsyncThunk(
     try {
       await customerProfileApi.updateAddress(id, data);
       return { id, data };
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi cập nhật địa chỉ");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi cập nhật địa chỉ");
     }
   }
 );
@@ -92,8 +93,8 @@ export const deleteAddress = createAsyncThunk(
     try {
       await customerProfileApi.deleteAddress(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi xóa địa chỉ");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi xóa địa chỉ");
     }
   }
 );
@@ -104,8 +105,8 @@ export const setDefaultAddress = createAsyncThunk(
     try {
       await customerProfileApi.setDefaultAddress(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi đặt địa chỉ mặc định");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi đặt địa chỉ mặc định");
     }
   }
 );
@@ -117,11 +118,11 @@ export const fetchKyc = createAsyncThunk(
     try {
       const res = await customerProfileApi.getKyc();
       return res.data;
-    } catch (err: any) {
-      if (err.errorCode === "error_CoreKycNotFound") {
+    } catch (err: unknown) {
+      if (normalizeError(err).code === "error_CoreKycNotFound") {
         return null;
       }
-      return rejectWithValue(err.message || "Lỗi tải thông tin KYC");
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải thông tin KYC");
     }
   }
 );
@@ -132,8 +133,8 @@ export const submitKyc = createAsyncThunk(
     try {
       const res = await customerProfileApi.submitKyc(data);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi gửi hồ sơ KYC");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi gửi hồ sơ KYC");
     }
   }
 );

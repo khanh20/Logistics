@@ -18,7 +18,7 @@ namespace LG.Core.Domain.Finance
         public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
-        public int BankAccountId { get; set; }                 // Tài khoản ngân hàng nhận webhook
+        public Guid BankAccountId { get; set; }                 // Tài khoản ngân hàng nhận webhook
 
         [Required]
         [MaxLength(200)]

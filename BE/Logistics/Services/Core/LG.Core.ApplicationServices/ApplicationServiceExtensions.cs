@@ -1,6 +1,8 @@
 using LG.Core.ApplicationServices.Finance.Interfaces;
 using LG.Core.ApplicationServices.Finance.Services;
 using LG.Core.ApplicationServices.Common;
+using LG.Core.ApplicationServices.Common.Interfaces;
+using LG.Core.ApplicationServices.Common.Services;
 using LG.Core.ApplicationServices.Common.Localization;
 using LG.ApplicationBase.Localization;
 using LG.ApplicationBase.MapError;
@@ -23,7 +25,7 @@ public static class ApplicationServiceExtensions
         services.AddHttpClient<IScanIDService, ScanIDService>();
 
         // ── Cloud Storage (Cloudinary) ─────
-        services.AddScoped<LG.Core.ApplicationServices.Common.Interfaces.ICloudinaryService, LG.Core.ApplicationServices.Common.Services.CloudinaryService>();
+        services.AddScoped<ICloudinaryService, CloudinaryService>();
 
         // ── Localization & Error Mapping ──
         services.AddSingleton<LocalizationBase, CoreLocalization>();
@@ -57,9 +59,31 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IWalletTransactionService, WalletTransactionService>();
         services.AddScoped<IPaymentLockService, PaymentLockService>();
         services.AddScoped<IFraudDetectionService, FraudDetectionService>();
-        services.AddScoped<IPlatformReconcileService, PlatformReconcileService>();
+        services.AddScoped<IAdminWalletService, AdminWalletService>();
+
+        // HttpClient cho PlatformReconcileService giao tiếp với Module 1
+        services.AddHttpClient<IPlatformReconcileService, PlatformReconcileService>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+            var baseUrl = cfg["ApiUris:Module1"]
+                       ?? Environment.GetEnvironmentVariable("APIURIS__MODULE1")
+                       ?? "https://localhost:7198"; // Default Module 1 HTTPS port in template
+            
+            client.BaseAddress = new Uri(baseUrl);
+        });
+
+        services.AddHttpClient<IDailyRevenueService, DailyRevenueService>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+            var baseUrl = cfg["ApiUris:Module1"]
+                       ?? Environment.GetEnvironmentVariable("APIURIS__MODULE1")
+                       ?? "https://localhost:7198"; // Default Module 1 HTTPS port in template
+            
+            client.BaseAddress = new Uri(baseUrl);
+        });
+
         services.AddScoped<IBankWebhookLogService, BankWebhookLogService>();
-        services.AddScoped<LG.Core.ApplicationServices.Common.Interfaces.IEmailService, LG.Core.ApplicationServices.Common.Services.EmailService>();
+        services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IEmailNotificationService, EmailNotificationService>();
         // ── Wallet Payment Service ──────────────────────────────────────────────
         services.AddScoped<IWalletPaymentService, WalletPaymentService>();

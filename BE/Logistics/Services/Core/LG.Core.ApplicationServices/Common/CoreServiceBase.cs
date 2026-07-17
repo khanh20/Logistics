@@ -45,6 +45,11 @@ namespace LG.Core.ApplicationServices.Common
             return _httpContext.GetCurrentUserId();
         }
 
+        protected string? GetCurrentUserFullName()
+        {
+            return _httpContext.GetCurrentUserFullName();
+        }
+
         protected async Task<string?> GetUserEmailAsync(Guid userId)
         {
             using var command = _dbContext.Database.GetDbConnection().CreateCommand();

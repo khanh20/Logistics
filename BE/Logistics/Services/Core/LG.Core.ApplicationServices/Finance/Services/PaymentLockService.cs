@@ -45,84 +45,131 @@ namespace LG.Core.ApplicationServices.Finance.Services
             return _mapper.Map<List<PaymentLockDto>>(locks);
         }
 
+        public async Task<(List<PaymentLockDto> Items, int TotalCount)> SearchAsync(PaymentLockStatusEnum? status, Guid? orderId, int page, int pageSize)
+        {
+            var query = _db.PaymentLocks.AsQueryable();
+
+            if (status.HasValue)
+                query = query.Where(x => x.Status == status.Value);
+
+            if (orderId.HasValue && orderId.Value != Guid.Empty)
+                query = query.Where(x => x.OrderId == orderId.Value);
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(x => x.CreatedDate)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (_mapper.Map<List<PaymentLockDto>>(items), totalCount);
+        }
+
         public async Task<PaymentLockDto> CreateAsync(CreatePaymentLockDto dto)
         {
-            using var transaction = await _db.Database.BeginTransactionAsync();
-            try
+            var strategy = _db.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                var wallet = await _db.Wallets.FindAsync(dto.WalletId);
-                if (wallet == null) throw new CoreException(CoreErrorCode.CoreWalletNotFound);
+                using var transaction = await _db.Database.BeginTransactionAsync();
+                try
+                {
+                    var wallet = await _db.Wallets.FirstOrDefaultAsync(w => w.CustomerId == dto.CustomerId && w.Currency == "VND");
+                    if (wallet == null) throw new CoreException(CoreErrorCode.CoreWalletNotFound);
 
-                if (wallet.AvailableBalance < dto.LockedAmountVnd)
-                    throw new CoreException(CoreErrorCode.CoreInsufficientBalance);
+                    if (wallet.AvailableBalance < dto.LockedAmountVnd)
+                        throw new CoreException(CoreErrorCode.CoreInsufficientBalance);
 
-                // Update wallet balances
-                wallet.AvailableBalance -= dto.LockedAmountVnd;
-                wallet.FrozenBalance += dto.LockedAmountVnd;
-                wallet.ModifiedDate = DateTime.UtcNow;
+                    // Update wallet balances
+                    wallet.AvailableBalance -= dto.LockedAmountVnd;
+                    wallet.FrozenBalance += dto.LockedAmountVnd;
+                    wallet.ModifiedDate = DateTime.UtcNow;
 
-                var paymentLock = _mapper.Map<PaymentLock>(dto);
-                paymentLock.Status = PaymentLockStatusEnum.Active;
-                paymentLock.CreatedDate = DateTime.UtcNow;
+                    var paymentLock = _mapper.Map<PaymentLock>(dto);
+                    paymentLock.WalletId = wallet.Id;
+                    paymentLock.LockType = dto.LockType ?? PaymentLockTypeEnum.Deposit;
+                    paymentLock.ExpiresAt = dto.ExpiresAt ?? DateTime.UtcNow.AddDays(30);
+                    paymentLock.Status = PaymentLockStatusEnum.Active;
+                    paymentLock.CreatedDate = DateTime.UtcNow;
 
-                _db.PaymentLocks.Add(paymentLock);
-                await _db.SaveChangesAsync();
+                    _db.PaymentLocks.Add(paymentLock);
+                    await _db.SaveChangesAsync();
 
-                await transaction.CommitAsync();
+                    await transaction.CommitAsync();
 
-                return _mapper.Map<PaymentLockDto>(paymentLock);
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+                    return _mapper.Map<PaymentLockDto>(paymentLock);
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         public async Task<bool> ReleaseAsync(Guid id, ReleaseReasonEnum reason)
         {
-            using var transaction = await _db.Database.BeginTransactionAsync();
-            try
+            var strategy = _db.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                var paymentLock = await _db.PaymentLocks.FindAsync(id);
-                if (paymentLock == null || paymentLock.Status != PaymentLockStatusEnum.Active)
-                    return false;
-
-                var wallet = await _db.Wallets.FindAsync(paymentLock.WalletId);
-                if (wallet == null) return false;
-
-                // Release locked amount
-                wallet.FrozenBalance -= paymentLock.LockedAmountVnd;
-                
-                // If the order was cancelled, we refund the money to available balance.
-                // If it was completed, the money is considered spent.
-                // Depending on the reason, we might move it back to AvailableBalance or not.
-                if (reason != ReleaseReasonEnum.OrderCompleted) 
+                using var transaction = await _db.Database.BeginTransactionAsync();
+                try
                 {
-                    wallet.AvailableBalance += paymentLock.LockedAmountVnd;
+                    var paymentLock = await _db.PaymentLocks.FindAsync(id);
+                    if (paymentLock == null || paymentLock.Status != PaymentLockStatusEnum.Active)
+                        return false;
+
+                    var wallet = await _db.Wallets.FindAsync(paymentLock.WalletId);
+                    if (wallet == null) return false;
+
+                    // Release locked amount
+                    wallet.FrozenBalance -= paymentLock.LockedAmountVnd;
+                    
+                    // If the order was cancelled, we refund the money to available balance.
+                    // If it was completed, the money is considered spent.
+                    // Depending on the reason, we might move it back to AvailableBalance or not.
+                    if (reason != ReleaseReasonEnum.OrderCompleted) 
+                    {
+                        wallet.AvailableBalance += paymentLock.LockedAmountVnd;
+                    }
+                    else
+                    {
+                        wallet.TotalSpentEver += paymentLock.LockedAmountVnd;
+                    }
+                    
+                    wallet.ModifiedDate = DateTime.UtcNow;
+
+                    paymentLock.Status = PaymentLockStatusEnum.Released;
+                    paymentLock.ReleasedAt = DateTime.UtcNow;
+                    paymentLock.ReleaseReason = reason;
+                    paymentLock.ModifiedDate = DateTime.UtcNow;
+
+                    await _db.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return true;
                 }
-                else
+                catch
                 {
-                    wallet.TotalSpentEver += paymentLock.LockedAmountVnd;
+                    await transaction.RollbackAsync();
+                    throw;
                 }
-                
-                wallet.ModifiedDate = DateTime.UtcNow;
+            });
+        }
 
-                paymentLock.Status = PaymentLockStatusEnum.Released;
-                paymentLock.ReleasedAt = DateTime.UtcNow;
-                paymentLock.ReleaseReason = reason;
-                paymentLock.ModifiedDate = DateTime.UtcNow;
+        public async Task<bool> ReleaseByOrderIdAsync(Guid orderId, ReleaseReasonEnum reason)
+        {
+            var activeLocks = await _db.PaymentLocks
+                .Where(x => x.OrderId == orderId && x.Status == PaymentLockStatusEnum.Active)
+                .ToListAsync();
 
-                await _db.SaveChangesAsync();
-                await transaction.CommitAsync();
+            if (!activeLocks.Any()) return true; // Nothing to release
 
-                return true;
-            }
-            catch
+            foreach (var lockItem in activeLocks)
             {
-                await transaction.RollbackAsync();
-                throw;
+                await ReleaseAsync(lockItem.Id, reason);
             }
+            return true;
         }
     }
 }

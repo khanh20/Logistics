@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System.Text;
 using System.Text.Json.Serialization;
 using LG.Shared.Constants;
@@ -10,6 +11,7 @@ using System;
 using LG.Core.Infrastructure;
 using LG.Core.API.Middleware;
 using LG.Core.ApplicationServices;
+using LG.Core.API.BackgroundJobs;
 
 // 1. CREATE BUILDER
 var builder = WebApplication.CreateBuilder(args);
@@ -42,6 +44,9 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddEndpointsApiExplorer();
+
+// ── Background Jobs ───────────────────────────────────────────────────────────
+builder.Services.AddHostedService<DailyRevenueJob>();
 
 // ── JWT Authentication ────────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:SecretKey"]
@@ -201,6 +206,16 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<CoreDbContext>();
     //var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        logger.LogInformation("Applying migrations for Core database...");
+        await db.Database.MigrateAsync();
+        logger.LogInformation("Migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating the database.");
+    }
     //await DataSeeder.SeedAsync(db, hasher, logger);
 }
 

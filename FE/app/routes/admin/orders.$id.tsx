@@ -337,12 +337,16 @@ function OrderDetailInner({
               <div className="mt-4 border-t border-slate-100 pt-3">
                 <p className="mb-2 text-xs font-semibold text-slate-600">{t("order.fee_breakdown", "Phân tích phí")}</p>
                 <div className="space-y-1">
-                  {order.fees.map((f) => (
-                    <div key={f.feeType} className="flex justify-between text-xs text-slate-600">
-                      <span>{feeLabel(f.feeType)}</span>
-                      <span className="font-medium tabular-nums">{formatVND(f.amountVnd)}</span>
-                    </div>
-                  ))}
+                  {order.fees.map((f) => {
+                    const label = feeLabel(f.feeType);
+                    const showNote = f.note && f.note.toLowerCase() !== label.toLowerCase();
+                    return (
+                      <div key={f.feeType} className="flex justify-between text-xs text-slate-600">
+                        <span>{label}{showNote ? ` (${f.note})` : ""}</span>
+                        <span className="font-medium tabular-nums">{formatVND(f.amountVnd)}</span>
+                      </div>
+                    );
+                  })}
                   {order.shippingFeeVnd > 0 && (
                     <div className="flex justify-between text-xs text-slate-600">
                       <span>{t("order.intl_shipping_fee", "Phí ship quốc tế")}</span>

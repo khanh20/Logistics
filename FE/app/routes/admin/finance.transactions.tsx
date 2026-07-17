@@ -6,6 +6,8 @@ import {
   PiCopyBold,
   PiCheckBold
 } from "react-icons/pi";
+import { Input } from "~/components/ui/Input";
+import { Button } from "~/components/ui/Button";
 
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { fetchWalletTransactions } from "~/lib/feature/adminFinance/adminFinanceThunk";
@@ -19,6 +21,7 @@ import {
 import { TransactionDirectionEnum } from "~/lib/enums/finance";
 import { ReduxStatus } from "~/lib/feature/const";
 import type { WalletTransactionDto } from "~/lib/types/adminFinance";
+import { Pagination } from "~/components/ui/Pagination";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -138,14 +141,15 @@ export default function AdminFinanceTransactionsPage() {
           <h1 className="text-2xl font-serif font-bold text-black mb-1">Giao dịch ví điện tử</h1>
           <p className="text-sm text-gray-500">Quản lý và tra cứu lịch sử giao dịch của tất cả ví khách hàng</p>
         </div>
-        <button
+        <Button
           onClick={handleRefresh}
-          disabled={isLoading}
-          className="inline-flex items-center gap-1.5 bg-white border border-[#EAEAEA] hover:bg-gray-50 text-black text-xs font-semibold px-4.5 py-2.5 rounded transition-colors disabled:opacity-50"
+          loading={isLoading}
+          variant="secondary"
+          className="px-4.5 py-2.5"
         >
-          <PiArrowClockwiseBold className={isLoading ? "animate-spin" : ""} />
+          <PiArrowClockwiseBold />
           Làm mới
-        </button>
+        </Button>
       </div>
 
       {/* KPI stats & Filters card */}
@@ -159,33 +163,31 @@ export default function AdminFinanceTransactionsPage() {
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {/* Wallet ID Input */}
           <div className="relative flex-1 sm:flex-initial">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none z-10">
               <PiMagnifyingGlassBold className="text-sm" />
             </span>
-            <input
+            <Input
               type="text"
               placeholder="Lọc theo Wallet ID..."
               value={walletIdFilter}
               onChange={(e) => setWalletIdFilter(e.target.value)}
-              className="w-full sm:w-60 rounded border border-[#EAEAEA] bg-white pl-9 pr-3 py-2 text-sm text-black focus:border-black focus:outline-none placeholder-gray-400"
+              className="pl-9 sm:w-60"
             />
           </div>
 
           {/* Date Range Inputs */}
           <div className="flex items-center gap-2">
-            <input
+            <Input
               type="date"
               value={startDateStr}
               onChange={(e) => setStartDateStr(e.target.value)}
-              className="rounded border border-[#EAEAEA] bg-white px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
               title="Từ ngày"
             />
-            <span className="text-gray-400 text-xs">đến</span>
-            <input
+            <span className="text-gray-400 text-xs mt-6">đến</span>
+            <Input
               type="date"
               value={endDateStr}
               onChange={(e) => setEndDateStr(e.target.value)}
-              className="rounded border border-[#EAEAEA] bg-white px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
               title="Đến ngày"
             />
           </div>
@@ -257,30 +259,14 @@ export default function AdminFinanceTransactionsPage() {
               </table>
             </div>
 
-            {/* Custom Pagination Footer */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} giao dịch
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="giao dịch"
+            />
           </>
         )}
       </div>

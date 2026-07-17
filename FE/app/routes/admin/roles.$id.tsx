@@ -1,3 +1,4 @@
+import { normalizeError } from "~/lib/utils/errors";
 import { useState, useMemo } from "react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -99,7 +100,7 @@ export default function RolePermissionsPage({ loaderData }: Route.ComponentProps
       await permissionsApi.syncRolePermissions(role.id, [...checked]);
       showToast(t("roles.perm_success"));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t("common.error");
+      const msg = err instanceof Error ? normalizeError(err).message : t("common.error");
       setSaveError(msg);
     } finally {
       setSaving(false);

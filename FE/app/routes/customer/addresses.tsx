@@ -80,8 +80,8 @@ export default function CustomerAddressesPage() {
     try {
       await dispatch(deleteAddress(id)).unwrap();
       message.success("Xóa địa chỉ thành công!");
-    } catch (error: any) {
-      message.error(error || "Xóa địa chỉ thất bại!");
+    } catch (error: unknown) {
+      message.error((error as string) || "Xóa địa chỉ thất bại!");
     }
   };
 
@@ -89,8 +89,8 @@ export default function CustomerAddressesPage() {
     try {
       await dispatch(setDefaultAddress(id)).unwrap();
       message.success("Đã đặt làm địa chỉ mặc định!");
-    } catch (error: any) {
-      message.error(error || "Đặt địa chỉ mặc định thất bại!");
+    } catch (error: unknown) {
+      message.error((error as string) || "Đặt địa chỉ mặc định thất bại!");
     }
   };
 
@@ -130,8 +130,8 @@ export default function CustomerAddressesPage() {
         message.success("Thêm địa chỉ thành công!");
       }
       setIsModalVisible(false);
-    } catch (error: any) {
-      message.error(error || "Đã xảy ra lỗi!");
+    } catch (error: unknown) {
+      message.error((error as string) || "Đã xảy ra lỗi!");
     }
   };
 

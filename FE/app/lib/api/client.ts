@@ -148,3 +148,8 @@ export const apiModule1Client = createClient(
 export const apiModule3Client = createClient(
   import.meta.env.VITE_MODULE3_API_URL ?? "https://localhost:7215",
 );
+
+// Module2 service — port 7280 (Logistics & Tracking, with refresh interceptor)
+export const apiModule2Client = createClient(
+  import.meta.env.VITE_MODULE2_API_URL ?? "https://localhost:7280",
+);

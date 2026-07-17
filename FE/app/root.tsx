@@ -74,7 +74,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         ? "Xin lỗi, trang bạn đang tìm kiếm không tồn tại hoặc đã bị xóa."
         : error.statusText || details;
   } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
+    details = (error as any).message;
     stack = error.stack;
   }
 

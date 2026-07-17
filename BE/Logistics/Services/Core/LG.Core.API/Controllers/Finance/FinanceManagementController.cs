@@ -1,5 +1,6 @@
 using LG.Core.ApplicationServices.Finance.DTOs.Management;
 using LG.Core.ApplicationServices.Finance.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public class FinanceManagementController : CoreBaseController
     {
         private readonly IFinanceManagementService _financeService;

@@ -6,7 +6,7 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.BankWebhookLog
     public class BankWebhookLogDto
     {
         public Guid Id { get; set; }
-        public int BankAccountId { get; set; }
+        public Guid BankAccountId { get; set; }
         public string IdempotencyKey { get; set; }
         public string RawPayload { get; set; }
         public string? BankRef { get; set; }

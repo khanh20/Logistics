@@ -1,4 +1,4 @@
-﻿using LG.Module1.ApplicationServices.DTOs.Platform;
+using LG.Module1.ApplicationServices.DTOs.Platform;
 using LG.Module1.ApplicationServices.Interfaces;
 using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Exceptions;
@@ -226,6 +226,16 @@ public class PlatformService(
         await uow.SaveChangesAsync(ct);
         logger.LogInformation("Account balance updated: {AccountId} → {Balance} CNY",
             accountId, req.AlipayBalance);
+    }
+
+    public async Task SyncBalanceAfterReconcileAsync(Guid accountId, decimal spentAmountCny, CancellationToken ct = default)
+    {
+        var account = await GetAccountOrThrowAsync(accountId, ct);
+        account.SyncBalanceAfterReconcile(spentAmountCny);
+        await accountRepo.UpdateAsync(account, ct);
+        await uow.SaveChangesAsync(ct);
+        logger.LogInformation("Account balance synced after reconcile: {AccountId} → {Balance} CNY",
+            accountId, spentAmountCny);
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

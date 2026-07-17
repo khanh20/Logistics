@@ -385,36 +385,6 @@ namespace LG.Module2.Infrastructure.Migrations
                             MaxValueVnd = 20000000m,
                             MaxWeightKg = 30m,
                             Name = "GHTK"
-                        },
-                        new
-                        {
-                            Id = new Guid("b0000000-0000-0000-0000-000000000002"),
-                            ApiEndpoint = "https://online-gateway.ghn.vn",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            MaxValueVnd = 20000000m,
-                            MaxWeightKg = 30m,
-                            Name = "GHN"
-                        },
-                        new
-                        {
-                            Id = new Guid("b0000000-0000-0000-0000-000000000003"),
-                            ApiEndpoint = "https://partner.viettelpost.vn",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            MaxValueVnd = 50000000m,
-                            MaxWeightKg = 50m,
-                            Name = "Viettel Post"
-                        },
-                        new
-                        {
-                            Id = new Guid("b0000000-0000-0000-0000-000000000004"),
-                            ApiEndpoint = "https://api.jtexpress.vn",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            MaxValueVnd = 30000000m,
-                            MaxWeightKg = 50m,
-                            Name = "J&T Express"
                         });
                 });
 
@@ -483,11 +453,19 @@ namespace LG.Module2.Infrastructure.Migrations
                         .HasPrecision(14)
                         .HasColumnType("numeric(14,0)");
 
+                    b.Property<decimal?>("ClaimedAmountVnd")
+                        .HasPrecision(14)
+                        .HasColumnType("numeric(14,0)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DamagePhotos")
                         .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<Guid?>("MissingClaimId")
                         .HasColumnType("uuid");
@@ -528,6 +506,13 @@ namespace LG.Module2.Infrastructure.Migrations
 
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("EvidenceUrls")
+                        .HasColumnType("text");
 
                     b.Property<decimal?>("InsuranceCoveragePct")
                         .HasPrecision(4, 2)
@@ -590,9 +575,24 @@ namespace LG.Module2.Infrastructure.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("DeclaredValueVnd")
+                        .HasPrecision(16)
+                        .HasColumnType("numeric(16,0)");
+
+                    b.Property<DateTime?>("FeeCalculatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("FeeRatePerKgVnd")
+                        .HasPrecision(12)
+                        .HasColumnType("numeric(12,0)");
+
                     b.Property<decimal?>("HeightCm")
                         .HasPrecision(8, 1)
                         .HasColumnType("numeric(8,1)");
+
+                    b.Property<decimal?>("InsuranceFeeVnd")
+                        .HasPrecision(16)
+                        .HasColumnType("numeric(16,0)");
 
                     b.Property<string>("InsuranceLevel")
                         .HasMaxLength(10)
@@ -615,6 +615,10 @@ namespace LG.Module2.Infrastructure.Migrations
 
                     b.Property<Guid?>("SackId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("ShipIntlVnd")
+                        .HasPrecision(16)
+                        .HasColumnType("numeric(16,0)");
 
                     b.Property<string>("Status")
                         .IsRequired()

@@ -5,6 +5,7 @@ using LG.Authentication.Domain.Entities;
 using LG.Authentication.Domain.Exceptions;
 using LG.Authentication.Domain.Repositories;
 using Microsoft.Extensions.Logging;
+using LG.Shared.Constants;
 
 namespace LG.Authentication.ApplicationServices.Services;
 
@@ -149,20 +150,20 @@ public class CurrentUserService(Microsoft.AspNetCore.Http.IHttpContextAccessor h
         httpContextAccessor.HttpContext?.User;
 
     public Guid? UserId =>
-        Guid.TryParse(Principal?.FindFirst(LG.Shared.Constants.UserClaimTypes.UserId)?.Value, out var id) ? id : null;
+        Guid.TryParse(Principal?.FindFirst(UserClaimTypes.UserId)?.Value, out var id) ? id : null;
 
-    public string? Email    => Principal?.FindFirst(LG.Shared.Constants.UserClaimTypes.Email)?.Value;
-    public string? FullName => Principal?.FindFirst(LG.Shared.Constants.UserClaimTypes.Fullname)?.Value;
+    public string? Email    => Principal?.FindFirst(UserClaimTypes.Email)?.Value;
+    public string? FullName => Principal?.FindFirst(UserClaimTypes.Fullname)?.Value;
 
     public List<string> Roles =>
         Principal?.Claims
-            .Where(c => c.Type == LG.Shared.Constants.UserClaimTypes.Role)
+            .Where(c => c.Type == UserClaimTypes.Role)
             .Select(c => c.Value)
             .ToList() ?? [];
 
     public List<string> Permissions =>
         Principal?.Claims
-            .Where(c => c.Type == LG.Shared.Constants.UserClaimTypes.Permission)
+            .Where(c => c.Type == UserClaimTypes.Permission)
             .Select(c => c.Value)
             .ToList() ?? [];
 

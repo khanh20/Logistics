@@ -78,6 +78,11 @@ public class PackageConfig : IEntityTypeConfiguration<Package>
         b.Property(x => x.VolWeightKg).HasPrecision(8, 3);
         b.Property(x => x.ChargedWeightKg).HasPrecision(8, 3);
 
+        b.Property(x => x.DeclaredValueVnd).HasPrecision(16, 0);
+        b.Property(x => x.FeeRatePerKgVnd).HasPrecision(12, 0);
+        b.Property(x => x.ShipIntlVnd).HasPrecision(16, 0);
+        b.Property(x => x.InsuranceFeeVnd).HasPrecision(16, 0);
+
         b.HasIndex(x => x.CustomerId);
         b.HasIndex(x => x.OrderId);
         b.HasIndex(x => x.Status);
@@ -304,13 +309,11 @@ public class DomesticCarrierConfig : IEntityTypeConfiguration<DomesticCarrier>
         b.Property(x => x.MaxWeightKg).HasPrecision(8, 3);
         b.Property(x => x.MaxValueVnd).HasPrecision(14, 0);
 
-        // Seed carriers
+        // Seed carrier — scope Phase 6: CHỈ tích hợp GHTK, các carrier khác đã xoá hẳn
+        // (migration RemoveNonGhtkCarriers dọn cả waybill demo tham chiếu chúng)
         var now = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         b.HasData(
-            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000001"), Name = "GHTK",         ApiEndpoint = "https://services.giaohangtietkiem.vn", MaxWeightKg = 30m, MaxValueVnd = 20_000_000m, IsActive = true, CreatedAt = now },
-            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000002"), Name = "GHN",          ApiEndpoint = "https://online-gateway.ghn.vn",         MaxWeightKg = 30m, MaxValueVnd = 20_000_000m, IsActive = true, CreatedAt = now },
-            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000003"), Name = "Viettel Post", ApiEndpoint = "https://partner.viettelpost.vn",        MaxWeightKg = 50m, MaxValueVnd = 50_000_000m, IsActive = true, CreatedAt = now },
-            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000004"), Name = "J&T Express",  ApiEndpoint = "https://api.jtexpress.vn",              MaxWeightKg = 50m, MaxValueVnd = 30_000_000m, IsActive = true, CreatedAt = now }
+            new { Id = Guid.Parse("B0000000-0000-0000-0000-000000000001"), Name = "GHTK", ApiEndpoint = "https://services.giaohangtietkiem.vn", MaxWeightKg = 30m, MaxValueVnd = 20_000_000m, IsActive = true, CreatedAt = now }
         );
     }
 }
@@ -353,6 +356,8 @@ public class MissingClaimConfig : IEntityTypeConfiguration<MissingClaim>
         b.HasKey(x => x.Id);
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.Resolution).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.Description).HasMaxLength(1000);
+        b.Property(x => x.EvidenceUrls).HasColumnType("text");
         b.Property(x => x.ClaimedValueVnd).HasPrecision(14, 0);
         b.Property(x => x.InsuranceCoveragePct).HasPrecision(4, 2);
         b.Property(x => x.ResolvedAmountVnd).HasPrecision(14, 0);
@@ -371,6 +376,8 @@ public class InsuranceClaimConfig : IEntityTypeConfiguration<InsuranceClaim>
         b.ToTable("insurance_claims");
         b.HasKey(x => x.Id);
         b.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.Description).HasMaxLength(1000);
+        b.Property(x => x.ClaimedAmountVnd).HasPrecision(14, 0);
         b.Property(x => x.DamagePhotos).HasColumnType("text");
         b.Property(x => x.AdjusterNote).HasMaxLength(1000);
         b.Property(x => x.ApprovedAmount).HasPrecision(14, 0);

@@ -31,6 +31,12 @@
 		<text name="error_CoreKycInvalidImageType">Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.</text>
 		<text name="error_CoreKycImageTooLarge">Ảnh không được vượt quá 10MB.</text>
 		<text name="error_CoreKycDataRequired">Cần nhập ít nhất số CCCD hoặc họ tên.</text>
+		<text name="error_CoreKycRequired">Vui lòng hoàn thành Xác minh danh tính (KYC) để thực hiện giao dịch này.</text>
+		<text name="error_CoreKycIdNumberAlreadyExists">Số CCCD/CMND này đã được sử dụng trong hệ thống.</text>
+
+		<!-- Fraud Detection -->
+		<text name="error_CoreFraudDetected">Giao dịch bị từ chối do phát hiện dấu hiệu gian lận. Vui lòng liên hệ Admin để được hỗ trợ.</text>
+		<text name="error_CoreFraudWalletFrozen">Ví của bạn đã bị khóa do phát hiện bất thường. Vui lòng liên hệ CSKH.</text>
 
 		<!-- Auth/Token -->
 		<text name="error_CoreUserIdNotFoundInToken">Không tìm thấy user ID trong token.</text>

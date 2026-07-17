@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { PiPlusBold, PiPencilSimpleBold, PiTrashBold, PiArrowClockwiseBold, PiXBold } from "react-icons/pi";
 import { adminFinanceApi } from "~/lib/api/adminFinance";
+import { Input } from "~/components/ui/Input";
+import { Button } from "~/components/ui/Button";
+import { Select } from "~/components/ui/Select";
 import { TransactionDirectionEnum } from "~/lib/enums/finance";
 import { TRANSACTION_DIRECTION_COLORS, TRANSACTION_DIRECTION_LABELS } from "~/lib/constants/finance";
 import type { TransactionTypeDto } from "~/lib/types/adminFinance";
+import { Pagination } from "~/components/ui/Pagination";
 
 function DirectionBadge({ direction }: { direction?: TransactionDirectionEnum }) {
   if (!direction) {
@@ -156,21 +160,20 @@ export default function AdminTransactionTypesPage() {
           <p className="text-sm text-gray-500">Cấu hình danh mục mã loại, luồng tiền và khả năng hoàn tác giao dịch</p>
         </div>
         <div className="flex gap-3">
-          <button
+          <Button
             onClick={fetchTransactionTypes}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 bg-white border border-[#EAEAEA] hover:bg-gray-50 text-black text-xs font-semibold px-4 py-2.5 rounded transition-colors disabled:opacity-50"
+            variant="secondary"
+            loading={loading}
           >
-            <PiArrowClockwiseBold className={loading ? "animate-spin" : ""} />
+            <PiArrowClockwiseBold />
             Làm mới
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => handleOpenModal()}
-            className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4.5 py-2.5 rounded transition-colors"
           >
             <PiPlusBold />
             Thêm mới
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -261,30 +264,14 @@ export default function AdminTransactionTypesPage() {
               </table>
             </div>
 
-            {/* Custom Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} loại giao dịch
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="loại giao dịch"
+            />
           </>
         )}
       </div>
@@ -307,41 +294,32 @@ export default function AdminTransactionTypesPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Mã loại giao dịch *
-                </label>
-                <input
+                <Input
+                  label="Mã loại giao dịch *"
                   type="text"
                   required
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="Nhập mã (VD: DEPOSIT, WITHDRAW)..."
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Tên loại giao dịch *
-                </label>
-                <input
+                <Input
+                  label="Tên loại giao dịch *"
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Nhập tên loại giao dịch..."
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Chiều giao dịch
-                </label>
-                <select
+                <Select
+                  label="Chiều giao dịch"
                   value={direction}
                   onChange={(e) => setDirection(e.target.value ? Number(e.target.value) : "")}
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none bg-white font-medium"
                 >
                   <option value="">Chọn chiều giao dịch</option>
                   {Object.entries(TRANSACTION_DIRECTION_LABELS).map(([val, label]) => (
@@ -349,7 +327,7 @@ export default function AdminTransactionTypesPage() {
                       {label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="flex items-center gap-2 cursor-pointer pt-2">
@@ -366,19 +344,18 @@ export default function AdminTransactionTypesPage() {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={handleCloseModal}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   {editingId ? "Cập nhật" : "Thêm mới"}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

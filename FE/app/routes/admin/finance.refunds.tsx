@@ -4,6 +4,10 @@ import { toast } from "react-toastify";
 import { FiCheck, FiPlus, FiX, FiCopy } from "react-icons/fi";
 import { adminFinanceApi } from "~/lib/api/adminFinance";
 import { PiWarningCircleBold, PiCheckCircleBold } from "react-icons/pi";
+import { Input } from "~/components/ui/Input";
+import { Textarea } from "~/components/ui/Textarea";
+import { Button } from "~/components/ui/Button";
+import { Select } from "~/components/ui/Select";
 import {
   REFUND_REASON_LABELS,
   REFUND_STATUS_COLORS,
@@ -207,13 +211,13 @@ export default function AdminRefundsPage() {
           <h1 className="text-2xl font-serif font-bold text-black mb-1">Quản lý Hoàn tiền</h1>
           <p className="text-sm text-gray-500">Quản lý và xét duyệt các yêu cầu hoàn tiền của khách hàng</p>
         </div>
-        <button
+        <Button
           onClick={() => setIsModalVisible(true)}
-          className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4.5 py-2.5 rounded transition-colors"
+          className="px-4.5 py-2.5"
         >
           <FiPlus />
           Tạo hoàn tiền
-        </button>
+        </Button>
       </div>
 
 
@@ -287,25 +291,26 @@ export default function AdminRefundsPage() {
                     <td className="py-3.5 px-6 text-center">
                       {record.status === RefundStatusEnum.Pending ? (
                         <div className="inline-flex gap-2 justify-center">
-                          <button
+                          <Button
+                            size="sm"
                             onClick={() => handleApprove(record.id)}
-                            disabled={submitting}
-                            className="inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white text-xs font-semibold p-1.5 rounded transition-colors disabled:opacity-50"
+                            loading={submitting}
                             title="Duyệt hoàn tiền"
                           >
                             <FiCheck className="text-sm" />
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
                             onClick={() => {
                               setRejectingRefundId(record.id);
                               setRejectModalVisible(true);
                             }}
-                            disabled={submitting}
-                            className="inline-flex items-center justify-center bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold p-1.5 rounded transition-colors disabled:opacity-50"
+                            loading={submitting}
                             title="Từ chối hoàn tiền"
                           >
                             <FiX className="text-sm" />
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         "—"
@@ -342,110 +347,91 @@ export default function AdminRefundsPage() {
 
             <form onSubmit={handleCreateRefund} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Mã ví khách hàng *
-                </label>
-                <input
+                <Input
+                  label="Mã ví khách hàng *"
                   type="text"
                   required
                   value={walletId}
                   onChange={(e) => setWalletId(e.target.value)}
                   placeholder="Nhập mã ví (Wallet ID)..."
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Loại tham chiếu *
-                  </label>
-                  <input
+                  <Input
+                    label="Loại tham chiếu *"
                     type="text"
                     required
                     value={referenceType}
                     onChange={(e) => setReferenceType(e.target.value)}
                     placeholder="Ví dụ: Order..."
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Mã tham chiếu *
-                  </label>
-                  <input
+                  <Input
+                    label="Mã tham chiếu *"
                     type="text"
                     required
                     value={referenceId}
                     onChange={(e) => setReferenceId(e.target.value)}
                     placeholder="Mã đơn hoặc mã giao dịch..."
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Số tiền hoàn (VND) *
-                  </label>
-                  <input
+                  <Input
+                    label="Số tiền hoàn (VND) *"
                     type="number"
                     required
                     min={0}
                     step={1000}
                     value={grossAmountVnd}
                     onChange={(e) => setGrossAmountVnd(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Phần trăm phạt (%)
-                  </label>
-                  <input
+                  <Input
+                    label="Phần trăm phạt (%)"
                     type="number"
                     min={0}
                     max={100}
                     value={penaltyPct}
                     onChange={(e) => setPenaltyPct(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Lý do hoàn tiền
-                </label>
-                <select
+                <Select
+                  label="Lý do hoàn tiền"
                   value={reason}
                   onChange={(e) => setReason(e.target.value as RefundReasonEnum)}
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none bg-white"
                 >
                   {Object.entries(REFUND_REASON_LABELS).map(([key, label]) => (
                     <option key={key} value={key}>
                       {label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalVisible(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={submitting}
-                  className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  loading={submitting}
                 >
-                  {submitting ? "Đang xử lý..." : "Tạo mới"}
-                </button>
+                  Tạo mới
+                </Button>
               </div>
             </form>
           </div>
@@ -472,38 +458,35 @@ export default function AdminRefundsPage() {
 
             <form onSubmit={handleReject}>
               <div className="mb-4">
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-2">
-                  Lý do từ chối yêu cầu hoàn tiền này
-                </label>
-                <textarea
+                <Textarea
+                  label="Lý do từ chối yêu cầu hoàn tiền này"
                   rows={4}
                   required
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Nhập lý do từ chối..."
-                  className="w-full rounded border border-[#EAEAEA] p-3 text-sm text-black focus:border-black focus:outline-none"
-                ></textarea>
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => {
                     setRejectModalVisible(false);
                     setRejectReason("");
                     setRejectingRefundId(null);
                   }}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={submitting}
-                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  variant="danger"
+                  loading={submitting}
                 >
-                  {submitting ? "Đang xử lý..." : "Xác nhận từ chối"}
-                </button>
+                  Xác nhận từ chối
+                </Button>
               </div>
             </form>
           </div>
@@ -524,20 +507,21 @@ export default function AdminRefundsPage() {
               </p>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA] mt-5">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => setApprovingRefundId(null)}
-                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
               >
                 Hủy
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="primary"
                 onClick={() => executeApproveRefund(approvingRefundId)}
-                className="bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-4 py-2 rounded transition-colors"
+                loading={submitting}
               >
                 Xác nhận duyệt
-              </button>
+              </Button>
             </div>
           </div>
         </div>

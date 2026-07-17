@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace LG.Core.API.Controllers.Finance
 {
     [Route("api/[controller]")]
-    // [Authorize] // Uncomment when testing security
+    [Authorize] // Bảo vệ toàn bộ endpoint, chỉ user đăng nhập mới được gọi
     public class RefundController : CoreBaseController
     {
         private readonly IRefundService _refundService;
@@ -41,7 +41,7 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpPost("{id}/approve")]
-        // [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> Approve(Guid id)
         {
             var result = await _refundService.ApproveRefundAsync(id);
@@ -50,7 +50,7 @@ namespace LG.Core.API.Controllers.Finance
         }
 
         [HttpPost("{id}/reject")]
-        // [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> Reject(Guid id, [FromBody] string reason)
         {
             var result = await _refundService.RejectRefundAsync(id, reason);

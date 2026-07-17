@@ -58,6 +58,9 @@ export interface CheckoutPreviewResponse {
   serviceFeeVnd: number;
   inspectionFeeVnd: number;
   insuranceFeeVnd: number;
+  importEntrustmentFeeVnd: number;
+  importVatVnd: number;
+  importDutyVnd: number;
   estimatedShippingFeeVnd: number;
   totalVnd: number;
   depositVnd: number;
@@ -96,6 +99,7 @@ export interface CheckoutPreviewRequest {
   shopIds: string[];
   deliveryAddressNote?: string;
   insuranceOption?: string;
+  shippingLine?: string;
 }
 
 export interface ConfirmCheckoutRequest {
@@ -103,4 +107,5 @@ export interface ConfirmCheckoutRequest {
   deliveryAddressNote?: string;
   customerNote?: string;
   insuranceOption?: string;
+  shippingLine?: string;
 }
