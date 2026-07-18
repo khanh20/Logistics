@@ -82,8 +82,11 @@ public class AuthController(
         [FromBody] RefreshTokenRequest req, CancellationToken ct)
     {
         var result = await authService.RefreshTokenAsync(req.RefreshToken, ClientIp, ct);
+        // Rotation: cap lai ca access lan refresh cookie (refresh token cu da bi thu hoi).
         Response.Cookies.Append(AccessCookie, result.AccessToken,
             BuildCookieOptions(result.AccessTokenExpiresAt));
+        Response.Cookies.Append(RefreshCookie, result.RefreshToken,
+            BuildCookieOptions(result.RefreshTokenExpiresAt));
         return Ok(result);
     }
 

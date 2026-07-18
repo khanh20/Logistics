@@ -55,5 +55,7 @@ public record UserAuthInfo(
 
 public record RefreshResponse(
     string   AccessToken,
-    DateTime AccessTokenExpiresAt
+    DateTime AccessTokenExpiresAt,
+    string   RefreshToken,          // rotation: mỗi lần refresh cấp refresh token mới
+    DateTime RefreshTokenExpiresAt
 );

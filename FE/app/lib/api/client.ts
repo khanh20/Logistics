@@ -117,9 +117,10 @@ function createClient(baseURL: string) {
           { headers: { "Content-Type": "application/json" } }
         );
         const newToken = raw.data.data.accessToken;
+        const newRefresh = raw.data.data.refreshToken;
 
-        // Update Redux store
-        store.dispatch(setToken(newToken));
+        // Update Redux store (rotation: lưu cả refresh token mới cho lần sau)
+        store.dispatch(setToken({ token: newToken, refreshToken: newRefresh }));
         original.headers.Authorization = `Bearer ${newToken}`;
         flushQueue(null, newToken);
 

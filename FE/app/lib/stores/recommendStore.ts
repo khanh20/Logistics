@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { recommendationsApi } from "~/lib/api/engagement";
 import { getSessionKey } from "~/lib/utils/session";
-import { store } from "~/lib/feature/store";
+import { useAppSelector } from "~/lib/feature/hooks";
 import type { RecommendationResponse } from "~/lib/types/engagement";
 import type { ProductListItem } from "~/lib/types/product";
 
@@ -33,15 +33,21 @@ export const useRecommendStore = create<RecommendState>()((set, get) => ({
 
     const p = fetcher()
       .then((d) => {
-        set({ data: d, key, fetchedAt: Date.now(), inflight: null });
+        // Chỉ ghi nếu key vẫn là key hiện hành → tránh kết quả cũ/vô danh (resolve muộn)
+        // ghi đè kết quả mới/đã-đăng-nhập (chống đua khi token vừa sẵn sàng).
+        if (get().key === key) set({ data: d, fetchedAt: Date.now(), inflight: null });
         return d;
       })
       .catch((e) => {
-        set({ inflight: null });
+        if (get().key === key) set({ inflight: null });
         throw e;
       });
 
-    set({ key, inflight: p });
+    // Đổi ngữ cảnh (vô danh → đăng nhập, hoặc đổi tài khoản): key khác key của data
+    // hiện tại → XÓA data cũ để KHÔNG hiện nhãn phân khúc sai (vd "Khách mới" của phiên
+    // vô danh còn trong cache) trong lúc chờ dữ liệu mới về.
+    const contextChanged = s.key !== null && s.key !== key;
+    set(contextChanged ? { key, inflight: p, data: null, fetchedAt: 0 } : { key, inflight: p });
     return p;
   },
 
@@ -54,12 +60,15 @@ export const useRecommendStore = create<RecommendState>()((set, get) => ({
 export function useRecommend() {
   const data = useRecommendStore((s) => s.data);
   const load = useRecommendStore((s) => s.load);
+  // Đọc token REACTIVE: mọi component gọi useRecommend thấy cùng một giá trị token,
+  // và khi token vừa sẵn sàng (đăng nhập/hydrate) effect chạy lại → fetch có xác thực.
+  const token = useAppSelector((s) => s.authState.token);
   const [loading, setLoading] = useState(!data);
 
   useEffect(() => {
     let alive = true;
-    const token = store.getState().authState.token;
     const key = token ? `auth:${token.slice(-12)}` : `anon:${getSessionKey()}`;
+    setLoading(true); // đổi ngữ cảnh (đăng nhập) → hiện skeleton trong lúc chờ, không hiện nhãn cũ
     load(key, async () =>
       (await recommendationsApi.get({ sessionKey: getSessionKey(), perSection: 12 })).data
     )
@@ -70,7 +79,7 @@ export function useRecommend() {
     return () => {
       alive = false;
     };
-  }, [load]);
+  }, [load, token]);
 
   return { data, loading };
 }
