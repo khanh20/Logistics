@@ -141,6 +141,7 @@ public static class Module1ServiceExtensions
             client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("LlmGateway:ClassifyTimeoutSeconds", 5));
         }));
         services.AddScoped<CategoryAutoClassifier>();
+        services.AddSingleton<BackgroundCategoryClassifier>();
 
         // Recommendation: options từ appsettings (mục "Recommendation"; thiếu -> defaults
         // = hành vi cũ) + reranker ML (LightGBM bên serving_pipeline, fallback linear).

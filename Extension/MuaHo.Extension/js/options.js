@@ -1,9 +1,9 @@
 // Options page — lưu/đọc cấu hình vào chrome.storage.sync.
 
 var DEFAULTS = {
-  backendHost: "https://localhost:7167",
-  webHost: "http://localhost:5173",
-  authHost: "https://localhost:7237",
+  backendHost: "http://localhost:5066",
+  webHost: "http://localhost:3000",
+  authHost: "http://localhost:5016",
   isTranslate: true,
 };
 

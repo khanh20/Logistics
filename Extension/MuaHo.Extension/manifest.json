@@ -26,6 +26,9 @@
     "https://localhost:7167/*",
     "https://localhost:7237/*",
     "http://localhost:5173/*",
+    "http://localhost:5066/*",
+    "http://localhost:5016/*",
+    "http://localhost:3000/*",
     "https://api.muaho.vn/*",
     "https://auth.muaho.vn/*",
     "https://muaho.vn/*",
@@ -68,6 +71,7 @@
   "externally_connectable": {
     "matches": [
       "http://localhost:5173/*",
+      "http://localhost:3000/*",
       "https://muaho.vn/*",
       "https://*.muaho.vn/*"
     ]

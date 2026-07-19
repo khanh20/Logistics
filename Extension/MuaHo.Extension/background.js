@@ -4,9 +4,9 @@
 // tới Module1. On 401 → gọi Auth /refresh (gửi cookie refresh) → đọc lại cookie → retry.
 
 var DEFAULTS = {
-  backendHost: "https://localhost:7167",
-  webHost: "http://localhost:5173",
-  authHost: "https://localhost:7237",
+  backendHost: "http://localhost:5066",
+  webHost: "http://localhost:3000",
+  authHost: "http://localhost:5016",
 };
 
 var ACCESS_COOKIE = "muaho.access";
@@ -120,6 +120,7 @@ function scrapeUrlInHiddenTab(url) {
     var settled = false;
     var tabId = null;
     var timer = null;
+    var startedAt = Date.now();
 
     function cleanup(result) {
       if (settled) return;
@@ -128,6 +129,8 @@ function scrapeUrlInHiddenTab(url) {
       if (tabId != null) {
         try { chrome.tabs.remove(tabId); } catch (e) {}
       }
+      console.log("[MuaHo] scrape", (Date.now() - startedAt) + "ms",
+        result.ok ? "OK" : ("FAIL:" + result.reason), url);
       resolve(result);
     }
 
@@ -139,10 +142,10 @@ function scrapeUrlInHiddenTab(url) {
         }
         tabId = tab.id;
 
-        // Timeout 15s — trang sàn load chậm / SPA chưa render.
+        // Timeout 30s — 1688 nặng + tab nền bị Chrome bóp nên render/scrape chậm.
         timer = setTimeout(function () {
           cleanup({ ok: false, reason: "timeout" });
-        }, 15000);
+        }, 30000);
 
         // Chờ tab load xong rồi yêu cầu content script scrape.
         function onUpdated(updatedTabId, info) {
@@ -150,17 +153,17 @@ function scrapeUrlInHiddenTab(url) {
           chrome.tabs.onUpdated.removeListener(onUpdated);
 
           // Content script đã được inject (matches domain sàn). Nhờ nó scrape.
-          // Cho trang 1.2s để window object / SPA kịp khởi tạo trước khi hỏi.
+          // Cho trang 2s để window object / SPA kịp khởi tạo trước khi hỏi.
           setTimeout(function () {
             chrome.tabs.sendMessage(tabId, { action: "scrapeNow" }, function (resp) {
               if (chrome.runtime.lastError) {
-                cleanup({ ok: false, reason: "no_content_script" });
+                cleanup({ ok: false, reason: "no_content_script (" + (chrome.runtime.lastError.message || "") + ")" });
                 return;
               }
               if (resp && resp.ok && resp.data) cleanup({ ok: true, data: resp.data });
               else cleanup({ ok: false, reason: (resp && resp.reason) || "scrape_failed" });
             });
-          }, 1200);
+          }, 2000);
         }
         chrome.tabs.onUpdated.addListener(onUpdated);
       });

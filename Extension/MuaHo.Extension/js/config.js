@@ -3,9 +3,9 @@
 
 var MUAHO = {
   // Backend domain — đọc từ chrome.storage.sync (options page), fallback localhost dev.
-  backendHost: "https://localhost:7167",
+  backendHost: "http://localhost:5066",
   // Web app domain (để mở giỏ hàng / login).
-  webHost: "http://localhost:5173",
+  webHost: "http://localhost:3000",
   // Endpoint API.
   addToCartPath: "/api/cart/add-from-extension",
   healthPath: "/api/cart/extension/health",
