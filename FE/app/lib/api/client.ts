@@ -25,8 +25,11 @@ function handleLogout(): void {
 function createAuthClient(baseURL: string) {
   const client = axios.create({
     baseURL,
-    headers: { "Content-Type": "application/json" },
-    withCredentials: true, 
+    headers: {
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true", 
+    },
+    withCredentials: true,
   });
 
   client.interceptors.request.use((config) => {
@@ -63,8 +66,11 @@ function flushQueue(err: unknown, token: string | null): void {
 function createClient(baseURL: string) {
   const client = axios.create({
     baseURL,
-    headers: { "Content-Type": "application/json" },
-    withCredentials: true, 
+    headers: {
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true", // né trang cảnh báo ngrok free (vô hại với localhost)
+    },
+    withCredentials: true,
   });
 
   client.interceptors.request.use((config) => {
@@ -114,7 +120,7 @@ function createClient(baseURL: string) {
         const raw = await axios.post<ApiResponse<RefreshResponse>>(
           `${AUTH_BASE_URL}/api/auth/refresh`,
           { refreshToken: refreshTokenValue },
-          { headers: { "Content-Type": "application/json" } }
+          { headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" } }
         );
         const newToken = raw.data.data.accessToken;
         const newRefresh = raw.data.data.refreshToken;
