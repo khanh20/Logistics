@@ -11,6 +11,7 @@ namespace LG.Module1.ApplicationServices.Services;
 public class BackgroundCategoryClassifier(
     IServiceScopeFactory scopeFactory,
     ILogger<BackgroundCategoryClassifier> logger)
+{
     public void Enqueue(Guid productId, string? title, string? imageUrl, string? originalCategory)
     {
         _ = Task.Run(async () =>
