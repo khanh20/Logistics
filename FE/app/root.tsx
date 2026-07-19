@@ -13,6 +13,7 @@ import "./app.css";
 import "~/lib/i18n";
 import { Provider } from "react-redux";
 import { store } from "~/lib/feature/store";
+import { AuthExtensionSync } from "~/components/AuthExtensionSync";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -55,6 +56,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Provider store={store}>
+      <AuthExtensionSync />
       <Outlet />
     </Provider>
   );

@@ -68,8 +68,25 @@ function getCookie(cfg, name) {
     });
 }
 
+// Token do web MuaHo (FE) đẩy sang qua onMessageExternal — ưu tiên hơn cookie.
+// Giải quyết trường hợp FE deploy (Vercel): cookie nằm ở domain ngrok / bị chặn third-party.
+function getPushedToken() {
+  return new Promise(function (resolve) {
+    try {
+      chrome.storage.local.get({ pushedToken: null, pushedTokenExp: 0 }, function (o) {
+        var t = o.pushedToken;
+        if (t && o.pushedTokenExp && Date.now() > o.pushedTokenExp) t = null; // hết hạn → bỏ
+        resolve(t || null);
+      });
+    } catch (e) { resolve(null); }
+  });
+}
+
 function getToken(cfg) {
-  return getCookie(cfg, ACCESS_COOKIE);
+  // 1) Token FE đẩy sang (không cần cookie). 2) fallback cookie (dev local).
+  return getPushedToken().then(function (t) {
+    return t || getCookie(cfg, ACCESS_COOKIE);
+  });
 }
 
 chrome.runtime.onMessage.addListener(function (req, sender, sendResponse) {
@@ -104,6 +121,22 @@ chrome.runtime.onMessageExternal.addListener(function (req, sender, sendResponse
   if (req.action === "ping") {
     sendResponse({ ok: true, version: chrome.runtime.getManifest().version });
     return false;
+  }
+
+  // FE đẩy access token sang (thay cho việc extension phải đọc cookie).
+  if (req.action === "setAuth" && req.token) {
+    chrome.storage.local.set({
+      pushedToken: req.token,
+      pushedTokenExp: req.expiresAt ? new Date(req.expiresAt).getTime() : 0,
+    }, function () { sendResponse({ ok: true }); });
+    return true; // async
+  }
+
+  if (req.action === "clearAuth") {
+    chrome.storage.local.remove(["pushedToken", "pushedTokenExp"], function () {
+      sendResponse({ ok: true });
+    });
+    return true; // async
   }
 
   if (req.action === "scrapeUrl" && req.url) {
