@@ -15,6 +15,7 @@ public abstract class LlmGatewayAdapterBase(HttpClient http, IConfiguration cfg)
             Content = JsonContent.Create(body),
         };
         if (!string.IsNullOrEmpty(_apiKey)) req.Headers.Add("X-API-Key", _apiKey);
+        req.Headers.Add("ngrok-skip-browser-warning", "true");   
 
         using var resp = await http.SendAsync(req, ct);
         resp.EnsureSuccessStatusCode();

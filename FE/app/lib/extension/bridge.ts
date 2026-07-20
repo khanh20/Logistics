@@ -91,11 +91,41 @@ export async function pingExtension(): Promise<boolean> {
 
 // Nhờ extension scrape 1 URL sàn. Trả ScrapedData hoặc throw lý do.
 export async function scrapeViaExtension(url: string): Promise<ScrapedData> {
-  // Timeout 16s (> 15s timeout phía background) để background kịp trả lý do timeout.
+  // Timeout 31s (> 30s timeout phía background) để background kịp trả lý do thật,
+  // tránh FE báo "TIMEOUT" oan trong khi tab nền vẫn đang scrape.
   const resp = await send<{ ok: boolean; data?: ScrapedData; reason?: string }>(
     { action: "scrapeUrl", url },
-    16000
+    31000
   );
   if (resp?.ok && resp.data) return resp.data;
+  console.warn("[MuaHo] scrapeViaExtension fail:", resp?.reason ?? "SCRAPE_FAILED", url);
   throw new Error(resp?.reason ?? "SCRAPE_FAILED");
+}
+
+// Lấy hạn (exp) từ JWT để extension biết token còn hạn không.
+function jwtExpIso(token: string): string | undefined {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload?.exp ? new Date(payload.exp * 1000).toISOString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// Đẩy access token sang MuaHo Extension (thay cho việc extension đọc cookie — cần khi FE
+// deploy khác domain với backend, cookie bị chặn third-party). Fire-and-forget; im lặng
+// nếu chưa cài extension. Gọi mỗi khi token đổi (login / refresh); truyền null khi logout.
+export function pushAuthToExtension(token: string | null): void {
+  const rt = getRuntime();
+  if (!rt || typeof rt.sendMessage !== "function") return;
+  try {
+    const msg = token
+      ? { action: "setAuth", token, expiresAt: jwtExpIso(token) }
+      : { action: "clearAuth" };
+    rt.sendMessage(EXT_ID, msg, () => {
+      void rt.lastError; // nuốt "Unchecked lastError" khi extension không cài
+    });
+  } catch {
+    /* ignore */
+  }
 }

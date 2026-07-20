@@ -13,6 +13,7 @@ import "./app.css";
 import "~/lib/i18n";
 import { Provider } from "react-redux";
 import { store } from "~/lib/feature/store";
+import { AuthExtensionSync } from "~/components/AuthExtensionSync";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -39,6 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="referrer" content="no-referrer" />
         <Meta />
         <Links />
       </head>
@@ -55,6 +57,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Provider store={store}>
+      <AuthExtensionSync />
       <Outlet />
     </Provider>
   );

@@ -63,6 +63,16 @@
     <h1>MuaHo — Cài đặt</h1>
 
     <div class="field">
+      <label for="preset">Môi trường (chọn nhanh)</label>
+      <select id="preset" style="width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;background:#fff;">
+        <option value="">— Tự nhập —</option>
+        <option value="local">Local (localhost — dev)</option>
+        <option value="demo">Demo (FE trên Vercel)</option>
+      </select>
+      <div class="hint">Chọn để tự điền 3 ô bên dưới, rồi bấm “Lưu cài đặt”.</div>
+    </div>
+
+    <div class="field">
       <label for="backendHost">Backend API URL</label>
       <input type="text" id="backendHost" placeholder="https://localhost:7167" />
       <div class="hint">Địa chỉ API Module1 của MuaHo (không có dấu / cuối).</div>

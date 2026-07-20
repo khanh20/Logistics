@@ -98,18 +98,45 @@ public class AuthService(
         var rt = await rtRepo.GetByTokenAsync(refreshToken, ct)
                  ?? throw new InvalidTokenException();
 
-        if (!rt.IsActive) throw new InvalidTokenException("Refresh token has been revoked or expired.");
+        // Phat hien tai su dung: token da bi xoay (revoked + co ReplacedBy) ma van duoc gui lai
+        // -> dau hieu token bi danh cap -> thu hoi TOAN BO phien cua nguoi dung.
+        if (rt.RevokedAt != null)
+        {
+            if (rt.ReplacedBy != null)
+            {
+                await rtRepo.RevokeAllForUserAsync(rt.UserId, ip, ct);
+                await uow.SaveChangesAsync(ct);
+                logger.LogWarning("Refresh token reuse detected for user {UserId} — all sessions revoked", rt.UserId);
+            }
+            throw new InvalidTokenException("Refresh token has been revoked.");
+        }
+        if (rt.IsExpired) throw new InvalidTokenException("Refresh token has expired.");
 
         var user = rt.User;
         if (!user.IsActive) throw new AccountLockedException();
 
-        var roles = await userRepo.GetRoleNamesAsync(user.Id, ct);
-        var permissions = await userRepo.GetPermissionCodesAsync(user.Id, ct);
-        var newAccess = tokenSvc.GenerateAccessToken(user, roles, permissions);
+        return await uow.ExecuteInTransactionAsync(async innerCt =>
+        {
+            var roles       = await userRepo.GetRoleNamesAsync(user.Id, innerCt);
+            var permissions = await userRepo.GetPermissionCodesAsync(user.Id, innerCt);
+            var newAccess   = tokenSvc.GenerateAccessToken(user, roles, permissions);
 
-        logger.LogInformation("Token refreshed for user: {UserId}", user.Id);
+            // Xoay refresh token: cap cai moi, thu hoi cai cu va tro ReplacedBy sang cai moi.
+            var newRt = tokenSvc.GenerateRefreshToken(user.Id, ip);
+            await rtRepo.AddAsync(newRt, innerCt);
+            rt.Revoke(ip, newRt.Token);
+            await rtRepo.UpdateAsync(rt, innerCt);
+            await uow.SaveChangesAsync(innerCt);
 
-        return new RefreshResponse(newAccess, DateTime.UtcNow.AddMinutes(30));
+            logger.LogInformation("Token rotated for user: {UserId}", user.Id);
+
+            return new RefreshResponse(
+                AccessToken: newAccess,
+                AccessTokenExpiresAt: DateTime.UtcNow.AddMinutes(30),
+                RefreshToken: newRt.Token,
+                RefreshTokenExpiresAt: newRt.ExpiresAt
+            );
+        }, ct);
     }
 
     public async Task LogoutAsync(string refreshToken, string? ip, CancellationToken ct = default)

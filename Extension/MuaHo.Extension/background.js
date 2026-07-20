@@ -4,9 +4,9 @@
 // tới Module1. On 401 → gọi Auth /refresh (gửi cookie refresh) → đọc lại cookie → retry.
 
 var DEFAULTS = {
-  backendHost: "https://localhost:7167",
-  webHost: "http://localhost:5173",
-  authHost: "https://localhost:7237",
+  backendHost: "http://localhost:5066",
+  webHost: "http://localhost:3000",
+  authHost: "http://localhost:5016",
 };
 
 var ACCESS_COOKIE = "muaho.access";
@@ -68,8 +68,25 @@ function getCookie(cfg, name) {
     });
 }
 
+// Token do web MuaHo (FE) đẩy sang qua onMessageExternal — ưu tiên hơn cookie.
+// Giải quyết trường hợp FE deploy (Vercel): cookie nằm ở domain ngrok / bị chặn third-party.
+function getPushedToken() {
+  return new Promise(function (resolve) {
+    try {
+      chrome.storage.local.get({ pushedToken: null, pushedTokenExp: 0 }, function (o) {
+        var t = o.pushedToken;
+        if (t && o.pushedTokenExp && Date.now() > o.pushedTokenExp) t = null; // hết hạn → bỏ
+        resolve(t || null);
+      });
+    } catch (e) { resolve(null); }
+  });
+}
+
 function getToken(cfg) {
-  return getCookie(cfg, ACCESS_COOKIE);
+  // 1) Token FE đẩy sang (không cần cookie). 2) fallback cookie (dev local).
+  return getPushedToken().then(function (t) {
+    return t || getCookie(cfg, ACCESS_COOKIE);
+  });
 }
 
 chrome.runtime.onMessage.addListener(function (req, sender, sendResponse) {
@@ -106,6 +123,22 @@ chrome.runtime.onMessageExternal.addListener(function (req, sender, sendResponse
     return false;
   }
 
+  // FE đẩy access token sang (thay cho việc extension phải đọc cookie).
+  if (req.action === "setAuth" && req.token) {
+    chrome.storage.local.set({
+      pushedToken: req.token,
+      pushedTokenExp: req.expiresAt ? new Date(req.expiresAt).getTime() : 0,
+    }, function () { sendResponse({ ok: true }); });
+    return true; // async
+  }
+
+  if (req.action === "clearAuth") {
+    chrome.storage.local.remove(["pushedToken", "pushedTokenExp"], function () {
+      sendResponse({ ok: true });
+    });
+    return true; // async
+  }
+
   if (req.action === "scrapeUrl" && req.url) {
     scrapeUrlInHiddenTab(req.url).then(sendResponse);
     return true; // async
@@ -120,6 +153,7 @@ function scrapeUrlInHiddenTab(url) {
     var settled = false;
     var tabId = null;
     var timer = null;
+    var startedAt = Date.now();
 
     function cleanup(result) {
       if (settled) return;
@@ -128,6 +162,8 @@ function scrapeUrlInHiddenTab(url) {
       if (tabId != null) {
         try { chrome.tabs.remove(tabId); } catch (e) {}
       }
+      console.log("[MuaHo] scrape", (Date.now() - startedAt) + "ms",
+        result.ok ? "OK" : ("FAIL:" + result.reason), url);
       resolve(result);
     }
 
@@ -139,10 +175,10 @@ function scrapeUrlInHiddenTab(url) {
         }
         tabId = tab.id;
 
-        // Timeout 15s — trang sàn load chậm / SPA chưa render.
+        // Timeout 30s — 1688 nặng + tab nền bị Chrome bóp nên render/scrape chậm.
         timer = setTimeout(function () {
           cleanup({ ok: false, reason: "timeout" });
-        }, 15000);
+        }, 30000);
 
         // Chờ tab load xong rồi yêu cầu content script scrape.
         function onUpdated(updatedTabId, info) {
@@ -150,17 +186,17 @@ function scrapeUrlInHiddenTab(url) {
           chrome.tabs.onUpdated.removeListener(onUpdated);
 
           // Content script đã được inject (matches domain sàn). Nhờ nó scrape.
-          // Cho trang 1.2s để window object / SPA kịp khởi tạo trước khi hỏi.
+          // Cho trang 2s để window object / SPA kịp khởi tạo trước khi hỏi.
           setTimeout(function () {
             chrome.tabs.sendMessage(tabId, { action: "scrapeNow" }, function (resp) {
               if (chrome.runtime.lastError) {
-                cleanup({ ok: false, reason: "no_content_script" });
+                cleanup({ ok: false, reason: "no_content_script (" + (chrome.runtime.lastError.message || "") + ")" });
                 return;
               }
               if (resp && resp.ok && resp.data) cleanup({ ok: true, data: resp.data });
               else cleanup({ ok: false, reason: (resp && resp.reason) || "scrape_failed" });
             });
-          }, 1200);
+          }, 2000);
         }
         chrome.tabs.onUpdated.addListener(onUpdated);
       });

@@ -100,10 +100,21 @@ public static class Module1ServiceExtensions
         services.AddScoped<IProductCoViewRepository, ProductCoViewRepository>();
         services.AddScoped<IModule1UnitOfWork, Module1UnitOfWork>();
 
+        // ── Chống chậm khi gateway AI TẮT ────────────────────────────────────────
+        // Circuit breaker DÙNG CHUNG cho mọi client AI: khi gateway chết, mỗi lời gọi ném
+        // HttpRequestException (connection refused) — được HandleTransientHttpError đếm; sau 2
+        // lần lỗi thì "mở mạch", các lời gọi sau bị chặn NGAY (không thử kết nối) trong 30s →
+        // search/recommend fallback tức thì thay vì phí ~9s mỗi lần. (Dùng 127.0.0.1 thay
+        // localhost trong BaseUrl để refuse ~2s thay vì ~4s do khỏi thử cả IPv6 ::1.)
+        var aiBreaker = Polly.Extensions.Http.HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .CircuitBreakerAsync(handledEventsAllowedBeforeBreaking: 2, durationOfBreak: TimeSpan.FromSeconds(30));
+        IHttpClientBuilder WithAiResilience(IHttpClientBuilder b) => b.AddPolicyHandler(aiBreaker);
+
         // Embedding — Qwen3-Embedding phục vụ bởi serving_pipeline (endpoint /api/v1/embed).
         // Mặc định dùng chung host với gateway (LlmGateway:BaseUrl); có thể override Embedding:BaseUrl
         // nếu dùng TEI riêng (khi đó đặt Embedding:Path=/embed).
-        services.AddHttpClient<IEmbeddingProvider, HttpEmbeddingService>((sp, client) =>
+        WithAiResilience(services.AddHttpClient<IEmbeddingProvider, HttpEmbeddingService>((sp, client) =>
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
             var baseUrl = cfg["Embedding:BaseUrl"]
@@ -113,35 +124,36 @@ public static class Module1ServiceExtensions
             client.BaseAddress = new Uri(baseUrl);
             // Batch backfill trên CPU có thể chậm; GPU/production giảm qua config.
             client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("Embedding:TimeoutSeconds", 300));
-        });
+        }));
 
         // Các client ML dùng chung host gateway (LlmGateway:BaseUrl + ApiKey); timeout config được.
-        services.AddHttpClient<ISearchReranker, HttpSearchReranker>((sp, client) =>
+        WithAiResilience(services.AddHttpClient<ISearchReranker, HttpSearchReranker>((sp, client) =>
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
             client.BaseAddress = new Uri(cfg["LlmGateway:BaseUrl"] ?? "http://localhost:8000");
             client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("LlmGateway:RerankTimeoutSeconds", 8));
-        });
+        }));
 
-        services.AddHttpClient<ICategoryClassifier, HttpCategoryClassifier>((sp, client) =>
+        WithAiResilience(services.AddHttpClient<ICategoryClassifier, HttpCategoryClassifier>((sp, client) =>
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
             client.BaseAddress = new Uri(cfg["LlmGateway:BaseUrl"] ?? "http://localhost:8000");
             client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("LlmGateway:ClassifyTimeoutSeconds", 5));
-        });
+        }));
         services.AddScoped<CategoryAutoClassifier>();
+        services.AddSingleton<BackgroundCategoryClassifier>();
 
         // Recommendation: options từ appsettings (mục "Recommendation"; thiếu -> defaults
         // = hành vi cũ) + reranker ML (LightGBM bên serving_pipeline, fallback linear).
         services.AddSingleton(
             config.GetSection("Recommendation").Get<LG.Module1.ApplicationServices.Configuration.RecommendationOptions>()
             ?? new LG.Module1.ApplicationServices.Configuration.RecommendationOptions());
-        services.AddHttpClient<IRecoReranker, HttpRecoReranker>((sp, client) =>
+        WithAiResilience(services.AddHttpClient<IRecoReranker, HttpRecoReranker>((sp, client) =>
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
             client.BaseAddress = new Uri(cfg["LlmGateway:BaseUrl"] ?? "http://localhost:8000");
             client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("LlmGateway:RerankTimeoutSeconds", 8));
-        });
+        }));
 
         services.AddDataProtection()
            .SetApplicationName("LG.Module1");

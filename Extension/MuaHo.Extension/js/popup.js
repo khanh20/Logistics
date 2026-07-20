@@ -1,8 +1,8 @@
 // Popup logic — kiểm tra kết nối backend + hiển thị tỉ giá, link giỏ hàng / cài đặt.
 
 var DEFAULTS = {
-  backendHost: "https://localhost:7167",
-  webHost: "http://localhost:5173",
+  backendHost: "http://localhost:5066",
+  webHost: "http://localhost:3000",
 };
 
 document.addEventListener("DOMContentLoaded", function () {

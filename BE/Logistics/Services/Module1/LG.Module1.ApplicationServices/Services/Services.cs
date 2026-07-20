@@ -5,6 +5,7 @@ using LG.Module1.Domain.Adapters;
 using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Exceptions;
 using LG.Module1.Domain.Repositories;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace LG.Module1.ApplicationServices.Services;
@@ -187,11 +188,14 @@ public class ProductService(
     IForbiddenCategoryService forbiddenSvc,
     IEmbeddingProvider embeddingProvider,
     ISearchReranker searchReranker,
+    IMemoryCache cache,
     IModule1UnitOfWork uow,
     ILogger<ProductService> logger
 ) : IProductService
 {
     private const int SemanticPoolSize = 50;
+    private const int RerankTopK = 50; 
+    private static readonly TimeSpan SemanticPoolTtl = TimeSpan.FromMinutes(2);
 
     public async Task<PagedProductResponse> SearchAsync(ProductSearchRequest req, CancellationToken ct = default)
     {
@@ -216,8 +220,30 @@ public class ProductService(
         );
     }
 
-    // Hybrid (lexical + vector, RRF) → cross-encoder rerank → phân trang trong pool.
+    // Hybrid (lexical + vector, RRF) → cross-encoder rerank. Pool đã xếp hạng được CACHE
+    // theo (keyword + bộ lọc) nên phân trang / tìm lại cùng truy vấn không chạy lại embed+rerank.
     private async Task<PagedProductResponse> SearchSemanticAsync(ProductSearchRequest req, CancellationToken ct)
+    {
+        var key = SemanticCacheKey(req);
+        if (!cache.TryGetValue(key, out (List<ProductListItemResponse> Items, int Total) pool))
+        {
+            pool = await ComputeSemanticPoolAsync(req, ct);
+            cache.Set(key, pool, SemanticPoolTtl);
+        }
+
+        var pageItems = pool.Items
+            .Skip((req.Page - 1) * req.PageSize)
+            .Take(req.PageSize)
+            .ToList();
+
+        return new PagedProductResponse(
+            pageItems, req.Page, req.PageSize, pool.Total,
+            (int)Math.Ceiling(pool.Total / (double)req.PageSize));
+    }
+
+    // Tính pool ngữ nghĩa (embed → hybrid RRF → rerank) rồi map DTO. Chỉ chạy 1 lần/truy vấn (được cache).
+    private async Task<(List<ProductListItemResponse> Items, int Total)> ComputeSemanticPoolAsync(
+        ProductSearchRequest req, CancellationToken ct)
     {
         Pgvector.Vector? qVec = null;
         try
@@ -232,29 +258,24 @@ public class ProductService(
             req.MinPriceCny, req.MaxPriceCny, req.ActiveOnly, qVec, SemanticPoolSize, ct);
 
         var total = Math.Max(lexTotal, candidates.Count);
-        if (candidates.Count == 0)
-            return new PagedProductResponse(new(), req.Page, req.PageSize, total,
-                (int)Math.Ceiling(total / (double)req.PageSize));
+        if (candidates.Count == 0) return (new(), total);
 
-        var docs = candidates.Select(p => (p.Id, Text: BuildRerankText(p))).ToList();
+        var docs = candidates.Take(RerankTopK).Select(p => (p.Id, Text: BuildRerankText(p))).ToList();
         var order = await searchReranker.RerankAsync(req.Keyword!, docs, ct);
         if (order is not null)
             candidates = Common.RankingHelpers.ReorderByIds(candidates, order);
 
-        var pageItems = candidates
-            .Skip((req.Page - 1) * req.PageSize)
-            .Take(req.PageSize)
-            .Select(ProductMapper.ToListItem)
-            .ToList();
-
-        return new PagedProductResponse(
-            pageItems, req.Page, req.PageSize, total,
-            (int)Math.Ceiling(total / (double)req.PageSize));
+        return (candidates.Select(ProductMapper.ToListItem).ToList(), total);
     }
+
+    private static string SemanticCacheKey(ProductSearchRequest req) =>
+        $"sem:{req.Keyword?.Trim().ToLowerInvariant()}|c={req.CategoryId}|p={req.PlatformId}|" +
+        $"mn={req.MinPriceCny}|mx={req.MaxPriceCny}|a={req.ActiveOnly}";
 
     private static string BuildRerankText(ProductMaster p)
     {
         var title = string.IsNullOrWhiteSpace(p.TranslatedTitle) ? p.OriginalTitle : p.TranslatedTitle!;
+        if (title.Length > 80) title = title[..80];   // chặn độ dài để cross-encoder CPU ổn định
         var cat = p.Category?.NameVn;
         return string.IsNullOrWhiteSpace(cat) ? title : $"{title} · {cat}";
     }
