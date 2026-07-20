@@ -26,7 +26,7 @@ function createAuthClient(baseURL: string) {
   const client = axios.create({
     baseURL,
     headers: { "Content-Type": "application/json" },
-    withCredentials: true, 
+    withCredentials: true,
   });
 
   client.interceptors.request.use((config) => {
@@ -64,7 +64,7 @@ function createClient(baseURL: string) {
   const client = axios.create({
     baseURL,
     headers: { "Content-Type": "application/json" },
-    withCredentials: true, 
+    withCredentials: true,
   });
 
   client.interceptors.request.use((config) => {
