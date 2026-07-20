@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LG.Module2.Domain\LG.Module2.Domain.csproj" />
+    <ProjectReference Include="..\LG.Module2.Infrastructure\LG.Module2.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

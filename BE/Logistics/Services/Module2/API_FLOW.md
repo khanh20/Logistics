@@ -126,6 +126,7 @@ Khách nhận hàng ✅
 | Bước | Method | Endpoint | Body |
 |------|--------|----------|------|
 | Tính cước | `POST` | `/api/packages/{id}/calculate-fee` | `{ ratePerKgVnd, insuranceRate?, declaredValueVnd? }` |
+| **Thu cước (trừ ví)** | `POST` | `/api/packages/{id}/charge-fee` | — |
 | Xem chi tiết cước | `GET` | `/api/packages/{id}/fee` | — |
 
 **Logic tính (lưu vào `packages`):**
@@ -135,7 +136,13 @@ Khách nhận hàng ✅
 - `insuranceFeeVnd` = declaredValueVnd × insuranceRate (chỉ khi `insuranceOpted = true`)
 - `totalFeeVnd` = shipIntlVnd + insuranceFeeVnd
 - Lỗi `PACKAGE_NOT_WEIGHED` nếu kiện chưa được cân (`chargedWeightKg` null)
-- `GET /fee` trả `totalFeeVnd = null` nếu chưa từng tính cước
+- `GET /fee` trả `totalFeeVnd = null` nếu chưa từng tính cước, `paidAt` = thời điểm đã thu (null nếu chưa)
+
+**Thu cước (`charge-fee`) — trừ ví thật qua Core Finance:**
+- Trừ ví khách `totalFeeVnd` (referenceType `PackageIntlFee`); đánh dấu `FeePaidAt`
+- Idempotent: đã thu → `FEE_ALREADY_PAID` (409); chưa tính cước → `FEE_NOT_CALCULATED` (422); thiếu số dư → `WALLET_OPERATION_FAILED` (422)
+- Commit DB fail sau khi trừ → tự hoàn lại (compensation), khách không mất tiền oan
+- Sau khi đã thu, `calculate-fee` bị chặn (`FEE_ALREADY_PAID`) để không lệch số đã thu
 
 ---
 

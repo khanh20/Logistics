@@ -91,5 +91,6 @@ public record PackageFeeResponse(
     bool     InsuranceOpted,
     decimal? InsuranceFeeVnd,
     decimal? TotalFeeVnd,
-    DateTime? CalculatedAt
+    DateTime? CalculatedAt,
+    DateTime? PaidAt
 );

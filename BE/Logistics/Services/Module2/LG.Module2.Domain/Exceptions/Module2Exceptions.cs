@@ -67,6 +67,12 @@ public class DuplicateCustomsClearanceException(object tripId)
 public class PackageNotWeighedException(string barcode)
     : Module2DomainException($"Kiện '{barcode}' chưa được cân nên không thể tính cước.", "PACKAGE_NOT_WEIGHED");
 
+public class FeeNotCalculatedException(string barcode)
+    : Module2DomainException($"Kiện '{barcode}' chưa tính cước quốc tế nên không thể thu tiền.", "FEE_NOT_CALCULATED");
+
+public class FeeAlreadyPaidException(string barcode)
+    : Module2DomainException($"Kiện '{barcode}' đã thu cước quốc tế rồi.", "FEE_ALREADY_PAID");
+
 // ── Phase 6 — Delivery & Carrier ──────────────────────────────────────────────
 public class EmptyDeliveryRequestException()
     : Module2DomainException("Yêu cầu giao hàng phải có ít nhất 1 kiện.", "EMPTY_DELIVERY_REQUEST");

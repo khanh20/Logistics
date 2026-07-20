@@ -80,6 +80,7 @@ export interface PackageFee {
   insuranceFeeVnd: number | null;
   totalFeeVnd: number | null;
   calculatedAt: string | null;
+  paidAt: string | null;
 }
 
 // ── Warehouse & receive (UC-2.01, 2.06 — staff) ──────────────────────────────

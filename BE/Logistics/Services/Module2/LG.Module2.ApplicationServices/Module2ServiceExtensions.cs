@@ -80,7 +80,10 @@ public static class Module2ServiceExtensions
         services.AddScoped<IDeliveryService,     DeliveryService>();
         services.AddScoped<ITrackingService,     TrackingService>();
         services.AddScoped<IClaimService,        ClaimService>();
-        services.AddScoped<IAIForecastService,   AIForecastService>();  // Phase 8: stub rule-based
+        services.AddScoped<IAIForecastService,   AIForecastService>();
+        // Model ML dự báo lead time (Bước 8 LeadTime.md) — singleton nạp 1 lần;
+        // Ai:ModelDirectory trống/thiếu file → Predict trả null → heuristic fallback
+        services.AddSingleton<Services.Ml.ILeadTimeModel, Services.Ml.LeadTimeModelService>();
 
         // ── Core Finance (ví khách + sổ địa chỉ — cùng pattern Module1) ────────
         // Lưu ý: ICustomerAddressService cần IUserTokenAccessor — API project phải đăng ký
