@@ -623,7 +623,9 @@
     "staff_kpi": "Staff KPI",
     "staff_settings": "Shifts & capacity",
     "complaints": "Complaints",
-    "staff_portal": "Staff portal"
+    "staff_portal": "Staff portal",
+    "my_orders_group": "My orders",
+    "menu": "Menu"
   },
   "roles": {
     "title": "Roles & Permissions",

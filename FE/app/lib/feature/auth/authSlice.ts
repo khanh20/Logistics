@@ -61,6 +61,17 @@ const authSlice = createSlice({
     clearAuthError(state) {
       state.error = null;
     },
+    // Xoá sạch danh tính tại chỗ, không qua API. Dùng cho các nhánh logout không gọi
+    resetAuth(state) {
+      state.user = null;
+      state.token = null;
+      state.refreshToken = null;
+      state.roles = [];
+      state.permissions = [];
+      state.status = ReduxStatus.IDLE;
+      state.error = null;
+      localStorage.removeItem("muaho-auth");
+    },
     setToken(state, action: PayloadAction<{ token: string; refreshToken?: string }>) {
       state.token = action.payload.token;
       // Rotation: mỗi lần refresh, backend cấp refresh token mới → cập nhật luôn
@@ -123,5 +134,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearAuthError, setToken, updateUserLocal } = authSlice.actions;
+export const { clearAuthError, setToken, updateUserLocal, resetAuth } = authSlice.actions;
 export default authSlice.reducer;

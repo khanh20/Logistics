@@ -50,8 +50,15 @@ function availableActions(status: OrderStatus) {
 }
 
 // ── Fetch wrapper: render NGAY + skeleton (non-blocking) ──────────────────────
-// Dùng chung cho cả /admin/orders/:id và /staff/orders/:id — chỉ khác nút "Quay lại".
-export function OrderDetailView({ backTo = "/admin/orders" }: { backTo?: string }) {
+// Dùng chung cho cả /admin/orders/:id và /staff/orders/:id.
+// canManageStaff: chỉ admin mới được phân công / chuyển việc. Trang nhân viên
+export function OrderDetailView({
+  backTo = "/admin/orders",
+  canManageStaff = true,
+}: {
+  backTo?: string;
+  canManageStaff?: boolean;
+}) {
   const { t } = useTranslation();
   const { id } = useParams();
 
@@ -93,6 +100,7 @@ export function OrderDetailView({ backTo = "/admin/orders" }: { backTo?: string 
           initialOrder={data.order}
           initialAssignment={data.assignment}
           users={data.users}
+          canManageStaff={canManageStaff}
         />
       )}
     </FadeIn>
@@ -107,10 +115,12 @@ function OrderDetailInner({
   initialOrder,
   initialAssignment,
   users,
+  canManageStaff = true,
 }: {
   initialOrder: OrderDetailResponse;
   initialAssignment: StaffAssignmentDto | null;
   users: StaffUserDto[];
+  canManageStaff?: boolean;
 }) {
   const { t } = useTranslation();
   const [order, setOrder] = useState(initialOrder);
@@ -468,8 +478,7 @@ function OrderDetailInner({
 
         {/* Right — Actions */}
         <div className="space-y-4">
-          {/* Assign staff */}
-          {actions.canAssign && (
+          {canManageStaff && actions.canAssign && (
             <ActionCard title={t("order.action_assign")}>
               <select
                 value={assignStaffId}
@@ -664,8 +673,8 @@ function OrderDetailInner({
             </ActionCard>
           )}
 
-          {/* Reassign staff */}
-          {assignment && !assignment.completedAt && (
+          {/* Reassign staff — chỉ admin */}
+          {canManageStaff && assignment && !assignment.completedAt && (
             <ActionCard title={t("order.action_reassign", "Chuyển nhân viên (Reassign)")}>
               <p className="mb-2 text-xs text-slate-500">
                 {t("order.current_staff", "NV hiện tại")}:{" "}
