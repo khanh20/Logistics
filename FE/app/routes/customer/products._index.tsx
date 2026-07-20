@@ -132,7 +132,7 @@ export default function CustomerProductsPage() {
 
       {!sp.get("keyword") && <RecommendationSections />}
 
-      {loading && !data ? (
+      {loading ? (
         <ProductGridSkeleton />
       ) : items.length === 0 ? (
         <EmptyState
