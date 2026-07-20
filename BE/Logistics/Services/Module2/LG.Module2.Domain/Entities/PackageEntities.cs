@@ -67,6 +67,10 @@ public class Package
     public decimal? ShipIntlVnd      { get; private set; }  // Cước quốc tế = charged_weight × đơn giá
     public decimal? InsuranceFeeVnd  { get; private set; }  // Phí bảo hiểm = declared_value × tỉ lệ
     public DateTime? FeeCalculatedAt { get; private set; }
+    public DateTime? FeePaidAt       { get; private set; }  // Thời điểm khách đã bị trừ ví cước quốc tế (null = chưa thu)
+
+    /// Tổng cước quốc tế phải thu = cước ship + phí bảo hiểm (0 nếu chưa tính cước).
+    public decimal TotalIntlFeeVnd => (ShipIntlVnd ?? 0m) + (InsuranceFeeVnd ?? 0m);
 
     public DateTime  CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime  UpdatedAt { get; private set; } = DateTime.UtcNow;
@@ -155,6 +159,19 @@ public class Package
             : 0m;
 
         FeeCalculatedAt = DateTime.UtcNow;
+        Touch();
+    }
+
+    /// UC-2.07: Đánh dấu đã thu cước quốc tế (sau khi trừ ví thành công).
+    /// Guard chống thu 2 lần + yêu cầu đã tính cước.
+    public void MarkFeePaid()
+    {
+        if (FeeCalculatedAt is null)
+            throw new FeeNotCalculatedException(Barcode);
+        if (FeePaidAt is not null)
+            throw new FeeAlreadyPaidException(Barcode);
+
+        FeePaidAt = DateTime.UtcNow;
         Touch();
     }
 

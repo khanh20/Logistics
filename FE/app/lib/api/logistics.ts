@@ -160,6 +160,12 @@ export const packagesApi = {
       body
     ),
 
+  // POST /api/packages/{id}/charge-fee  (UC-2.07 — thu cước quốc tế, trừ ví khách)
+  chargeFee: (id: string) =>
+    apiModule2Client.post<unknown, ApiResponse<PackageFee>>(
+      `/api/packages/${id}/charge-fee`
+    ),
+
   // GET /api/packages/{id}/fee
   getFee: (id: string) =>
     apiModule2Client.get<unknown, ApiResponse<PackageFee>>(

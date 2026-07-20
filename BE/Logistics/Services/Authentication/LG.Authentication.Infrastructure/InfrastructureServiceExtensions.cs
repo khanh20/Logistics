@@ -1,8 +1,9 @@
-﻿using System.Text;
+using System.Text;
 using LG.Authentication.Domain.Repositories;
 using LG.Authentication.Infrastructure.Data;
 using LG.Authentication.Infrastructure.Repositories;
 using LG.Authentication.Infrastructure.Security;
+using LG.Authentication.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,6 +63,7 @@ public static class InfrastructureServiceExtensions
         // ── Security ──────────────────────────────────────────────────────────
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IUploadAvatar, UploadAvatarService>();
 
         return services;
     }

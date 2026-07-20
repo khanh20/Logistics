@@ -1,13 +1,15 @@
 using LG.Authentication.API.Filters;
 using LG.Authentication.ApplicationServices.DTOs.User;
 using LG.Authentication.ApplicationServices.Interfaces;
+using LG.Authentication.Infrastructure.Services;
 using LG.Shared.Constants;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LG.Authentication.API.Controllers;
 
 [Route("api/users")]
-public class UsersController(IUserService userService) : BaseController
+public class UsersController(IUserService userService, IUploadAvatar uploadAvatarService) : BaseController
 {
     /// Get current authenticated user's profile
     [HttpGet("me")]
@@ -26,6 +28,41 @@ public class UsersController(IUserService userService) : BaseController
     {
         var result = await userService.UpdateProfileAsync(CurrentUserId, req, ct);
         return Ok(result, "Profile updated.");
+    }
+
+    /// Upload new avatar
+    [HttpPost("me/avatar")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(UserResponse), 200)]
+    public async Task<IActionResult> UploadAvatar(IFormFile file, CancellationToken ct)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { message = "Image is required." });
+        }
+
+        var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/webp" };
+        if (!Array.Exists(allowedTypes, t => t.Equals(file.ContentType, StringComparison.OrdinalIgnoreCase)))
+        {
+            return BadRequest(new { message = "Invalid image type. Allowed: jpeg, jpg, png, webp." });
+        }
+
+        if (file.Length > 5 * 1024 * 1024)
+        {
+            return BadRequest(new { message = "Image size cannot exceed 5MB." });
+        }
+
+        var avatarUrl = await uploadAvatarService.UploadImageAsync(file);
+        if (string.IsNullOrEmpty(avatarUrl))
+        {
+            return StatusCode(500, new { message = "Failed to upload image." });
+        }
+
+        var currentUser = await userService.GetMeAsync(CurrentUserId, ct);
+        var updateReq = new UpdateProfileRequest(currentUser.FullName, currentUser.Phone, avatarUrl);
+        var result = await userService.UpdateProfileAsync(CurrentUserId, updateReq, ct);
+
+        return Ok(result, "Avatar updated.");
     }
 
     /// List all users for staff management (Admin only)

@@ -27,7 +27,7 @@ function createAuthClient(baseURL: string) {
     baseURL,
     headers: {
       "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true", 
+      "ngrok-skip-browser-warning": "true",
     },
     withCredentials: true,
   });

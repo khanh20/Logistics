@@ -34,35 +34,67 @@ import {
 import { TopupForm } from "~/components/finance/TopupForm";
 import { WithdrawForm } from "~/components/finance/WithdrawForm";
 import { TransactionHistoryTable } from "~/components/finance/TransactionHistoryTable";
+import { SkeletonPanel, StatGroupSkeleton, Skeleton } from "~/components/shared/Skeleton";
 
 /* ── Scroll Reveal Hook (IntersectionObserver) ── */
-function useScrollReveal() {
+function useScrollReveal(deps: any[] = []) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const targets = container.querySelectorAll(".reveal-hidden");
-    if (targets.length === 0) return;
+    const timer = setTimeout(() => {
+      const targets = container.querySelectorAll(".reveal-hidden");
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("reveal-visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.05, rootMargin: "0px 0px -60px 0px" }
+      );
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("reveal-visible");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.05, rootMargin: "0px 0px -60px 0px" }
-    );
+      targets.forEach((el) => observer.observe(el));
+      return () => observer.disconnect();
+    }, 50);
 
-    targets.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
 
   return containerRef;
+}
+
+function FinancePageSkeleton() {
+  return (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="p-6 bg-white border border-slate-200/70 rounded-xl space-y-4">
+          <div className="flex justify-between items-center"><Skeleton className="h-4 w-24" /><Skeleton className="h-7 w-7 rounded-md" /></div>
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-3 w-3/4 mt-4" />
+        </div>
+        <div className="p-6 bg-white border border-slate-200/70 rounded-xl space-y-4">
+          <div className="flex justify-between items-center"><Skeleton className="h-4 w-24" /><Skeleton className="h-7 w-7 rounded-md" /></div>
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-3 w-3/4 mt-4" />
+        </div>
+        <div className="p-6 bg-white border border-slate-200/70 rounded-xl space-y-4">
+          <div className="flex justify-between items-center"><Skeleton className="h-4 w-24" /><Skeleton className="h-7 w-7 rounded-md" /></div>
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-3 w-3/4 mt-4" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="lg:col-span-5"><SkeletonPanel rows={7} cols={1} /></div>
+        <div className="lg:col-span-7"><SkeletonPanel rows={7} cols={5} /></div>
+      </div>
+    </>
+  );
 }
 
 const FinancePage: React.FC = () => {
@@ -75,7 +107,7 @@ const FinancePage: React.FC = () => {
   const systemBankAccounts = useAppSelector(selectSystemBankAccounts) || [];
   const kyc = useAppSelector(selectKyc);
 
-  const scrollRef = useScrollReveal();
+  const scrollRef = useScrollReveal([status]);
 
   const activeBankAccounts = bankAccounts.filter((b) => b.isActive);
   const activeSystemBankAccounts = systemBankAccounts.filter((b) => b.isActive);
@@ -132,6 +164,10 @@ const FinancePage: React.FC = () => {
           </Link>
         </div>
 
+        {status === "loading" || (!wallet && topups.length === 0 && withdraws.length === 0) ? (
+          <FinancePageSkeleton />
+        ) : (
+          <>
         {/* ── Banners & Warnings ── */}
 
         {(!kyc || (kyc.status !== "Approved" && kyc.status !== KycStatus.Approved.toString())) && (
@@ -392,6 +428,8 @@ const FinancePage: React.FC = () => {
             
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

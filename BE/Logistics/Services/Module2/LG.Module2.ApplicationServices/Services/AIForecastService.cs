@@ -7,14 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace LG.Module2.ApplicationServices.Services;
 
-/// Phase 8 — STUB rule-based. API contract giữ nguyên khi thay ruột:
-/// forecast → ML.NET train trên ContainerTrip/TrackingEvent lịch sử;
-/// border alert nguồn NewsScrape → Claude API structured outputs.
+/// Phase 8 — forecast dùng model ML.NET (Bước 8 LeadTime.md) với heuristic làm
+/// fallback khi model chưa nạp được; border alert vẫn rule-based
+/// (nguồn NewsScrape → Claude API structured outputs: nâng cấp sau).
 public class AIForecastService(
     IAITransitForecastRepository forecastRepo,
     IAIBorderAlertRepository     alertRepo,
     IContainerTripRepository     tripRepo,
     IPackageRepository           packageRepo,
+    Ml.ILeadTimeModel            leadTimeModel,
     INotificationService         notifier,
     IModule2UnitOfWork           uow,
     ILogger<AIForecastService>   logger
@@ -37,33 +38,48 @@ public class AIForecastService(
     // ── Transit forecast ──────────────────────────────────────────────────────
     public async Task<TransitForecastResponse> ForecastTransitAsync(TransitForecastRequest req, CancellationToken ct = default)
     {
-        var season = string.IsNullOrWhiteSpace(req.Season) ? InferSeason(DateTime.UtcNow) : req.Season.Trim().ToLower();
+        // Mùa: cửa sổ Tết âm lịch thật (SeasonHelper) — không còn "cả T1+T2 là tet"
+        var season = string.IsNullOrWhiteSpace(req.Season)
+            ? Ml.SeasonHelper.InferSeason(DateTime.UtcNow)
+            : req.Season.Trim().ToLower();
 
-        var (min, max) = BorderBaseline.TryGetValue(req.BorderCrossing, out var baseline) ? baseline : (4, 7);
-        var confidence = 0.60m;
-
-        // Mùa cao điểm
-        switch (season)
-        {
-            case "tet":    min += 3; max += 5; confidence -= 0.10m; break;
-            case "winter": min += 1; max += 1; confidence -= 0.02m; break;
-        }
-
-        // Hàng nặng/cồng kềnh đi chậm hơn (chờ gom đủ chuyến)
-        if (req.WeightKg >= 500m) max += 1;
-
-        // Cảnh báo tắc biên đang active trên cửa khẩu này
+        // Cảnh báo tắc biên đang active trên cửa khẩu này — vừa là feature của model,
+        // vừa là hệ số cộng của heuristic fallback
         var activeAlerts = await alertRepo.GetActiveByBorderAsync(req.BorderCrossing, ct);
         var alertApplied = activeAlerts.Count > 0;
-        if (alertApplied)
-        {
-            var delay = activeAlerts.Max(a => a.EstimatedDelayDays) ?? 2;
-            min += delay;
-            max += delay;
-            confidence -= 0.10m;
-        }
 
-        confidence = Math.Clamp(confidence, 0.30m, 0.90m);
+        // Model ML (Bước 8) — null khi chưa cấu hình/nạp lỗi → heuristic
+        var ml = leadTimeModel.Predict(req.OriginProvinceCn, req.CarrierCn, req.BorderCrossing,
+                                       req.WeightKg, season, alertApplied);
+
+        int min, max; decimal confidence;
+        if (ml is not null)
+        {
+            (min, max, confidence) = (ml.EstDaysMin, ml.EstDaysMax, ml.ConfidencePct);
+        }
+        else
+        {
+            (min, max) = BorderBaseline.TryGetValue(req.BorderCrossing, out var baseline) ? baseline : (4, 7);
+            confidence = 0.60m;
+
+            switch (season)   // mùa cao điểm
+            {
+                case "tet":    min += 3; max += 5; confidence -= 0.10m; break;
+                case "winter": min += 1; max += 1; confidence -= 0.02m; break;
+            }
+
+            if (req.WeightKg >= 500m) max += 1;   // hàng nặng chờ gom đủ chuyến
+
+            if (alertApplied)
+            {
+                var delay = activeAlerts.Max(a => a.EstimatedDelayDays) ?? 2;
+                min += delay;
+                max += delay;
+                confidence -= 0.10m;
+            }
+
+            confidence = Math.Clamp(confidence, 0.30m, 0.90m);
+        }
 
         var forecast = AITransitForecast.Create(
             req.OriginProvinceCn, req.WeightKg, req.CarrierCn, req.BorderCrossing,
@@ -72,8 +88,8 @@ public class AIForecastService(
         await forecastRepo.AddAsync(forecast, ct);
         await uow.SaveChangesAsync(ct);
 
-        logger.LogInformation("[AI-STUB] Forecast {Origin}→VN via {Border} ({Season}): {Min}-{Max} days, conf={Conf}",
-            req.OriginProvinceCn, req.BorderCrossing, season, min, max, confidence);
+        logger.LogInformation("[AI-{Source}] Forecast {Origin}→VN via {Border} ({Season}): {Min}-{Max} days, conf={Conf}",
+            ml is not null ? "ML" : "HEURISTIC", req.OriginProvinceCn, req.BorderCrossing, season, min, max, confidence);
 
         return MapForecast(forecast, alertApplied);
     }
@@ -191,15 +207,6 @@ public class AIForecastService(
 
         alert.MarkNotified(customers.Count);
     }
-
-    private static string InferSeason(DateTime utcNow) => utcNow.Month switch
-    {
-        1 or 2       => "tet",
-        3 or 4 or 5  => "spring",
-        6 or 7 or 8  => "summer",
-        9 or 10 or 11 => "autumn",
-        _            => "winter",
-    };
 
     private static TransitForecastResponse MapForecast(AITransitForecast f, bool alertApplied) => new(
         Id:                 f.Id,

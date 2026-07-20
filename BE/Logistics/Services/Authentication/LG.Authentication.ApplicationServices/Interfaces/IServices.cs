@@ -93,3 +93,4 @@ public interface ICurrentUserService
     bool         HasPermission(string permission);
     bool         HasRole(string role);
 }
+
