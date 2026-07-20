@@ -10,6 +10,7 @@ import {
   Input,
   Select,
   Tag,
+  Popconfirm,
   Empty,
   message,
   Typography,
@@ -62,6 +63,7 @@ export default function AdminPackageDetailPage({
   const [feeOpen, setFeeOpen] = useState(false);
   const [feeForm] = Form.useForm();
   const [calcLoading, setCalcLoading] = useState(false);
+  const [chargeLoading, setChargeLoading] = useState(false);
 
   const [imgOpen, setImgOpen] = useState(false);
   const [imgForm] = Form.useForm();
@@ -70,6 +72,20 @@ export default function AdminPackageDetailPage({
   const [sessionImages, setSessionImages] = useState<PackageImage[]>([]);
 
   const feeCalculated = fee?.calculatedAt != null;
+  const feePaid = fee?.paidAt != null;
+
+  const handleChargeFee = async () => {
+    setChargeLoading(true);
+    try {
+      await packagesApi.chargeFee(pkg.id);
+      message.success("Đã thu cước quốc tế từ ví khách.");
+      revalidator.revalidate();
+    } catch (err) {
+      message.error(normalizeError(err).message || "Thu cước thất bại.");
+    } finally {
+      setChargeLoading(false);
+    }
+  };
 
   const handleCalcFee = async () => {
     const values = await feeForm.validateFields();
@@ -176,11 +192,29 @@ export default function AdminPackageDetailPage({
         className="mb-5"
         title="Cước vận chuyển quốc tế"
         extra={
-          canManage && (
-            <Button type="primary" size="small" onClick={() => setFeeOpen(true)}>
-              {feeCalculated ? "Tính lại cước" : "Tính cước"}
-            </Button>
-          )
+          canManage &&
+          (feePaid ? (
+            <Tag color="green">Đã thu</Tag>
+          ) : (
+            <div className="flex gap-2">
+              <Button size="small" onClick={() => setFeeOpen(true)}>
+                {feeCalculated ? "Tính lại cước" : "Tính cước"}
+              </Button>
+              {feeCalculated && (
+                <Popconfirm
+                  title="Thu cước quốc tế?"
+                  description={`Trừ ${fee!.totalFeeVnd != null ? formatVND(fee!.totalFeeVnd) : ""} từ ví khách hàng.`}
+                  okText="Thu tiền"
+                  cancelText="Huỷ"
+                  onConfirm={handleChargeFee}
+                >
+                  <Button type="primary" size="small" loading={chargeLoading}>
+                    Thu cước
+                  </Button>
+                </Popconfirm>
+              )}
+            </div>
+          ))
         }
       >
         {feeCalculated ? (
@@ -203,6 +237,15 @@ export default function AdminPackageDetailPage({
             </Descriptions.Item>
             <Descriptions.Item label="Tính lúc">
               {fee!.calculatedAt ? formatDate(fee!.calculatedAt) : "—"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái thu">
+              {feePaid ? (
+                <span className="text-green-600">
+                  Đã thu · {formatDate(fee!.paidAt!)}
+                </span>
+              ) : (
+                <span className="text-amber-600">Chưa thu</span>
+              )}
             </Descriptions.Item>
           </Descriptions>
         ) : (

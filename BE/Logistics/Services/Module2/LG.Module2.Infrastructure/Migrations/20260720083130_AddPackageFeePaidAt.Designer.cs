@@ -3,6 +3,7 @@ using System;
 using LG.Module2.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LG.Module2.Infrastructure.Migrations
 {
     [DbContext(typeof(Module2DbContext))]
-    partial class Module2DbContextModelSnapshot : ModelSnapshot
+    [Migration("20260720083130_AddPackageFeePaidAt")]
+    partial class AddPackageFeePaidAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -66,6 +66,15 @@ public class PackagesController(
         return Ok(ApiResponse<object>.Ok(result, "Tính cước quốc tế thành công."));
     }
 
+    // POST /api/packages/{id}/charge-fee   UC-2.07 — thu cước quốc tế (trừ ví khách)
+    [HttpPost("{id:guid}/charge-fee")]
+    [Authorize(Policy = Permissions.WarehouseManage)]
+    public async Task<IActionResult> ChargeFee(Guid id, CancellationToken ct)
+    {
+        var result = await feeService.ChargeAsync(id, ct);
+        return Ok(ApiResponse<object>.Ok(result, "Đã thu cước quốc tế từ ví khách."));
+    }
+
     // GET /api/packages/{id}/fee
     [HttpGet("{id:guid}/fee")]
     [Authorize(Policy = Permissions.WarehouseRead)]

@@ -67,4 +67,11 @@ public class NotificationServiceStub(ILogger<NotificationServiceStub> logger) : 
             borderName, severity, estimatedDelayDays, customerId);
         return Task.CompletedTask;
     }
+
+    public Task SendIntlFeeChargedAsync(Guid customerId, string barcode, decimal amountVnd, CancellationToken ct = default)
+    {
+        logger.LogInformation("[NOTIFY-STUB] Đã thu cước quốc tế {Amount} VND kiện {Barcode} → customer {CustomerId}",
+            amountVnd, barcode, customerId);
+        return Task.CompletedTask;
+    }
 }

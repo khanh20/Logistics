@@ -29,6 +29,7 @@ public interface INotificationService
     Task SendDeliveryFailedAlertAsync(string trackingNo, int attemptCount, string? reason, CancellationToken ct = default);
     Task SendClaimResolvedAsync(Guid customerId, string claimType, string outcome, CancellationToken ct = default);
     Task SendRefundIssuedAsync(Guid customerId, decimal amountVnd, string reason, CancellationToken ct = default);
+    Task SendIntlFeeChargedAsync(Guid customerId, string barcode, decimal amountVnd, CancellationToken ct = default);
     Task SendBorderAlertAsync(Guid customerId, string borderName, string severity, int? estimatedDelayDays, CancellationToken ct = default);
 }
 
@@ -87,6 +88,8 @@ public interface IFeeCalculationService
 {
     Task<PackageFeeResponse> CalculateAsync(Guid packageId, CalculateFeeRequest req, CancellationToken ct = default);
     Task<PackageFeeResponse> GetFeeAsync(Guid packageId, CancellationToken ct = default);
+    /// UC-2.07 — thu cước quốc tế thật: trừ ví khách (ShipIntl + bảo hiểm). Idempotent theo FeePaidAt.
+    Task<PackageFeeResponse> ChargeAsync(Guid packageId, CancellationToken ct = default);
 }
 
 // ── ICarrierGateway (tích hợp carrier nội địa) ────────────────────────────────
