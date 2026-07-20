@@ -61,8 +61,10 @@ const authSlice = createSlice({
     clearAuthError(state) {
       state.error = null;
     },
-    setToken(state, action: PayloadAction<string>) {
-      state.token = action.payload;
+    setToken(state, action: PayloadAction<{ token: string; refreshToken?: string }>) {
+      state.token = action.payload.token;
+      // Rotation: mỗi lần refresh, backend cấp refresh token mới → cập nhật luôn
+      if (action.payload.refreshToken) state.refreshToken = action.payload.refreshToken;
       // Update persistence
       localStorage.setItem("muaho-auth", JSON.stringify(state));
     },
@@ -112,9 +114,10 @@ const authSlice = createSlice({
         state.status = ReduxStatus.IDLE;
         localStorage.removeItem("muaho-auth");
       })
-      // Refresh Token
+      // Refresh Token (rotation: cập nhật cả access lẫn refresh token mới)
       .addCase(refreshToken.fulfilled, (state, action) => {
         state.token = action.payload.accessToken;
+        if (action.payload.refreshToken) state.refreshToken = action.payload.refreshToken;
         localStorage.setItem("muaho-auth", JSON.stringify(state));
       });
   },

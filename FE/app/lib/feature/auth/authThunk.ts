@@ -1,3 +1,4 @@
+import { normalizeError } from "~/lib/utils/errors";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { authApi } from "../../api/auth";
 import type { LoginRequest, RegisterRequest } from "../../types/auth";
@@ -9,8 +10,8 @@ export const login = createAsyncThunk(
       const response = await authApi.login(data);
       if (!response.data) throw new Error(response.message || "Login failed");
       return response.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Something went wrong");
     }
   }
 );
@@ -22,8 +23,8 @@ export const register = createAsyncThunk(
       const response = await authApi.register(data);
       if (!response.data) throw new Error(response.message || "Registration failed");
       return response.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Something went wrong");
     }
   }
 );
@@ -34,8 +35,8 @@ export const logout = createAsyncThunk(
     try {
       await authApi.logout(refreshToken);
       return null;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Logout failed");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Logout failed");
     }
   }
 );
@@ -47,8 +48,8 @@ export const refreshToken = createAsyncThunk(
       const response = await authApi.refresh(token);
       if (!response.data) throw new Error(response.message || "Token refresh failed");
       return response.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Something went wrong");
     }
   }
 );

@@ -10,6 +10,9 @@ import {
   PiCopyBold,
   PiWarningCircleBold
 } from "react-icons/pi";
+import { Button } from "~/components/ui/Button";
+import { Textarea } from "~/components/ui/Textarea";
+import type { CustomerKycDto } from "~/lib/types/customerProfile";
 
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { ReduxStatus } from "~/lib/feature/const";
@@ -58,7 +61,7 @@ export default function AdminFinanceKycPage() {
   const dispatch = useAppDispatch();
   const { kycs, status } = useAppSelector((state) => state.adminFinanceState);
 
-  const [selectedKyc, setSelectedKyc] = useState<any>(null);
+  const [selectedKyc, setSelectedKyc] = useState<CustomerKycDto | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -76,8 +79,8 @@ export default function AdminFinanceKycPage() {
       await dispatch(approveAdminKyc(id)).unwrap();
       toast.success("Phê duyệt KYC thành công");
       setIsReviewModalOpen(false);
-    } catch (error: any) {
-      toast.error(error || "Lỗi phê duyệt");
+    } catch (error: unknown) {
+      toast.error((error as string) || "Lỗi phê duyệt");
     } finally {
       setActionLoading(false);
     }
@@ -97,8 +100,8 @@ export default function AdminFinanceKycPage() {
       setIsRejectModalOpen(false);
       setIsReviewModalOpen(false);
       setRejectReason("");
-    } catch (error: any) {
-      toast.error(error || "Lỗi từ chối");
+    } catch (error: unknown) {
+      toast.error((error as string) || "Lỗi từ chối");
     } finally {
       setActionLoading(false);
     }
@@ -134,7 +137,7 @@ export default function AdminFinanceKycPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAEAEA]">
-                {kycs.map((record: any) => (
+                {kycs.map((record: CustomerKycDto) => (
                   <tr key={record.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="py-3.5 px-6 text-gray-500">
                       {dayjs(record.createdDate).format("DD/MM/YYYY HH:mm")}
@@ -143,22 +146,22 @@ export default function AdminFinanceKycPage() {
                       {record.fullNameOnId}
                     </td>
                     <td className="py-3.5 px-6">
-                      <CopyableText text={record.idNumber} />
+                      <CopyableText text={record.idNumber || ""} />
                     </td>
                     <td className="py-3.5 px-6">
-                      <StatusBadge status={record.status} />
+                      <StatusBadge status={record.status || ""} />
                     </td>
                     <td className="py-3.5 px-6 text-right">
-                      <button
+                      <Button
+                        size="sm"
                         onClick={() => {
                           setSelectedKyc(record);
                           setIsReviewModalOpen(true);
                         }}
-                        className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-3 py-1.5 rounded transition-colors"
                       >
                         <PiEyeBold />
                         Chi tiết
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -225,7 +228,7 @@ export default function AdminFinanceKycPage() {
                   <div className="grid grid-cols-3 py-3 px-4">
                     <span className="text-xs font-mono uppercase text-gray-500">Trạng thái</span>
                     <span className="col-span-2">
-                      <StatusBadge status={selectedKyc.status} />
+                      <StatusBadge status={selectedKyc.status || ""} />
                     </span>
                   </div>
                   {selectedKyc.rejectionReason && (
@@ -280,31 +283,31 @@ export default function AdminFinanceKycPage() {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-[#EAEAEA] flex justify-end gap-3 bg-gray-50">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => setIsReviewModalOpen(false)}
-                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
               >
                 Đóng
-              </button>
+              </Button>
 
               {selectedKyc.status === "Pending" && (
                 <>
-                  <button
+                  <Button
+                    variant="danger"
                     onClick={() => setIsRejectModalOpen(true)}
-                    disabled={actionLoading}
-                    className="inline-flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                    loading={actionLoading}
                   >
                     <PiXCircleBold />
                     Từ chối
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="primary"
                     onClick={() => handleApprove(selectedKyc.id)}
-                    disabled={actionLoading}
-                    className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                    loading={actionLoading}
                   >
                     <PiCheckCircleBold />
                     Phê duyệt
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -328,34 +331,31 @@ export default function AdminFinanceKycPage() {
 
             <form onSubmit={handleReject}>
               <div className="mb-4">
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-2">
-                  Lý do từ chối
-                </label>
-                <textarea
+                <Textarea
+                  label="Lý do từ chối"
                   rows={4}
                   required
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Ví dụ: Ảnh mặt sau bị mờ, không khớp thông tin đăng ký..."
-                  className="w-full rounded border border-[#EAEAEA] p-3 text-sm text-black focus:border-black focus:outline-none placeholder-gray-400"
-                ></textarea>
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsRejectModalOpen(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={actionLoading}
-                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  variant="danger"
+                  loading={actionLoading}
                 >
-                  {actionLoading ? "Đang xử lý..." : "Xác nhận từ chối"}
-                </button>
+                  Xác nhận từ chối
+                </Button>
               </div>
             </form>
           </div>
@@ -376,20 +376,21 @@ export default function AdminFinanceKycPage() {
               </p>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA] mt-5">
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => setApprovingKycId(null)}
-                className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
               >
                 Hủy
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="primary"
                 onClick={() => executeApproveKyc(approvingKycId)}
-                className="bg-primary hover:bg-primary-dark text-white text-xs font-semibold px-4 py-2 rounded transition-colors"
+                loading={actionLoading}
               >
                 Xác nhận duyệt
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -59,13 +59,18 @@ public record CheckoutPreviewResponse(
     decimal                          ServiceFeeVnd,
     decimal                          InspectionFeeVnd,
     decimal                          InsuranceFeeVnd,
+    decimal                          ImportEntrustmentFeeVnd,
+    decimal                          ImportVatVnd,
+    decimal                          ImportDutyVnd,
     decimal                          EstimatedShippingFeeVnd,
     decimal                          TotalVnd,
     decimal                          DepositVnd,
     decimal                          RemainingPaymentVnd,
     bool                             WalletBalanceSufficient,
     decimal                          WalletBalanceVnd,
-    decimal                          WalletShortageVnd
+    decimal                          WalletShortageVnd,
+    decimal                          ServiceFeeDiscountVnd,
+    decimal                          InspectionFeeDiscountVnd
 );
 
 // ── Confirm checkout ──────────────────────────────────────────────────────────
@@ -95,12 +100,14 @@ public record UpdateCartItemQuantityRequest(
 public record CheckoutPreviewRequest(
     List<Guid>? ShopIds,
     string?     DeliveryAddressNote,
-    string      InsuranceOption = "none" // "none" | "basic" | "full"
+    string      InsuranceOption = "none", // "none" | "basic" | "full"
+    string      ShippingLine = "Tmdt"
 );
 
 public record ConfirmCheckoutRequest(
     List<Guid>? ShopIds,
     string?     DeliveryAddressNote,
     string?     CustomerNote,
-    string      InsuranceOption = "none" // "none" | "basic" | "full"
+    string      InsuranceOption = "none", // "none" | "basic" | "full"
+    string      ShippingLine = "Tmdt"
 );

@@ -32,6 +32,13 @@ namespace LG.Shared.Common
             return claim?.Value ?? string.Empty;
         }
 
+        public static string? GetCurrentUserFullName(this IHttpContextAccessor httpContextAccessor)
+        {
+            var claims = httpContextAccessor.HttpContext?.User?.Identity as ClaimsIdentity;
+            var claim = claims?.FindFirst(UserClaimTypes.Fullname);
+            return claim?.Value;
+        }
+
         // ── HttpContext Extensions ──────────────────────────────────────────────────
         
         public static Guid GetCurrentUserId(this HttpContext httpContext)

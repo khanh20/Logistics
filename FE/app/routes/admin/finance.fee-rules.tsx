@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { PiPlusBold, PiPencilSimpleBold, PiTrashBold, PiXBold } from "react-icons/pi";
+import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
+import { Button } from "~/components/ui/Button";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import {
   fetchFeeRules,
@@ -16,6 +19,7 @@ import {
 import dayjs from "dayjs";
 import type { FeeRuleDto, CreateFeeRuleDto } from "~/lib/types/adminFinance";
 import { ReduxStatus } from "~/lib/feature/const";
+import { Pagination } from "~/components/ui/Pagination";
 
 function StatusBadge({ active }: { active: boolean }) {
   return (
@@ -30,6 +34,8 @@ function StatusBadge({ active }: { active: boolean }) {
     </span>
   );
 }
+
+const toPercentDisplay = (val: number) => Math.round(val * 10000) / 100;
 
 export default function AdminFeeRulesPage() {
   const dispatch = useAppDispatch();
@@ -79,16 +85,16 @@ export default function AdminFeeRulesPage() {
       setIsActive(rule.isActive);
       setVipTierId(rule.vipTierId || "");
       setPlatformId(rule.platformId || "");
-      setServiceFeePct(rule.serviceFeePct);
+      setServiceFeePct(toPercentDisplay(rule.serviceFeePct));
       setIntlShipPerKgVnd(rule.intlShipPerKgVnd);
       setIntlShipVolDivisor(rule.intlShipVolDivisor);
       setMinChargeKg(rule.minChargeKg);
-      setInspectionFeePct(rule.inspectionFeePct);
+      setInspectionFeePct(toPercentDisplay(rule.inspectionFeePct));
       setInspectionMinVnd(rule.inspectionMinVnd);
       setInspectionMaxVnd(rule.inspectionMaxVnd);
       setStorageDailyPerKgVnd(rule.storageDailyPerKgVnd);
-      setInsuranceBasicPct(rule.insuranceBasicPct);
-      setInsuranceFullPct(rule.insuranceFullPct);
+      setInsuranceBasicPct(toPercentDisplay(rule.insuranceBasicPct));
+      setInsuranceFullPct(toPercentDisplay(rule.insuranceFullPct));
       setEffectiveFrom(rule.effectiveFrom ? dayjs(rule.effectiveFrom).format("YYYY-MM-DDTHH:mm") : "");
       setEffectiveTo(rule.effectiveTo ? dayjs(rule.effectiveTo).format("YYYY-MM-DDTHH:mm") : "");
     } else {
@@ -132,16 +138,16 @@ export default function AdminFeeRulesPage() {
         isActive,
         vipTierId: vipTierId ? vipTierId : undefined,
         platformId: platformId.trim() ? platformId.trim() : undefined,
-        serviceFeePct,
+        serviceFeePct: serviceFeePct / 100,
         intlShipPerKgVnd,
         intlShipVolDivisor,
         minChargeKg,
-        inspectionFeePct,
+        inspectionFeePct: inspectionFeePct / 100,
         inspectionMinVnd,
         inspectionMaxVnd,
         storageDailyPerKgVnd,
-        insuranceBasicPct,
-        insuranceFullPct,
+        insuranceBasicPct: insuranceBasicPct / 100,
+        insuranceFullPct: insuranceFullPct / 100,
         effectiveFrom: dayjs(effectiveFrom).format("YYYY-MM-DD"),
         effectiveTo: effectiveTo ? dayjs(effectiveTo).format("YYYY-MM-DD") : undefined,
       };
@@ -156,8 +162,8 @@ export default function AdminFeeRulesPage() {
       handleCloseModal();
       dispatch(fetchFeeRules());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (error: any) {
-      setErrorMessage(error || "Có lỗi xảy ra khi lưu quy tắc phí");
+    } catch (error: unknown) {
+      setErrorMessage((error as string) || "Có lỗi xảy ra khi lưu quy tắc phí");
     }
   };
 
@@ -170,8 +176,8 @@ export default function AdminFeeRulesPage() {
       setSuccessMessage("Xóa quy tắc phí thành công");
       dispatch(fetchFeeRules());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (error: any) {
-      setErrorMessage(error || "Có lỗi xảy ra khi xóa quy tắc phí");
+    } catch (error: unknown) {
+      setErrorMessage((error as string) || "Có lỗi xảy ra khi xóa quy tắc phí");
     }
   };
 
@@ -191,13 +197,13 @@ export default function AdminFeeRulesPage() {
           <h1 className="text-2xl font-serif font-bold text-black mb-1">Quản lý quy tắc tính phí</h1>
           <p className="text-sm text-gray-500">Cấu hình các loại phí dịch vụ, vận chuyển, kiểm đếm và bảo hiểm</p>
         </div>
-        <button
+        <Button
           onClick={() => handleOpenModal()}
-          className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4.5 py-2.5 rounded transition-colors"
+          className="px-4.5 py-2.5"
         >
           <PiPlusBold />
           Thêm quy tắc mới
-        </button>
+        </Button>
       </div>
 
       {/* Alert Messages */}
@@ -260,16 +266,16 @@ export default function AdminFeeRulesPage() {
                             <span className="text-gray-400">Mặc định</span>
                           )}
                         </td>
-                        <td className="py-3.5 px-6 text-right font-mono font-medium">{record.serviceFeePct}%</td>
+                        <td className="py-3.5 px-6 text-right font-mono font-medium">{toPercentDisplay(record.serviceFeePct)}%</td>
                         <td className="py-3.5 px-6 text-right font-mono font-medium">{record.intlShipPerKgVnd.toLocaleString()} ₫</td>
                         <td className="py-3.5 px-6 text-right font-mono text-gray-500">{record.intlShipVolDivisor}</td>
                         <td className="py-3.5 px-6 text-right font-mono text-gray-500">{record.minChargeKg} kg</td>
-                        <td className="py-3.5 px-6 text-right font-mono text-gray-500">{record.inspectionFeePct}%</td>
+                        <td className="py-3.5 px-6 text-right font-mono text-gray-500">{toPercentDisplay(record.inspectionFeePct)}%</td>
                         <td className="py-3.5 px-6 text-right font-mono text-gray-500 whitespace-nowrap">
                           {record.inspectionMinVnd.toLocaleString()}₫ - {record.inspectionMaxVnd.toLocaleString()}₫
                         </td>
                         <td className="py-3.5 px-6 text-right font-mono text-gray-500">
-                          {record.insuranceBasicPct}% / {record.insuranceFullPct}%
+                          {toPercentDisplay(record.insuranceBasicPct)}% / {toPercentDisplay(record.insuranceFullPct)}%
                         </td>
                         <td className="py-3.5 px-6 text-right font-mono text-gray-500">{record.storageDailyPerKgVnd.toLocaleString()} ₫</td>
                         <td className="py-3.5 px-6">
@@ -310,30 +316,14 @@ export default function AdminFeeRulesPage() {
               </table>
             </div>
 
-            {/* Custom Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} quy tắc
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="quy tắc"
+            />
           </>
         )}
       </div>
@@ -357,16 +347,13 @@ export default function AdminFeeRulesPage() {
             <form onSubmit={handleSave} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Tên quy tắc *
-                  </label>
-                  <input
+                  <Input
+                    label="Tên quy tắc *"
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="VD: Phí vận chuyển tiêu chuẩn 2026..."
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
@@ -387,13 +374,10 @@ export default function AdminFeeRulesPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Áp dụng cho Hạng VIP
-                  </label>
-                  <select
+                  <Select
+                    label="Áp dụng cho Hạng VIP"
                     value={vipTierId}
                     onChange={(e) => setVipTierId(e.target.value)}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none bg-white font-medium"
                   >
                     <option value="">Chọn hạng VIP (bỏ trống = Tất cả)</option>
                     {vipTiers.map((tier) => (
@@ -401,166 +385,133 @@ export default function AdminFeeRulesPage() {
                         {tier.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    ID Nền tảng (Platform)
-                  </label>
-                  <input
+                  <Input
+                    label="ID Nền tảng (Platform)"
                     type="text"
                     value={platformId}
                     onChange={(e) => setPlatformId(e.target.value)}
                     placeholder="Bỏ trống = Tất cả"
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Phí dịch vụ (%) *
-                  </label>
-                  <input
+                  <Input
+                    label="Phí dịch vụ (%) *"
                     type="number"
                     required
-                    step={0.1}
+                    step="any"
                     min={0}
                     value={serviceFeePct}
                     onChange={(e) => setServiceFeePct(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Phí VCQT (VNĐ/kg) *
-                  </label>
-                  <input
+                  <Input
+                    label="Phí VCQT (VNĐ/kg) *"
                     type="number"
                     required
                     min={0}
                     step={1000}
                     value={intlShipPerKgVnd}
                     onChange={(e) => setIntlShipPerKgVnd(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Hệ số thể tích *
-                  </label>
-                  <input
+                  <Input
+                    label="Hệ số thể tích *"
                     type="number"
                     required
                     min={1}
                     value={intlShipVolDivisor}
                     onChange={(e) => setIntlShipVolDivisor(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    KL tối thiểu (kg) *
-                  </label>
-                  <input
+                  <Input
+                    label="KL tối thiểu (kg) *"
                     type="number"
                     required
                     step={0.1}
                     min={0}
                     value={minChargeKg}
                     onChange={(e) => setMinChargeKg(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Phí kiểm đếm (%) *
-                  </label>
-                  <input
+                  <Input
+                    label="Phí kiểm đếm (%) *"
                     type="number"
                     required
-                    step={0.1}
+                    step="any"
                     min={0}
                     value={inspectionFeePct}
                     onChange={(e) => setInspectionFeePct(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Kiểm đếm Min (VNĐ) *
-                  </label>
-                  <input
+                  <Input
+                    label="Kiểm đếm Min (VNĐ) *"
                     type="number"
                     required
                     min={0}
                     step={1000}
                     value={inspectionMinVnd}
                     onChange={(e) => setInspectionMinVnd(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Kiểm đếm Max (VNĐ) *
-                  </label>
-                  <input
+                  <Input
+                    label="Kiểm đếm Max (VNĐ) *"
                     type="number"
                     required
                     min={0}
                     step={1000}
                     value={inspectionMaxVnd}
                     onChange={(e) => setInspectionMaxVnd(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Lưu kho/kg/ngày *
-                  </label>
-                  <input
+                  <Input
+                    label="Lưu kho/kg/ngày *"
                     type="number"
                     required
                     min={0}
                     step={100}
                     value={storageDailyPerKgVnd}
                     onChange={(e) => setStorageDailyPerKgVnd(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Bảo hiểm Cơ bản (%) *
-                  </label>
-                  <input
+                  <Input
+                    label="Bảo hiểm Cơ bản (%) *"
                     type="number"
                     required
-                    step={0.1}
+                    step="any"
                     min={0}
                     value={insuranceBasicPct}
                     onChange={(e) => setInsuranceBasicPct(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Bảo hiểm Toàn diện (%) *
-                  </label>
-                  <input
+                  <Input
+                    label="Bảo hiểm Toàn diện (%) *"
                     type="number"
                     required
-                    step={0.1}
+                    step="any"
                     min={0}
                     value={insuranceFullPct}
                     onChange={(e) => setInsuranceFullPct(Number(e.target.value))}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div className="sm:col-span-2"></div>
@@ -568,45 +519,38 @@ export default function AdminFeeRulesPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Hiệu lực từ *
-                  </label>
-                  <input
+                  <Input
+                    label="Hiệu lực từ *"
                     type="datetime-local"
                     required
                     value={effectiveFrom}
                     onChange={(e) => setEffectiveFrom(e.target.value)}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Hiệu lực đến (Tùy chọn)
-                  </label>
-                  <input
+                  <Input
+                    label="Hiệu lực đến (Tùy chọn)"
                     type="datetime-local"
                     value={effectiveTo}
                     onChange={(e) => setEffectiveTo(e.target.value)}
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={handleCloseModal}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isLoading}
-                  className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  loading={isLoading}
                 >
                   {editingRule ? "Lưu Thay Đổi" : "Tạo Mới"}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

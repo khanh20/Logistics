@@ -31,6 +31,12 @@
 		<text name="error_CoreKycInvalidImageType">Only JPG, PNG, or WebP images are accepted.</text>
 		<text name="error_CoreKycImageTooLarge">Image must not exceed 10MB.</text>
 		<text name="error_CoreKycDataRequired">At least ID number or full name is required.</text>
+		<text name="error_CoreKycRequired">Please complete Identity Verification (KYC) to perform this transaction.</text>
+		<text name="error_CoreKycIdNumberAlreadyExists">This Identity Card/Passport number is already registered to another account.</text>
+
+		<!-- Fraud Detection -->
+		<text name="error_CoreFraudDetected">Transaction declined due to detected fraud signs. Please contact Admin for support.</text>
+		<text name="error_CoreFraudWalletFrozen">Your wallet has been locked due to anomalies. Please contact customer service.</text>
 
 		<!-- Auth/Token -->
 		<text name="error_CoreUserIdNotFoundInToken">User ID not found in token.</text>

@@ -36,7 +36,7 @@ import type { WithdrawResponseDto } from "~/lib/types/finance";
 import type { FraudDetectionDto } from "~/lib/types/adminFinance";
 import { ReduxStatus } from "~/lib/feature/const";
 
-function StatusBadge({ status, label, colorsMap }: { status: any; label: string; colorsMap: any }) {
+function StatusBadge({ status, label, colorsMap }: { status: string | number; label: string; colorsMap: Record<string | number, string> }) {
   const color = colorsMap[status] || "default";
   let classes = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ";
   if (color === "success") {
@@ -182,22 +182,22 @@ export default function AdminFinanceDashboard() {
             </div>
 
             {/* KPI 4 */}
-            <div className="bg-gradient-to-br from-[#F7F6F3] to-[#F1EFE9] border border-[#EAEAEA] rounded-lg p-6 flex flex-col justify-between">
-              <div className="flex flex-col items-center text-center mt-2">
-                <div className="p-3 rounded-full bg-white text-indigo-600 border border-[#EAEAEA] mb-3">
-                  <PiScalesBold className="text-2xl" />
+            <div className="bg-white border border-[#EAEAEA] rounded-lg p-6 flex flex-col justify-between hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-shadow">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-mono uppercase tracking-wider text-gray-500 mb-2">Báo cáo doanh thu</p>
+                  <h3 className="text-3xl font-serif font-bold text-black">Live</h3>
                 </div>
-                <h4 className="text-base font-semibold text-black mb-1">Đối soát nền tảng</h4>
-                <p className="text-xs text-gray-500 px-2 leading-relaxed">
-                  Đồng bộ và kiểm tra dữ liệu tài chính với hệ thống đối tác
-                </p>
+                <div className="p-2.5 rounded-lg bg-green-50 text-green-600 border border-green-100/50">
+                  <PiScalesBold className="text-xl" />
+                </div>
               </div>
-              <button
-                onClick={() => navigate("/admin/finance/reconcile")}
-                className="mt-6 w-full bg-black hover:bg-neutral-800 text-white text-xs font-semibold py-2.5 rounded-md transition-colors"
-              >
-                Thực hiện đối soát
-              </button>
+              <div className="mt-6 pt-4 border-t border-[#EAEAEA] flex justify-between items-center">
+                <span className="text-xs text-gray-400">cập nhật hàng ngày</span>
+                <Link to="/admin/finance/revenue" className="text-xs font-semibold text-green-600 hover:text-green-700 flex items-center gap-1 transition-colors">
+                  Chi tiết <PiArrowRightBold />
+                </Link>
+              </div>
             </div>
           </div>
 

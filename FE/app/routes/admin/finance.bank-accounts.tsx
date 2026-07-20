@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { PiPlusBold, PiTrashBold, PiBankBold, PiXBold, PiCopyBold, PiCheckBold } from "react-icons/pi";
+import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
+import { Button } from "~/components/ui/Button";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import {
   fetchSystemBankAccounts,
@@ -17,6 +20,7 @@ import { WEBHOOK_SERVICE_LABELS } from "~/lib/constants/finance";
 import { VIETNAM_BANKS } from "~/lib/constants/banks";
 import dayjs from "dayjs";
 import type { CreateBankAccountDto } from "~/lib/types/bankAccount";
+import { Pagination } from "~/components/ui/Pagination";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -98,8 +102,8 @@ export default function SystemBankAccountsPage() {
       setWebhookService("");
       dispatch(fetchSystemBankAccounts());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (error: any) {
-      setErrorMessage(error || "Lỗi khi thêm tài khoản");
+    } catch (error: unknown) {
+      setErrorMessage((error as string) || "Lỗi khi thêm tài khoản");
     }
   };
 
@@ -111,8 +115,8 @@ export default function SystemBankAccountsPage() {
       setSuccessMessage("Cập nhật trạng thái thành công");
       dispatch(fetchSystemBankAccounts());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (error: any) {
-      setErrorMessage(error || "Lỗi khi cập nhật trạng thái");
+    } catch (error: unknown) {
+      setErrorMessage((error as string) || "Lỗi khi cập nhật trạng thái");
     }
   };
 
@@ -125,8 +129,8 @@ export default function SystemBankAccountsPage() {
       setSuccessMessage("Xóa tài khoản thành công");
       dispatch(fetchSystemBankAccounts());
       setTimeout(() => setSuccessMessage(""), 4000);
-    } catch (error: any) {
-      setErrorMessage(error || "Lỗi khi xóa tài khoản");
+    } catch (error: unknown) {
+      setErrorMessage((error as string) || "Lỗi khi xóa tài khoản");
     }
   };
 
@@ -147,13 +151,13 @@ export default function SystemBankAccountsPage() {
           <h1 className="text-2xl font-serif font-bold text-black mb-1">Tài khoản hệ thống</h1>
           <p className="text-sm text-gray-500">Quản lý các tài khoản ngân hàng nhận tiền của hệ thống</p>
         </div>
-        <button
+        <Button
           onClick={() => setIsModalVisible(true)}
-          className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4.5 py-2.5 rounded transition-colors"
+          className="px-4.5 py-2.5"
         >
           <PiPlusBold />
           Thêm tài khoản
-        </button>
+        </Button>
       </div>
 
       {/* Alert Messages */}
@@ -275,30 +279,14 @@ export default function SystemBankAccountsPage() {
               </table>
             </div>
 
-            {/* Custom Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#EAEAEA] bg-gray-50 text-xs">
-                <span className="text-gray-500 font-medium">
-                  Hiển thị {Math.min(totalItems, (currentPage - 1) * pageSize + 1)} - {Math.min(totalItems, currentPage * pageSize)} trong tổng số {totalItems} tài khoản
-                </span>
-                <div className="inline-flex gap-2">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  >
-                    Sau
-                  </button>
-                </div>
-              </div>
-            )}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="tài khoản"
+            />
           </>
         )}
       </div>
@@ -319,14 +307,11 @@ export default function SystemBankAccountsPage() {
 
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Ngân hàng *
-                </label>
-                <select
+                <Select
+                  label="Ngân hàng *"
                   required
                   value={bankCode}
                   onChange={(e) => setBankCode(e.target.value)}
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none bg-white font-medium"
                 >
                   <option value="">Chọn ngân hàng</option>
                   {VIETNAM_BANKS.map((bank) => (
@@ -334,60 +319,48 @@ export default function SystemBankAccountsPage() {
                       {bank.shortName} - {bank.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Số tài khoản *
-                  </label>
-                  <input
+                  <Input
+                    label="Số tài khoản *"
                     type="text"
                     required
                     value={accountNumber}
                     onChange={(e) => setAccountNumber(e.target.value)}
                     placeholder="VD: 1903..."
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                    Chủ tài khoản *
-                  </label>
-                  <input
+                  <Input
+                    label="Chủ tài khoản *"
                     type="text"
                     required
                     value={accountHolder}
                     onChange={(e) => setAccountHolder(e.target.value.toUpperCase())}
                     placeholder="VD: NGUYEN VAN A"
-                    className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Chi nhánh *
-                </label>
-                <input
+                <Input
+                  label="Chi nhánh *"
                   type="text"
                   required
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
                   placeholder="VD: Chi nhánh HCM..."
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                  Dịch vụ Webhook (Tùy chọn)
-                </label>
-                <select
+                <Select
+                  label="Dịch vụ Webhook (Tùy chọn)"
                   value={webhookService}
                   onChange={(e) => setWebhookService(e.target.value ? Number(e.target.value) : "")}
-                  className="w-full rounded border border-[#EAEAEA] px-3 py-2 text-sm text-black focus:border-black focus:outline-none bg-white font-medium"
                 >
                   <option value="">Chọn dịch vụ đồng bộ giao dịch</option>
                   {Object.entries(WEBHOOK_SERVICE_LABELS).map(([key, label]) => (
@@ -395,24 +368,23 @@ export default function SystemBankAccountsPage() {
                       {label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-[#EAEAEA]">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setIsModalVisible(false)}
-                  className="bg-white hover:bg-gray-100 text-[#2F3437] border border-[#EAEAEA] text-xs font-semibold px-4 py-2 rounded transition-colors"
                 >
                   Hủy
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2 rounded transition-colors disabled:opacity-50"
+                  loading={loading}
                 >
-                  {loading ? "Đang xử lý..." : "Thêm tài khoản"}
-                </button>
+                  Thêm tài khoản
+                </Button>
               </div>
             </form>
           </div>

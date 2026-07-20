@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { redirect, Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { store } from "~/lib/feature/store";
 import { customerOrdersApi } from "~/lib/api/orders";
@@ -52,6 +53,7 @@ export default function CustomerOrderDetailPage({
 }: {
   loaderData: { order: OrderDetailResponse };
 }) {
+  const { t } = useTranslation();
   const [order, setOrder] = useState(loaderData.order);
   const [cancelReason, setCancelReason] = useState("");
   const [showCancelForm, setShowCancelForm] = useState(false);
@@ -136,6 +138,12 @@ export default function CustomerOrderDetailPage({
 
   const paymentAmount = paymentType === "deposit" ? order.depositVnd : (order.finalAmountVnd - order.depositVnd);
 
+  const initialFees = order.fees.filter(f => f.feeType !== 'shipping_cn_to_vn' && f.feeType !== 'storage');
+  const lateFees = order.fees.filter(f => f.feeType === 'shipping_cn_to_vn' || f.feeType === 'storage');
+  const lateFeesTotal = lateFees.reduce((sum, f) => sum + f.amountVnd, 0);
+  const subtotalVnd = order.finalAmountVnd - lateFeesTotal;
+  const remainingAfterDeposit = subtotalVnd - order.depositVnd;
+
   async function handlePayDeposit() {
     setPaymentType("deposit");
     setShowPaymentModal(true);
@@ -206,7 +214,7 @@ export default function CustomerOrderDetailPage({
       {/* Back */}
       <Link
         to="/orders"
-        className="inline-flex items-center text-[10px] font-mono uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors mb-12"
+        className="inline-flex items-center text-sm font-mono uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors mb-12"
       >
         <span className="mr-2">←</span> Danh sách đơn hàng
       </Link>
@@ -220,7 +228,7 @@ export default function CustomerOrderDetailPage({
             <StatusBadge status={order.status} />
           </div>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3">
           {canPayDeposit && (
             <Button variant="primary" className="rounded bg-neutral-900 text-white hover:bg-neutral-800 border-none px-6" loading={loading} onClick={handlePayDeposit}>
@@ -237,7 +245,7 @@ export default function CustomerOrderDetailPage({
               Hủy đơn
             </Button>
           )}
-          <ComplaintButton order={order} />
+          {order.isDepositPaid && <ComplaintButton order={order} />}
         </div>
       </div>
 
@@ -285,7 +293,7 @@ export default function CustomerOrderDetailPage({
       {canPayFinal && (
         <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
           <p className="text-sm font-semibold text-emerald-800">
-            🎁 Hàng đã về kho VN — Thanh toán cuối kỳ để nhận hàng
+            Hàng đã về kho VN — Thanh toán cuối kỳ để nhận hàng
           </p>
           <p className="text-xs text-gray-500 mt-0.5">
             Số tiền còn lại cần thanh toán:{" "}
@@ -330,28 +338,25 @@ export default function CustomerOrderDetailPage({
           </div>
 
           <div className="text-xs font-mono uppercase tracking-widest text-neutral-400 col-span-2 border-t border-[#EAEAEA] pt-6 mt-2">
-            Các khoản phí
+            Phí mua hộ ban đầu
           </div>
 
-          {order.fees.map((fee) => (
-            <div key={fee.feeType} className="contents">
-              <div className="text-neutral-500">· {feeLabel(fee.feeType)}</div>
-              <div className="text-right font-mono text-neutral-900">{formatVND(fee.amountVnd)}</div>
-            </div>
-          ))}
-
-          {order.shippingFeeVnd > 0 && (
-            <div className="contents">
-              <div className="text-neutral-500">· Phí ship quốc tế</div>
-              <div className="text-right font-mono text-neutral-900">{formatVND(order.shippingFeeVnd)}</div>
-            </div>
-          )}
+          {initialFees.map((fee) => {
+            const label = feeLabel(fee.feeType, t);
+            const showNote = fee.note && fee.note.toLowerCase() !== label.toLowerCase();
+            return (
+              <div key={fee.feeType} className="contents">
+                <div className="text-neutral-500">· {label}{showNote ? ` (${fee.note})` : ""}</div>
+                <div className="text-right font-mono text-neutral-900">{formatVND(fee.amountVnd)}</div>
+              </div>
+            );
+          })}
 
           <div className="text-neutral-900 font-serif text-lg border-t border-[#EAEAEA] pt-6 mt-2">
-            Tổng giá trị đơn
+            Tổng tạm tính (trước khi hàng về VN)
           </div>
           <div className="font-mono text-lg font-semibold text-right border-t border-[#EAEAEA] pt-6 mt-2 text-neutral-900">
-            {formatVND(order.finalAmountVnd)}
+            {formatVND(subtotalVnd)}
           </div>
 
           <div className="text-neutral-500">
@@ -364,10 +369,41 @@ export default function CustomerOrderDetailPage({
             </span>
           </div>
 
+          {lateFees.length > 0 && (
+            <>
+              <div className="text-neutral-500">Còn lại sau cọc</div>
+              <div className="font-mono text-right text-neutral-900">
+                {formatVND(remainingAfterDeposit)}
+              </div>
+
+              <div className="text-xs font-mono uppercase tracking-widest text-neutral-400 col-span-2 border-t border-[#EAEAEA] pt-6 mt-2">
+                Phí phát sinh (Hàng về VN)
+              </div>
+
+              {lateFees.map((fee) => {
+                const label = feeLabel(fee.feeType, t);
+                const showNote = fee.note && fee.note.toLowerCase() !== label.toLowerCase();
+                return (
+                  <div key={fee.feeType} className="contents">
+                    <div className="text-neutral-500">· {label}{showNote ? ` (${fee.note})` : ""}</div>
+                    <div className="text-right font-mono text-neutral-900">{formatVND(fee.amountVnd)}</div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+
+          <div className="text-neutral-900 font-serif text-lg border-t border-[#EAEAEA] pt-6 mt-2">
+            Tổng giá trị đơn
+          </div>
+          <div className="font-mono text-lg font-bold text-right border-t border-[#EAEAEA] pt-6 mt-2 text-neutral-900">
+            {formatVND(order.finalAmountVnd)}
+          </div>
+
           {order.isDepositPaid && (
             <div className="contents">
-              <div className="text-neutral-500">Còn lại</div>
-              <div className="font-mono text-right text-neutral-900 font-medium">
+              <div className="text-neutral-500 font-bold text-emerald-700">Cần thanh toán cuối kỳ</div>
+              <div className="font-mono text-right font-bold text-emerald-700 text-lg">
                 {formatVND(remainingPayment)}
                 <span className="text-[10px] uppercase ml-2 text-neutral-400">
                   {order.isFinalPaid ? "Đã thanh toán" : "Chưa thanh toán"}
@@ -619,8 +655,8 @@ export default function CustomerOrderDetailPage({
                 type="button"
                 onClick={() => confirmDialog.onConfirm()}
                 className={`flex-1 py-2.5 text-white text-xs font-mono uppercase tracking-wider rounded transition-colors ${confirmDialog.type === "danger"
-                    ? "bg-[#9F2F2D] hover:bg-[#852725]"
-                    : "bg-neutral-900 hover:bg-neutral-800"
+                  ? "bg-[#9F2F2D] hover:bg-[#852725]"
+                  : "bg-neutral-900 hover:bg-neutral-800"
                   }`}
               >
                 {confirmDialog.confirmText || "Đồng ý"}
@@ -633,12 +669,23 @@ export default function CustomerOrderDetailPage({
   );
 }
 
-function feeLabel(feeType: string): string {
+function feeLabel(feeType: string, t: any): string {
+  const normalizedKey = feeType.trim().toLowerCase();
+  const translationKey = `order.fees.${normalizedKey}`;
+  const translated = t(translationKey);
+  if (translated !== translationKey) {
+    return translated;
+  }
   const labels: Record<string, string> = {
-    ServiceFee: "Phí dịch vụ",
-    InspectionFee: "Phí kiểm hàng",
-    InsuranceFee: "Phí bảo hiểm",
-    ShippingFee: "Phí vận chuyển",
+    service: "Phí dịch vụ mua hộ",
+    inspection: "Phí kiểm hàng",
+    insurance: "Phí bảo hiểm",
+    import_duty: "Thuế nhập khẩu",
+    import_vat: "Thuế VAT nhập khẩu",
+    import_entrustment: "Phí ủy thác nhập khẩu",
+    shipping_cn_to_vn: "Phí vận chuyển TQ-VN",
+    storage: "Phí lưu kho vượt",
+    ship_local: "Phí giao hàng nội địa",
   };
-  return labels[feeType] ?? feeType;
+  return labels[normalizedKey] ?? feeType;
 }

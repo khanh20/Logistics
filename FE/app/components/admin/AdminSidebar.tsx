@@ -28,13 +28,7 @@ import {
   FaGear,
   FaCreditCard,
   FaSatelliteDish,
-  FaWarehouse,
-  FaBoxesStacked,
-  FaTruckFast,
-  FaBoxOpen,
-  FaTruckRampBox,
-  FaPassport,
-  FaFileCircleQuestion,
+
   FaChartBar,
   FaClock,
   FaChartLine,
@@ -42,7 +36,15 @@ import {
   FaComments,
   FaUserGear,
   FaUserShield,
-  FaKey
+  FaKey,
+  FaWarehouse,
+  FaBoxesStacked,
+  FaTruckFast,
+  FaBoxOpen,
+  FaTruckRampBox,
+  FaPassport,
+  FaFileCircleQuestion,
+  FaWallet
 } from "react-icons/fa6";
 
 interface AdminSidebarProps {
@@ -105,6 +107,7 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
         { to: "/admin/finance/refunds", label: t("nav.finance_refunds"), icon: <FaHandHoldingDollar className="text-base text-sky-400" /> },
         { to: "/admin/finance/reconcile", label: t("nav.finance_reconcile"), icon: <FaScaleBalanced className="text-base text-fuchsia-400" /> },
         { to: "/admin/finance/fraud", label: t("nav.finance_fraud"), icon: <FaTriangleExclamation className="text-base text-red-500" /> },
+        { to: "/admin/finance/frozen-wallets", label: t("nav.finance_frozen_wallets"), icon: <FaWallet className="text-base text-cyan-400" /> },
         { to: "/admin/finance/payment-locks", label: t("nav.finance_payment_locks"), icon: <FaLock className="text-base text-slate-400" /> },
         { to: "/admin/finance/fee-rules", label: t("nav.finance_fee_rules"), icon: <FaPercent className="text-base text-violet-400" /> },
         { to: "/admin/finance/vip-tiers", label: t("nav.finance_vip_tiers"), icon: <FaStar className="text-base text-yellow-400" /> },

@@ -123,13 +123,13 @@ export const adminFinanceApi = {
 
   // ── Platform Reconcile ───────────────────────────────────────
   getAllReconciles: () =>
-    apiModule3Client.get<unknown, ApiResponse<PlatformReconcileDto[]>>("/api/PlatformReconcile"),
+    apiModule3Client.get<unknown, ApiResponse<PlatformReconcileDto[]>>("/api/finance/reconcile"),
 
   createReconcile: (data: CreatePlatformReconcileDto) =>
-    apiModule3Client.post<unknown, ApiResponse<PlatformReconcileDto>>("/api/PlatformReconcile", data),
+    apiModule3Client.post<unknown, ApiResponse<PlatformReconcileDto>>("/api/finance/reconcile", data),
 
   confirmReconcile: (id: string) =>
-    apiModule3Client.post<unknown, ApiResponse<void>>(`/api/PlatformReconcile/${id}/confirm`),
+    apiModule3Client.post<unknown, ApiResponse<void>>(`/api/finance/reconcile/${id}/confirm`),
 
   // ── Wallet Transaction ───────────────────────────────────────
   getAllWalletTransactions: () =>

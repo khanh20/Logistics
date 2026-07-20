@@ -43,7 +43,7 @@ namespace LG.Core.Infrastructure
          : base(options, httpContextAccessor) { }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(CoreDbContext).Assembly);
             base.OnModelCreating(modelBuilder);
         }
     }

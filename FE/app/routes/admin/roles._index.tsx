@@ -1,8 +1,12 @@
+import { normalizeError } from "~/lib/utils/errors";
 import { useRef, useState } from "react";
 import { Link, useRevalidator } from "react-router";
 import { useTranslation } from "react-i18next";
 import { rolesApi } from "~/lib/api/auth";
 import { Button } from "~/components/ui/Button";
+import { Input } from "~/components/ui/Input";
+import { Select } from "~/components/ui/Select";
+import { Textarea } from "~/components/ui/Textarea";
 import { formatDate } from "~/lib/utils/format";
 import { cn } from "~/lib/utils/cn";
 import type { RoleResponse, CreateRoleRequest, UpdateRoleRequest } from "~/lib/types/auth";
@@ -57,49 +61,39 @@ function RoleModal({
         <form onSubmit={onSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("roles.field_name")} <span className="text-red-500">*</span>
-            </label>
-            <input
+            <Input
               ref={nameRef}
+              label={t("roles.field_name") + " *"}
               type="text"
               value={form.name}
               onChange={(e) => onChange("name", e.target.value)}
               placeholder={t("roles.field_name_placeholder")}
               required
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           {/* Scope */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("roles.field_scope")} <span className="text-red-500">*</span>
-            </label>
-            <select
+            <Select
+              label={t("roles.field_scope") + " *"}
               value={form.scope}
               onChange={(e) => onChange("scope", e.target.value)}
               required
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none
-                         focus:ring-2 focus:ring-primary bg-white"
             >
               <option value="" disabled>{t("roles.field_scope_placeholder")}</option>
               <option value="user">user</option>
               <option value="staff">staff</option>
-            </select>
+            </Select>
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t("roles.field_description")}
-            </label>
-            <textarea
+            <Textarea
+              label={t("roles.field_description")}
               value={form.description}
               onChange={(e) => onChange("description", e.target.value)}
               placeholder={t("roles.field_description_placeholder")}
               rows={3}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 
@@ -211,7 +205,7 @@ export default function RolesIndexPage({ loaderData }: Route.ComponentProps) {
       setModalOpen(false);
       revalidate();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t("common.error");
+      const msg = err instanceof Error ? normalizeError(err).message : t("common.error");
       setModalError(msg);
     } finally {
       setSubmitting(false);

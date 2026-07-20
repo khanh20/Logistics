@@ -19,6 +19,8 @@ export interface AuthResponse {
 export interface RefreshResponse {
   accessToken: string;
   accessTokenExpiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
 }
 
 export interface LoginRequest {

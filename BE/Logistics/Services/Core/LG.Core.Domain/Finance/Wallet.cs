@@ -47,6 +47,8 @@ namespace LG.Core.Domain.Finance
 
         public bool IsFrozen { get; set; } = false;            // Ví có đang bị đóng băng không
 
+        public bool IgnoreFraudDetection { get; set; } = false; // Đánh dấu ví an toàn, bỏ qua kiểm tra gian lận (AI/Heuristic)
+
         public string? FrozenReason { get; set; }              // Lý do đóng băng ví
 
         public DateTime? CreatedDate { get; set; }

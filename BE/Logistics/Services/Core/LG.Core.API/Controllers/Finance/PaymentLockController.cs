@@ -26,6 +26,17 @@ namespace LG.Core.API.Controllers.Finance
             return Ok(await _service.GetByOrderIdAsync(orderId));
         }
 
+        [HttpGet("search")]
+        public async Task<IActionResult> Search(
+            [FromQuery] PaymentLockStatusEnum? status,
+            [FromQuery] Guid? orderId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var (items, total) = await _service.SearchAsync(status, orderId, page, pageSize);
+            return Ok(new { items, total, page, pageSize });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create(CreatePaymentLockDto dto)
         {

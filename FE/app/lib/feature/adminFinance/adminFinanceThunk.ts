@@ -1,3 +1,4 @@
+import { normalizeError } from "~/lib/utils/errors";
 // ═══════════════════════════════════════════════════════════════════
 // Admin Finance Thunks — Redux Toolkit async actions
 // ═══════════════════════════════════════════════════════════════════
@@ -26,8 +27,8 @@ export const fetchPendingWithdraws = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getPendingWithdraws();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải danh sách rút tiền chờ duyệt");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải danh sách rút tiền chờ duyệt");
     }
   }
 );
@@ -38,8 +39,8 @@ export const approveWithdraw = createAsyncThunk(
     try {
       await adminFinanceApi.approveWithdraw(id, data);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi duyệt rút tiền");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi duyệt rút tiền");
     }
   }
 );
@@ -50,8 +51,8 @@ export const rejectWithdraw = createAsyncThunk(
     try {
       await adminFinanceApi.rejectWithdraw(id, data);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi từ chối rút tiền");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi từ chối rút tiền");
     }
   }
 );
@@ -63,8 +64,8 @@ export const fetchFeeRules = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getAllFeeRules();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải quy tắc phí");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải quy tắc phí");
     }
   }
 );
@@ -75,8 +76,8 @@ export const createFeeRule = createAsyncThunk(
     try {
       const res = await adminFinanceApi.createFeeRule(data);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tạo quy tắc phí");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tạo quy tắc phí");
     }
   }
 );
@@ -87,8 +88,8 @@ export const updateFeeRule = createAsyncThunk(
     try {
       await adminFinanceApi.updateFeeRule(id, data);
       return { id, data };
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi cập nhật quy tắc phí");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi cập nhật quy tắc phí");
     }
   }
 );
@@ -99,8 +100,8 @@ export const deleteFeeRule = createAsyncThunk(
     try {
       await adminFinanceApi.deleteFeeRule(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi xóa quy tắc phí");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi xóa quy tắc phí");
     }
   }
 );
@@ -112,8 +113,8 @@ export const fetchVipTiers = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getAllVipTiers();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải hạng VIP");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải hạng VIP");
     }
   }
 );
@@ -124,8 +125,8 @@ export const createVipTier = createAsyncThunk(
     try {
       const res = await adminFinanceApi.createVipTier(data);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tạo hạng VIP");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tạo hạng VIP");
     }
   }
 );
@@ -136,8 +137,8 @@ export const updateVipTier = createAsyncThunk(
     try {
       await adminFinanceApi.updateVipTier(id, data);
       return { id, data };
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi cập nhật hạng VIP");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi cập nhật hạng VIP");
     }
   }
 );
@@ -148,8 +149,8 @@ export const deleteVipTier = createAsyncThunk(
     try {
       await adminFinanceApi.deleteVipTier(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi xóa hạng VIP");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi xóa hạng VIP");
     }
   }
 );
@@ -161,8 +162,8 @@ export const fetchTransactionTypes = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getAllTransactionTypes();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải loại giao dịch");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải loại giao dịch");
     }
   }
 );
@@ -173,8 +174,8 @@ export const createTransactionType = createAsyncThunk(
     try {
       const res = await adminFinanceApi.createTransactionType(data);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tạo loại giao dịch");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tạo loại giao dịch");
     }
   }
 );
@@ -185,8 +186,8 @@ export const updateTransactionType = createAsyncThunk(
     try {
       await adminFinanceApi.updateTransactionType(id, data);
       return { id, data };
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi cập nhật loại giao dịch");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi cập nhật loại giao dịch");
     }
   }
 );
@@ -197,8 +198,8 @@ export const deleteTransactionType = createAsyncThunk(
     try {
       await adminFinanceApi.deleteTransactionType(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi xóa loại giao dịch");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi xóa loại giao dịch");
     }
   }
 );
@@ -210,8 +211,8 @@ export const fetchRefunds = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getAllRefunds();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải danh sách hoàn tiền");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải danh sách hoàn tiền");
     }
   }
 );
@@ -222,8 +223,8 @@ export const createRefund = createAsyncThunk(
     try {
       const res = await adminFinanceApi.createRefund(data);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tạo hoàn tiền");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tạo hoàn tiền");
     }
   }
 );
@@ -234,8 +235,8 @@ export const approveRefund = createAsyncThunk(
     try {
       await adminFinanceApi.approveRefund(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi duyệt hoàn tiền");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi duyệt hoàn tiền");
     }
   }
 );
@@ -246,8 +247,8 @@ export const rejectRefund = createAsyncThunk(
     try {
       await adminFinanceApi.rejectRefund(id, reason);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi từ chối hoàn tiền");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi từ chối hoàn tiền");
     }
   }
 );
@@ -259,8 +260,8 @@ export const fetchFraudCases = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getAllFraudCases();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải danh sách gian lận");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải danh sách gian lận");
     }
   }
 );
@@ -271,8 +272,8 @@ export const reviewFraudCase = createAsyncThunk(
     try {
       await adminFinanceApi.reviewFraudCase(id, data);
       return { id, data };
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi review fraud case");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi review fraud case");
     }
   }
 );
@@ -284,8 +285,8 @@ export const fetchReconciles = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getAllReconciles();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải danh sách đối soát");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải danh sách đối soát");
     }
   }
 );
@@ -296,8 +297,8 @@ export const createReconcile = createAsyncThunk(
     try {
       const res = await adminFinanceApi.createReconcile(data);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tạo đối soát");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tạo đối soát");
     }
   }
 );
@@ -308,8 +309,8 @@ export const confirmReconcile = createAsyncThunk(
     try {
       await adminFinanceApi.confirmReconcile(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi xác nhận đối soát");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi xác nhận đối soát");
     }
   }
 );
@@ -321,8 +322,8 @@ export const fetchWalletTransactions = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getAllWalletTransactions();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải lịch sử giao dịch");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải lịch sử giao dịch");
     }
   }
 );
@@ -334,8 +335,8 @@ export const fetchWebhookLogs = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getAllWebhookLogs();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải webhook logs");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải webhook logs");
     }
   }
 );
@@ -347,8 +348,8 @@ export const fetchSystemBankAccounts = createAsyncThunk(
     try {
       const res = await bankAccountApi.getSystemBankAccounts();
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải tài khoản ngân hàng");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải tài khoản ngân hàng");
     }
   }
 );
@@ -359,8 +360,8 @@ export const createSystemBankAccount = createAsyncThunk(
     try {
       const res = await bankAccountApi.create(data);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tạo tài khoản ngân hàng");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tạo tài khoản ngân hàng");
     }
   }
 );
@@ -371,8 +372,8 @@ export const toggleBankAccountStatus = createAsyncThunk(
     try {
       await bankAccountApi.toggleStatus(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi cập nhật trạng thái");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi cập nhật trạng thái");
     }
   }
 );
@@ -383,8 +384,8 @@ export const deleteSystemBankAccount = createAsyncThunk(
     try {
       await bankAccountApi.delete(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi xóa tài khoản ngân hàng");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi xóa tài khoản ngân hàng");
     }
   }
 );
@@ -396,8 +397,8 @@ export const fetchPaymentLocksByOrder = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getPaymentLocksByOrder(orderId);
       return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải payment locks");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải payment locks");
     }
   }
 );
@@ -408,8 +409,8 @@ export const releasePaymentLock = createAsyncThunk(
     try {
       await adminFinanceApi.releasePaymentLock(id, reason);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi giải phóng payment lock");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi giải phóng payment lock");
     }
   }
 );
@@ -421,8 +422,8 @@ export const fetchAdminKycs = createAsyncThunk(
     try {
       const res = await adminFinanceApi.getAllKycs();
       return res.data || res;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi tải danh sách KYC");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi tải danh sách KYC");
     }
   }
 );
@@ -433,8 +434,8 @@ export const approveAdminKyc = createAsyncThunk(
     try {
       await adminFinanceApi.approveKyc(id);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi phê duyệt KYC");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi phê duyệt KYC");
     }
   }
 );
@@ -445,8 +446,8 @@ export const rejectAdminKyc = createAsyncThunk(
     try {
       await adminFinanceApi.rejectKyc(id, reason);
       return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Lỗi từ chối KYC");
+    } catch (err: unknown) {
+      return rejectWithValue(normalizeError(err).message || "Lỗi từ chối KYC");
     }
   }
 );

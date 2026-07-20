@@ -1,3 +1,4 @@
+import { normalizeError } from "~/lib/utils/errors";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { financeApi } from "~/lib/api/finance";
@@ -11,6 +12,7 @@ import {
   PiFunnelBold,
   PiMagnifyingGlassBold
 } from "react-icons/pi";
+import { Pagination } from "~/components/ui/Pagination";
 
 export default function FinanceHistoryPage() {
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
@@ -37,8 +39,8 @@ export default function FinanceHistoryPage() {
       } else {
         setError(res.message || "Không thể tải lịch sử giao dịch.");
       }
-    } catch (err: any) {
-      setError(err?.message || "Đã xảy ra lỗi khi tải dữ liệu.");
+    } catch (err: unknown) {
+      setError(normalizeError(err).message || "Đã xảy ra lỗi khi tải dữ liệu.");
     } finally {
       setLoading(false);
     }
@@ -280,26 +282,15 @@ export default function FinanceHistoryPage() {
 
         {/* ── PAGINATION ── */}
         {!loading && totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-[#EAEAEA] pt-6 mt-4">
-            <span className="text-sm text-gray-400 font-mono">
-              Trang {page} / {totalPages} (Tổng số {filteredTransactions.length} giao dịch)
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                disabled={page === 1}
-                className="p-2 rounded border border-[#EAEAEA] hover:bg-gray-50 disabled:opacity-40 disabled:pointer-events-none transition-colors"
-              >
-                <PiCaretLeftBold className="text-base" />
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                disabled={page === totalPages}
-                className="p-2 rounded border border-[#EAEAEA] hover:bg-gray-50 disabled:opacity-40 disabled:pointer-events-none transition-colors"
-              >
-                <PiCaretRightBold className="text-base" />
-              </button>
-            </div>
+          <div className="mt-4">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={filteredTransactions.length}
+              pageSize={ITEMS_PER_PAGE}
+              onPageChange={setPage}
+              itemName="giao dịch"
+            />
           </div>
         )}
       </div>

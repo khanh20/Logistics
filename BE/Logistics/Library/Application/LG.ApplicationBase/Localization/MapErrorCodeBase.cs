@@ -1,4 +1,4 @@
-﻿using LG.ApplicationBase.Localization;
+using LG.ApplicationBase.Localization;
 using LG.ApplicationBase.MapError;
 using LG.EntitiesBase;
 using Microsoft.AspNetCore.Http;

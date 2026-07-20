@@ -1,0 +1,11 @@
+# ngrok config cho MuaHo — 1 URL tĩnh → nginx :8080 → Auth + Module1.
+# Chạy:  ngrok start --config duong/dan/ngrok.yml muaho
+
+version: "2"
+authtoken: <DÁN_AUTHTOKEN_CỦA_BẠN>   # dashboard.ngrok.com → Your Authtoken
+
+tunnels:
+  muaho:
+    proto: http
+    addr: 8080                                          # cổng nginx (nginx-muaho.conf)
+    domain: climatologic-engrained-dann.ngrok-free.dev  # domain tĩnh 

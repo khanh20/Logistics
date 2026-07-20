@@ -29,6 +29,7 @@ export function Button({
   loading,
   children,
   className,
+  disabled,
   ...props
 }: ButtonProps) {
   return (
@@ -40,8 +41,9 @@ export function Button({
         sizes[size],
         className
       )}
-      disabled={loading || props.disabled}
+      // disabled tách khỏi {...props} để loading LUÔN vô hiệu hoá nút (chống double-submit/spam).
       {...props}
+      disabled={loading || disabled}
     >
       {loading && <Spinner className="size-4" />}
       {children}

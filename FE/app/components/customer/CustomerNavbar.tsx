@@ -47,14 +47,14 @@ export function CustomerNavbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-primary shadow-md">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-8 xl:px-12">
         <div className="flex h-16 items-center justify-between">
           <a href="/" className="flex items-center gap-1">
             <span className="text-xl font-bold text-white">MuaHo</span>
             <span className="text-xl font-light text-red-200">Logistics</span>
           </a>
 
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-2 lg:gap-3">
             {NAV_ITEMS.map(({ to, label }) => (
               <NavLink
                 key={to}
@@ -62,7 +62,7 @@ export function CustomerNavbar() {
                 end={to === "/"}
                 className={({ isActive }) =>
                   cn(
-                    "px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    "px-3 py-2 rounded-md text-[15px] font-medium transition-colors whitespace-nowrap",
                     isActive
                       ? "text-white font-bold border-b-2 border-white"
                       : "text-red-100 hover:text-white hover:bg-primary-dark"
@@ -74,7 +74,7 @@ export function CustomerNavbar() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-5">
             <button
               onClick={() => setUrlModalOpen(true)}
               className="hidden sm:inline-flex items-center gap-1 rounded-lg bg-white/15 px-3 py-1.5
@@ -102,7 +102,7 @@ export function CustomerNavbar() {
                 </NavLink>
                 <button
                   onClick={handleLogout}
-                  className="text-sm text-red-100 hover:text-white transition-colors"
+                  className="text-sm text-red-100 hover:text-white transition-colors cursor-pointer"
                 >
                   {t("auth.logout")}
                 </button>

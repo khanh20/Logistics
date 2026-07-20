@@ -20,9 +20,9 @@ namespace LG.Core.Domain.Finance
         [MaxLength(100)]
         public string Name { get; set; }                        // Tên bộ quy tắc phí
 
-        public Guid? VipTierId { get; set; }                    // Áp dụng riêng cho hạng VIP (null = tất cả)
+        public Guid? VipTierId { get; set; }                    // Áp dụng riêng cho hạng VIP 
 
-        public Guid? PlatformId { get; set; }                   // Áp dụng riêng cho nền tảng (null = tất cả)
+        public Guid? PlatformId { get; set; }                   // Áp dụng riêng cho nền tảng
 
         [Required]
         [Column(TypeName = "decimal(5,4)")]
@@ -54,6 +54,15 @@ namespace LG.Core.Domain.Finance
 
         [Column(TypeName = "decimal(10,0)")]
         public decimal StorageDailyPerKgVnd { get; set; } = 5000; // Phí lưu kho / kg / ngày (VNĐ)
+
+        [Column(TypeName = "decimal(10,0)")]
+        public decimal ImportEntrustmentMinVnd { get; set; } = 500000; // Phí ủy thác nhập khẩu tối thiểu (VNĐ)
+
+        [Column(TypeName = "decimal(5,4)")]
+        public decimal ImportVatPct { get; set; } = 0.10m; // % Thuế VAT cho hàng chính ngạch
+
+        [Column(TypeName = "decimal(5,4)")]
+        public decimal ImportDutyPct { get; set; } = 0.05m; // % Thuế nhập khẩu (mặc định)
 
         public bool IsActive { get; set; } = true;              // Bộ quy tắc đang có hiệu lực
 

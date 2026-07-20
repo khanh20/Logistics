@@ -71,6 +71,50 @@ namespace LG.Module1.ApplicationServices.Services
             }
         }
 
+        public async Task LockFundsAsync(Guid customerId, Guid orderId, decimal amountVnd, CancellationToken ct = default)
+        {
+            var req = new
+            {
+                CustomerId = customerId,
+                OrderId = orderId,
+                LockedAmountVnd = amountVnd,
+                LockType = 0 // PaymentLockTypeEnum.Deposit = 0
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("api/wallet-payment/lock", req, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogError("Failed to lock wallet funds for customer {CustomerId}. Status: {Status}, Content: {Content}",
+                    customerId, response.StatusCode, errorMsg);
+                throw new Exception($"Không thể khóa tiền ví của khách hàng: {errorMsg}");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<ApiResponseWrapper<object>>(cancellationToken: ct);
+            if (result == null || !result.Success)
+            {
+                throw new Exception(result?.Message ?? "Khóa tiền ví thất bại.");
+            }
+        }
+
+        public async Task ReleaseFundsByOrderAsync(Guid orderId, string reason, CancellationToken ct = default)
+        {
+            var response = await _httpClient.PostAsync($"api/wallet-payment/release-by-order/{orderId}?reason={reason}", null, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMsg = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogError("Failed to release wallet funds for order {OrderId}. Status: {Status}, Content: {Content}",
+                    orderId, response.StatusCode, errorMsg);
+                throw new Exception($"Không thể giải phóng tiền ví: {response.ReasonPhrase}");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<ApiResponseWrapper<object>>(cancellationToken: ct);
+            if (result == null || !result.Success)
+            {
+                throw new Exception(result?.Message ?? "Giải phóng tiền ví thất bại.");
+            }
+        }
+
         public async Task RefundAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId, string description, CancellationToken ct = default)
         {
             var req = new
@@ -97,13 +141,14 @@ namespace LG.Module1.ApplicationServices.Services
                 throw new Exception(result?.Message ?? "Hoàn tiền ví thất bại.");
             }
         }
-        public async Task<WalletCalculateFeesResponse> CalculateCheckoutFeesAsync(Guid customerId, decimal subtotalVnd, string insuranceOption, CancellationToken ct = default)
+        public async Task<WalletCalculateFeesResponse> CalculateCheckoutFeesAsync(Guid customerId, decimal subtotalVnd, string insuranceOption, string shippingLine = "Tmdt", CancellationToken ct = default)
         {
             var req = new
             {
                 CustomerId = customerId,
                 SubtotalVnd = subtotalVnd,
-                InsuranceOption = insuranceOption
+                InsuranceOption = insuranceOption,
+                ShippingLine = shippingLine
             };
 
             var response = await _httpClient.PostAsJsonAsync("api/wallet-payment/calculate-checkout-fees", req, ct);

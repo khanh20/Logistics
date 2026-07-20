@@ -2,6 +2,7 @@ using LG.Module1.ApplicationServices.DTOs.Cart;
 using LG.Module1.ApplicationServices.DTOs.Ingestion;
 using LG.Module1.ApplicationServices.DTOs.Product;
 using LG.Module1.ApplicationServices.Interfaces;
+using LG.Module1.Domain.Adapters;
 using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Exceptions;
 using LG.Module1.Domain.Repositories;
@@ -17,7 +18,8 @@ namespace LG.Module1.ApplicationServices.Services;
 public class ExtensionProductUpserter(
     IPlatformRepository           platformRepo,
     IPlatformShopRepository       shopRepo,
-    IProductCategoryRepository    categoryRepo,
+    CategoryAutoClassifier        autoClassifier,
+    BackgroundCategoryClassifier  backgroundClassifier,
     IProductService               productService,
     IModule1UnitOfWork            uow,
     ILogger<ExtensionProductUpserter> logger)
@@ -57,9 +59,9 @@ public class ExtensionProductUpserter(
         if (shop.IsBlacklisted)
             throw new BlacklistedShopException(shop.ShopName);
 
-        // 3. Category — fallback category đầu tiên
-        var resolvedCategoryId = categoryId
-            ?? (await categoryRepo.GetAllAsync(activeOnly: true, ct)).First().Id;
+        // 3. Category TẠM (nhanh, KHÔNG chặn bởi ML) — explicit hoặc cats[0].
+        // Classify thật chạy nền sau khi lưu (xem cuối hàm) rồi cập nhật lại category.
+        var resolvedCategoryId = await autoClassifier.ResolveProvisionalAsync(categoryId, ct);
 
         // 4. Giá → CNY
         var priceCny = ConvertToCny(d.PricePromotion ?? d.PriceOriginal, d.Currency);
@@ -109,6 +111,13 @@ public class ExtensionProductUpserter(
             Attributes: new List<UpsertAttributeRequest>());
 
         var savedProduct = await productService.UpsertFromRawAsync(upsertReq, ct);
+
+        // Khách không chỉ định category → phân loại thật (ML) chạy NỀN, cập nhật lại category
+        // sau vài giây. Product đã ở DB với id/variant thật nên xem chi tiết + thêm giỏ hoạt
+        // động ngay, không phải chờ classify.
+        if (categoryId is null && !savedProduct.IsForbidden)
+            backgroundClassifier.Enqueue(savedProduct.Id,
+                d.TitleTranslated ?? d.TitleOriginal, d.PrimaryImageUrl, null);
 
         var matchedVariant = savedProduct.Variants.FirstOrDefault(v => v.VariantName == variantName)
                           ?? savedProduct.Variants.First();

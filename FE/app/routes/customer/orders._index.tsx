@@ -9,6 +9,7 @@ import { formatCNY, formatVND, formatDate } from "~/lib/utils/format";
 import { CUSTOMER_CANCELLABLE_STATUSES } from "~/lib/constants/orderStatus";
 import type { OrderListItemResponse, OrderStatus } from "~/lib/types/order";
 import type { Route } from "./+types/orders._index";
+import { Pagination } from "~/components/ui/Pagination";
 
 export function meta(_: Route.MetaArgs) {
   return [{ title: "Đơn mua hộ — MuaHo" }];
@@ -183,28 +184,15 @@ export default function CustomerOrdersPage({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6">
-          <p className="text-sm text-gray-500">
-            {t("order.pagination", { page, total: totalPages, count: totalCount })}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={page <= 1 || loading}
-              onClick={() => handlePage(page - 1)}
-            >
-              {t("common.prev_page")}
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={page >= totalPages || loading}
-              onClick={() => handlePage(page + 1)}
-            >
-              {t("common.next_page")}
-            </Button>
-          </div>
+        <div className="mt-6 border-t border-[#EAEAEA] pt-4">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalCount}
+            pageSize={PAGE_SIZE}
+            onPageChange={(p) => handlePage(p)}
+            itemName={t("order.orders_lower") || "đơn hàng"}
+          />
         </div>
       )}
     </div>

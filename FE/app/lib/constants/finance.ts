@@ -230,3 +230,11 @@ export const NOTIFICATION_DELIVERY_STATUS_LABELS: Record<NotificationDeliverySta
   [NotificationDeliveryStatusEnum.Delivered]: "Đã nhận",
   [NotificationDeliveryStatusEnum.Failed]: "Thất bại",
 };
+
+// ── Validation Limits ────────────────────────────────────────────
+export const FINANCE_LIMITS = {
+  MIN_TOPUP: 10000,
+  MAX_TOPUP: 1000000000,
+  MIN_WITHDRAW: 50000,
+  MAX_WITHDRAW: 1000000000,
+};

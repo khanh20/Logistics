@@ -16,10 +16,10 @@ public class ProductIngestionService(
     IEnumerable<IPlatformAdapter> adapters,
     IPlatformRepository platformRepo,
     IPlatformShopRepository shopRepo,
-    IProductCategoryRepository categoryRepo,
     IProductRepository productRepo,
     IProductService productService,
     ExtensionProductUpserter upserter,
+    CategoryAutoClassifier autoClassifier,
     IModule1UnitOfWork uow,
     ILogger<ProductIngestionService> logger
 ) : IProductIngestionService
@@ -86,14 +86,15 @@ public class ProductIngestionService(
             p.Name.Equals(adapter.PlatformName, StringComparison.OrdinalIgnoreCase))
             ?? throw new PlatformNotFoundException(adapter.PlatformName);
 
-        var categoryId = await ResolveCategoryAsync(req.CategoryId, ct);
+        if (req.CategoryId is { } cid)
+            await autoClassifier.ValidateAsync(cid, ct);   // fail-fast trước khi gọi sàn
 
         var raw = await adapter.GetDetailAsync(platformProductId, ct);
         if (raw is null)
             return new ResolveUrlResponse(adapter.PlatformName, null, "Error",
                 "Không lấy được thông tin sản phẩm từ sàn.", null);
 
-        var result = await ProcessSingleAsync(raw, platform, categoryId, ct);
+        var result = await ProcessSingleAsync(raw, platform, req.CategoryId, ct);
         if (result.SavedProductId is null)
             return new ResolveUrlResponse(adapter.PlatformName, null,
                 result.Status == "Forbidden" ? "Forbidden" : "Error", result.Reason, null);
@@ -175,10 +176,9 @@ public class ProductIngestionService(
             p.Name.Equals(req.PlatformName, StringComparison.OrdinalIgnoreCase))
             ?? throw new PlatformNotFoundException(req.PlatformName);
 
-        // Validate category (nếu có) hoặc dùng default category đầu tiên
-        var categoryId = await ResolveCategoryAsync(req.CategoryId, ct);
+        if (req.CategoryId is { } cid)
+            await autoClassifier.ValidateAsync(cid, ct);   // fail-fast trước khi crawl
 
-        // Gọi adapter
         logger.LogInformation("Crawling '{Platform}' for keyword '{Keyword}', max {Max}",
             req.PlatformName, req.Keyword, req.MaxResults);
 
@@ -198,7 +198,7 @@ public class ProductIngestionService(
         foreach (var raw in rawResults)
         {
             ct.ThrowIfCancellationRequested();
-            var result = await ProcessSingleAsync(raw, platform, categoryId, ct);
+            var result = await ProcessSingleAsync(raw, platform, req.CategoryId, ct);
             items.Add(result);
         }
 
@@ -249,14 +249,15 @@ public class ProductIngestionService(
             p.Name.Equals(adapter.PlatformName, StringComparison.OrdinalIgnoreCase))
             ?? throw new PlatformNotFoundException(adapter.PlatformName);
 
-        var categoryId = await ResolveCategoryAsync(req.CategoryId, ct);
+        if (req.CategoryId is { } cid)
+            await autoClassifier.ValidateAsync(cid, ct);
 
         var raw = await adapter.GetDetailAsync(platformProductId, ct);
         if (raw is null)
             return new CrawlUrlResultResponse(adapter.PlatformName, platformProductId,
                 null, "Skipped", "Adapter trả về null.");
 
-        var result = await ProcessSingleAsync(raw, platform, categoryId, ct);
+        var result = await ProcessSingleAsync(raw, platform, req.CategoryId, ct);
 
         return new CrawlUrlResultResponse(
             PlatformName: adapter.PlatformName,
@@ -268,10 +269,15 @@ public class ProductIngestionService(
 
     // ── Core processing — 1 raw result → DB ──────────────────────────────────
     private async Task<CrawlItemResult> ProcessSingleAsync(
-        RawProductResult raw, Platform platform, Guid categoryId, CancellationToken ct)
+        RawProductResult raw, Platform platform, Guid? requestedCategoryId, CancellationToken ct)
     {
         try
         {
+            // Category: explicit (đã validate upfront) hoặc phân loại ML -> fallback mặc định.
+            var categoryId = await autoClassifier.ResolveAsync(
+                requestedCategoryId, raw.Title, raw.ImageUrls.FirstOrDefault(),
+                raw.CategoryNameOriginal, ct);
+
             // 1. Resolve hoặc tạo PlatformShop
             var shop = await ResolveOrCreateShopAsync(platform, raw, ct);
 
@@ -348,21 +354,6 @@ public class ProductIngestionService(
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-    private async Task<Guid> ResolveCategoryAsync(Guid? categoryId, CancellationToken ct)
-    {
-        if (categoryId.HasValue)
-        {
-            var cat = await categoryRepo.GetByIdAsync(categoryId.Value, ct)
-                      ?? throw new ArgumentException($"Category '{categoryId}' không tồn tại.");
-            return cat.Id;
-        }
-
-        // Fallback: lấy category đầu tiên active
-        var all = await categoryRepo.GetAllAsync(activeOnly: true, ct);
-        var fallback = all.FirstOrDefault()
-            ?? throw new InvalidOperationException("Không có category nào active.");
-        return fallback.Id;
-    }
 
     private async Task<PlatformShop> ResolveOrCreateShopAsync(
         Platform platform, RawProductResult raw, CancellationToken ct)

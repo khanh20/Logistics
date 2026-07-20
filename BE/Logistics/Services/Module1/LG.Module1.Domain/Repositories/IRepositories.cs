@@ -93,6 +93,13 @@ public interface IProductRepository
         decimal? minPriceCny, decimal? maxPriceCny,
         bool activeOnly, ProductSort sort, int page, int pageSize, CancellationToken ct = default);
 
+    // Truy hồi hybrid: lexical (ILIKE) + vector ANN, hợp nhất RRF, cùng bộ filter.
+    // Items = tối đa poolSize ứng viên theo điểm RRF; LexicalTotal = tổng khớp lexical thật (cho phân trang).
+    Task<(List<ProductMaster> Items, int LexicalTotal)> SearchHybridAsync(
+        string? keyword, Guid? categoryId, Guid? platformId,
+        decimal? minPriceCny, decimal? maxPriceCny, bool activeOnly,
+        Pgvector.Vector? queryVector, int poolSize, CancellationToken ct = default);
+
     Task<List<ProductMaster>> GetFeaturedAsync(int limit, CancellationToken ct = default);
 
     /// Nạp nhiều sản phẩm theo danh sách Id (cho recommendation). Chỉ trả active + không cấm.
@@ -206,6 +213,9 @@ public interface ICustomerOrderRepository
 
     Task AddAsync(CustomerOrder order, CancellationToken ct = default);
     Task UpdateAsync(CustomerOrder order, CancellationToken ct = default);
+
+    /// Lấy tổng doanh thu phí của hệ thống trong 1 ngày (dựa theo ngày thanh toán - PaidAt).
+    Task<(int TotalOrders, decimal ServiceFee, decimal ShippingFee, decimal InspectionFee, decimal InsuranceFee, decimal EntrustmentFee, decimal VatFee, decimal DutyFee)> GetDailyRevenueSummaryAsync(DateOnly date, CancellationToken ct = default);
 }
 
 // ── PlatformOrder repos ───────────────────────────────────────────────────────
@@ -216,6 +226,7 @@ public interface IPlatformOrderRepository
     Task<List<PlatformOrder>> GetByStaffAsync(Guid staffId, OrderStatus? status, int page, int pageSize, CancellationToken ct = default);
     Task AddAsync(PlatformOrder order, CancellationToken ct = default);
     Task UpdateAsync(PlatformOrder order, CancellationToken ct = default);
+    Task<decimal> GetDailyPlatformCostAsync(Guid accountId, DateOnly date, CancellationToken ct = default);
 }
 
 // ── StaffAssignment repos ─────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LG.Core.API.Controllers.Finance
 {
-    [Route("api/[controller]")]
+    [Route("api/finance/reconcile")]
     [Authorize(Roles = "Admin,SuperAdmin")]
     public class PlatformReconcileController : CoreBaseController
     {

@@ -23,7 +23,7 @@ export default function VipTierPage() {
 
   const getTierMeta = (tierName: string, level: number) => {
     const nameLower = (tierName || "").toLowerCase();
-    
+
     // 1. Prioritize name matching first to prevent level overlaps
     if (nameLower.includes("đồng") || nameLower.includes("bronze")) {
       return { color: "#d97706" };
@@ -73,12 +73,11 @@ export default function VipTierPage() {
   let progressPct = 0;
   let remainingSpend = 0;
   if (nextTier) {
-    const startSpend = currentTier?.minSpendVnd ?? 0;
     const endSpend = nextTier.minSpendVnd;
-    const spendInRange = totalSpend - startSpend;
-    const rangeSize = endSpend - startSpend;
-    progressPct = Math.max(0, Math.min(100, Math.round((spendInRange / rangeSize) * 100)));
-    remainingSpend = endSpend - totalSpend;
+    progressPct = endSpend > 0
+      ? Math.max(0, Math.min(100, Math.round((totalSpend / endSpend) * 100)))
+      : 0;
+    remainingSpend = Math.max(0, endSpend - totalSpend);
   }
 
   const comparisonColumns = [
@@ -126,7 +125,7 @@ export default function VipTierPage() {
     },
     {
       key: "freeStorage",
-      benefit: "Số ngày lưu kho miễn phí",
+      benefit: "Số ngày lưu kho",
       ...vipTiers.reduce((acc, t) => {
         acc[t.id] = t.freeStorageDays > 0 ? `${t.freeStorageDays} ngày` : "—";
         return acc;
@@ -235,16 +234,39 @@ export default function VipTierPage() {
       {/* ── MINIMAL TIMELINE ── */}
       <div className="mb-24 px-4 overflow-x-auto">
         <div className="min-w-[600px] flex items-center justify-between relative py-6">
+          {/* Background track */}
           <div className="absolute left-0 right-0 top-1/2 h-[1px] bg-[#EAEAEA] -translate-y-1/2 z-0"></div>
 
-          {currentTierIndex !== -1 && vipTiers.length > 1 && (
-            <div
-              className="absolute left-0 top-1/2 h-[1px] bg-neutral-900 -translate-y-1/2 z-0 transition-all duration-500"
-              style={{
-                width: `${(currentTierIndex / (vipTiers.length - 1)) * 100 + (nextTier ? (progressPct / (vipTiers.length - 1)) : 0)}%`
-              }}
-            ></div>
-          )}
+          {/* Per-segment progress lines */}
+          {vipTiers.length > 1 && vipTiers.map((_, idx) => {
+            if (idx >= vipTiers.length - 1) return null; // no segment after last tier
+            const segLeft = (idx / (vipTiers.length - 1)) * 100;
+            const segWidth = (1 / (vipTiers.length - 1)) * 100;
+
+            const startSpend = vipTiers[idx].minSpendVnd;
+            const endSpend = vipTiers[idx + 1].minSpendVnd;
+            const range = endSpend - startSpend;
+
+            let fillPct = 0;
+            if (totalSpend >= endSpend) {
+              fillPct = 100;
+            } else if (totalSpend > startSpend && range > 0) {
+              fillPct = Math.max(0, Math.min(100, ((totalSpend - startSpend) / range) * 100));
+            }
+
+            if (fillPct <= 0) return null;
+
+            return (
+              <div
+                key={`seg-${idx}`}
+                className="absolute top-1/2 h-[1px] bg-neutral-900 -translate-y-1/2 z-0 transition-all duration-500"
+                style={{
+                  left: `${segLeft}%`,
+                  width: `${segWidth * (fillPct / 100)}%`,
+                }}
+              />
+            );
+          })}
 
           {vipTiers.map((t, idx) => {
             const isPassed = idx <= currentTierIndex;

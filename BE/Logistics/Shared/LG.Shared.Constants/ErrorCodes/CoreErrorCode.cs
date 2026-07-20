@@ -37,6 +37,8 @@ namespace LG.Shared.Constants.ErrorCodes
         public const int CoreKycInvalidImageType = 4033;
         public const int CoreKycImageTooLarge = 4034;
         public const int CoreKycDataRequired = 4035;
+        public const int CoreKycRequired = 4036;
+        public const int CoreKycIdNumberAlreadyExists = 4037;
         
         // General Auth/User 404x
         public const int CoreUserIdNotFoundInToken = 4041;
@@ -50,6 +52,10 @@ namespace LG.Shared.Constants.ErrorCodes
         // Customer Address 406x
         public const int CoreCustomerAddressNotFound = 4061;
         public const int CoreCustomerAddressLimitExceeded = 4062;
+
+        // Fraud Detection 407x
+        public const int CoreFraudDetected = 4071;
+        public const int CoreFraudWalletFrozen = 4072;
 
     }
 }

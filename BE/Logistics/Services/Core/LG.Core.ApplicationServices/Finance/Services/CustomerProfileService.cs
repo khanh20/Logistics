@@ -41,8 +41,14 @@ namespace LG.Core.ApplicationServices.Finance.Services
             var exists = await _db.CustomerProfiles.AnyAsync(x => x.UserId == userId);
             if (exists) throw new InvalidOperationException("Profile already exists for this user.");
 
+            // Tìm hạng Standard (Level = 0)
+            var standardTier = await _db.VipTiers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Level == 0);
+
             var profile = _mapper.Map<CustomerProfile>(dto);
             profile.UserId = userId;
+            profile.VipTierId = standardTier?.Id;
             profile.CreatedDate = DateTime.UtcNow;
 
             _db.CustomerProfiles.Add(profile);

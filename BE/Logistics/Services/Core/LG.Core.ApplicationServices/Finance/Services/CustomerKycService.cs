@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging;
 using AutoMapper;
 using LG.ApplicationBase.Localization;
 using LG.Core.ApplicationServices.Common.Interfaces;
+using LG.Core.Domain.Exceptions;
+using LG.Shared.Constants.ErrorCodes;
 
 namespace LG.Core.ApplicationServices.Finance.Services
 {
@@ -71,15 +73,15 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
         public async Task<CustomerKycDto?> GetKycByUserIdAsync(Guid userId)
         {
-            // Bước 1: tìm CustomerProfile theo UserId
-            var profile = await _db.CustomerProfiles
+            // Kiểm tra CustomerProfile tồn tại
+            var profileExists = await _db.CustomerProfiles
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.UserId == userId);
+                .AnyAsync(p => p.UserId == userId);
 
-            if (profile == null) return null;
+            if (!profileExists) return null;
 
-            // Theo dữ liệu thực tế trong DB: CustomerId trong bảng CustomerKYC lưu giá trị của CustomerProfile.Id
-            return await GetKycAsync(profile.Id);
+            // FK constraint: CustomerKYC.CustomerId → CustomerProfile.UserId
+            return await GetKycAsync(userId);
         }
 
         // ── Get KYC ──────────────────────────────────────────────────────────────
@@ -101,27 +103,77 @@ namespace LG.Core.ApplicationServices.Finance.Services
             var profile = await _db.CustomerProfiles
                 .FirstOrDefaultAsync(p => p.UserId == userId);
 
+            if (request.DateOfBirthOnId.HasValue && request.DateOfBirthOnId.Value.Kind != DateTimeKind.Utc)
+            {
+                request.DateOfBirthOnId = DateTime.SpecifyKind(request.DateOfBirthOnId.Value, DateTimeKind.Utc);
+            }
+
             if (profile == null)
             {
-                // Tự động tạo CustomerProfile nếu chưa tồn tại
+                // Safety net: Tự động tạo CustomerProfile nếu chưa tồn tại
+                var standardTier = await _db.VipTiers
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.Level == 0);
+
                 profile = new CustomerProfile
                 {
                     UserId = userId,
                     CustomerCode = "CUST" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString()[(^6)..],
                     FullName = request.FullNameOnId ?? "Unknown",
                     DateOfBirth = request.DateOfBirthOnId,
+                    VipTierId = standardTier?.Id,
                     CreatedDate = DateTime.UtcNow
                 };
                 await _db.CustomerProfiles.AddAsync(profile);
                 await _db.SaveChangesAsync();
-                _logger.LogInformation("Tự động tạo CustomerProfile cho userId={UserId}", userId);
+                _logger.LogInformation("Tự động tạo CustomerProfile cho userId={UserId} với VipTierId={VipTierId}", userId, standardTier?.Id);
+            }
+            else
+            {
+                // Cập nhật thông tin thật từ CCCD vào profile đã tồn tại
+                // (thay thế dữ liệu tạm "Khách hàng mới" nếu profile được tạo tự động trước đó)
+                bool updated = false;
+
+                if (!string.IsNullOrWhiteSpace(request.FullNameOnId) && profile.FullName != request.FullNameOnId)
+                {
+                    profile.FullName = request.FullNameOnId;
+                    updated = true;
+                }
+                if (request.DateOfBirthOnId.HasValue && profile.DateOfBirth != request.DateOfBirthOnId)
+                {
+                    profile.DateOfBirth = request.DateOfBirthOnId;
+                    updated = true;
+                }
+
+                if (updated)
+                {
+                    profile.ModifiedDate = DateTime.UtcNow;
+                    await _db.SaveChangesAsync();
+                    _logger.LogInformation("Cập nhật CustomerProfile từ CCCD cho userId={UserId}", userId);
+                }
             }
 
-            return await SubmitKycAsync(profile.Id, request);
+            // FK constraint: CustomerKYC.CustomerId → CustomerProfile.UserId
+            return await SubmitKycAsync(profile.UserId, request);
         }
 
         public async Task<CustomerKycDto> SubmitKycAsync(Guid customerId, UpdateKycFromOcrRequest request)
         {
+            var idNumber = request.IdNumber?.Trim();
+
+            // Kiểm tra trùng lặp CCCD với user khác
+            if (!string.IsNullOrWhiteSpace(idNumber))
+            {
+                var existingDuplicate = await _db.CustomerKycs
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(k => k.IdNumber == idNumber && k.CustomerId != customerId);
+
+                if (existingDuplicate != null)
+                {
+                    throw new CoreException(CoreErrorCode.CoreKycIdNumberAlreadyExists);
+                }
+            }
+
             var kyc = await _db.CustomerKycs
                 .FirstOrDefaultAsync(k => k.CustomerId == customerId);
 

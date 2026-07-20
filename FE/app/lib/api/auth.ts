@@ -36,6 +36,14 @@ export const authApi = {
 
   updateMe: (body: { fullName: string; phone?: string; avatarUrl?: string }) =>
     authClient.put<unknown, ApiResponse<any>>("/api/users/me", body),
+
+  uploadAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return authClient.post<unknown, ApiResponse<any>>("/api/users/me/avatar", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
 };
 
 export const usersApi = {

@@ -195,6 +195,12 @@ public class PlatformAccount
     public void UpdateBalance(decimal balance) => AlipayBalance = balance;
     public void RecordLogin() => LastLoginAt = DateTime.UtcNow;
 
+    public void SyncBalanceAfterReconcile(decimal spentAmount)
+    {
+        AlipayBalance -= spentAmount;
+        DailySpentToday = 0; // Reset after a successful reconcile
+    }
+
     public bool HasDailyCapacity(decimal amount) =>
         !IsFrozen && IsActive && (DailySpentToday + amount <= DailySpendLimit);
 }

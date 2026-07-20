@@ -14,7 +14,8 @@
   C.injectPageScript("js/inject_script.js");
 
   // ── Scrape theo lệnh từ background (tab ẩn do web MuaHo yêu cầu) ────────────
-  // Poll adapter.scrape() tới khi có price (SPA load chậm), tối đa ~12×700ms.
+  // Poll adapter.scrape() tới khi có price (SPA load chậm). Tab ẩn bị Chrome bóp
+  // (interval ép ≥1s) nên nới lên 20 lần (~14-20s thực tế, vẫn trong timeout 30s bg).
   chrome.runtime.onMessage.addListener(function (req, sender, sendResponse) {
     if (!req || req.action !== "scrapeNow") return false;
     var tries = 0;
@@ -23,7 +24,7 @@
       var data = null;
       try { data = adapter.scrape(); } catch (e) { data = null; }
       var ok = data && data.priceOriginal > 0 && data.platformProductId;
-      if (ok || tries >= 12) {
+      if (ok || tries >= 20) {
         clearInterval(poll);
         if (ok) sendResponse({ ok: true, data: data });
         else sendResponse({ ok: false, reason: "no_data" });

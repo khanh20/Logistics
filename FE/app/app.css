@@ -52,8 +52,9 @@ body {
   transform: translateY(28px);
   will-change: opacity, transform;
   transition: opacity 800ms cubic-bezier(0.16, 1, 0.3, 1),
-              transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
+    transform 800ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .reveal-visible {
   opacity: 1;
   transform: translateY(0);

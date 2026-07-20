@@ -207,6 +207,8 @@ public interface IOrderManagementService
 
     Task<OrderDetailResponse> GetOrderDetailAsync(Guid orderId, CancellationToken ct = default);
 
+    Task<OrderDetailResponse> GetOrderDetailByCodeAsync(string orderCode, CancellationToken ct = default);
+
     /// Staff nhận đơn — chuyển sang AwaitingManualPlace / AwaitingApiPlace.
     Task<OrderDetailResponse> AssignOrderAsync(Guid orderId, Guid staffId, CancellationToken ct = default);
 
@@ -239,22 +241,34 @@ public interface IOrderManagementService
 
     /// Ghi nhận hoàn hàng.
     Task<OrderDetailResponse> MarkReturnedAsync(Guid orderId, Guid staffId, OrderTransitionRequest req, CancellationToken ct = default);
+
+    /// Internal API: Lấy tổng chi tiêu thực tế trên sàn của 1 tài khoản trong 1 ngày.
+    Task<decimal> GetDailyPlatformCostAsync(Guid accountId, DateOnly date, CancellationToken ct = default);
+
+    /// Internal API: Lấy tổng doanh thu phí của hệ thống trong 1 ngày (dựa theo ngày thanh toán - PaidAt).
+    Task<DailyRevenueSummaryDto> GetDailyRevenueSummaryAsync(DateOnly date, CancellationToken ct = default);
 }
 
 public record WalletCalculateFeesResponse(
     decimal ServiceFeeVnd,
     decimal InspectionFeeVnd,
     decimal InsuranceFeeVnd,
+    decimal ImportEntrustmentFeeVnd,
+    decimal ImportVatVnd,
+    decimal ImportDutyVnd,
     string  InsuranceOption,
     decimal TotalCheckoutFeeVnd,
-    Guid?   FeeRuleId
+    Guid?   FeeRuleId,
+    decimal ServiceFeeDiscountVnd,
+    decimal InspectionFeeDiscountVnd
 );
 
 public record WalletCalculateShippingFeesResponse(
     decimal ShippingIntlFeeVnd,
     decimal StorageFeeVnd,
     decimal ChargeableWeightKg,
-    decimal TotalShippingFeeVnd
+    decimal TotalShippingFeeVnd,
+    int     StorageDaysOverFree
 );
 
 // ── Wallet Service Integration ──────────────────────────────────────
@@ -263,6 +277,12 @@ public interface IWalletService
     /// Lấy số dư khả dụng của ví.
     Task<decimal> GetBalanceAsync(Guid customerId, CancellationToken ct = default);
 
+    /// Khóa tiền ví (đặt cọc).
+    Task LockFundsAsync(Guid customerId, Guid orderId, decimal amountVnd, CancellationToken ct = default);
+
+    /// Giải phóng tiền ví đã khóa theo mã đơn hàng.
+    Task ReleaseFundsByOrderAsync(Guid orderId, string reason, CancellationToken ct = default);
+
     /// Trừ tiền ví (cọc hoặc thanh toán cuối kỳ).
     Task DeductAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId, string description, CancellationToken ct = default);
 
@@ -270,7 +290,7 @@ public interface IWalletService
     Task RefundAsync(Guid customerId, decimal amountVnd, string referenceType, Guid referenceId, string description, CancellationToken ct = default);
 
     /// Tính toán các khoản phí checkout (dịch vụ, kiểm hàng, bảo hiểm).
-    Task<WalletCalculateFeesResponse> CalculateCheckoutFeesAsync(Guid customerId, decimal subtotalVnd, string insuranceOption, CancellationToken ct = default);
+    Task<WalletCalculateFeesResponse> CalculateCheckoutFeesAsync(Guid customerId, decimal subtotalVnd, string insuranceOption, string shippingLine = "Tmdt", CancellationToken ct = default);
 
     /// Tính toán phí vận chuyển quốc tế và lưu kho.
     Task<WalletCalculateShippingFeesResponse> CalculateShippingFeesAsync(Guid customerId, decimal actualWeightKg, decimal? volumeCm3, int storageDaysOverFree, CancellationToken ct = default);
@@ -416,4 +436,7 @@ public interface IPlatformService
     Task FreezeAccountAsync(Guid accountId, CancellationToken ct = default);
     Task UnfreezeAccountAsync(Guid accountId, CancellationToken ct = default);
     Task UpdateBalanceAsync(Guid accountId, UpdateAccountBalanceRequest req, CancellationToken ct = default);
+
+    /// Internal API: Đồng bộ số dư Alipay từ Core sau khi đối soát thành công.
+    Task SyncBalanceAfterReconcileAsync(Guid accountId, decimal spentAmountCny, CancellationToken ct = default);
 }
