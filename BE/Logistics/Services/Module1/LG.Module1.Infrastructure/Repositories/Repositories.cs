@@ -1353,6 +1353,11 @@ public class ProductReviewRepository(Module1DbContext db) : IProductReviewReposi
         return (items, total);
     }
 
+    public Task<List<ProductReview>> GetPendingUnscannedAsync(int limit, CancellationToken ct = default) =>
+        db.ProductReviews
+          .Where(x => x.Status == ReviewStatus.Pending && x.AiScannedAt == null)
+          .OrderBy(x => x.CreatedAt).Take(limit).ToListAsync(ct);
+
     public Task<bool> ExistsForCustomerAsync(Guid productId, Guid customerId, CancellationToken ct = default) =>
         db.ProductReviews.AnyAsync(x => x.ProductId == productId && x.CustomerId == customerId, ct);
 

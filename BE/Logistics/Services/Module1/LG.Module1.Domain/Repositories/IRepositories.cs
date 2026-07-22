@@ -396,6 +396,8 @@ public interface IProductReviewRepository
     /// Hàng đợi kiểm duyệt (Admin/Staff).
     Task<(List<ProductReview> Items, int TotalCount)> SearchAsync(
         ReviewStatus? status, int page, int pageSize, CancellationToken ct = default);
+    /// Review Pending chưa được mô hình lọc spam chấm (cho background job).
+    Task<List<ProductReview>> GetPendingUnscannedAsync(int limit, CancellationToken ct = default);
     Task<bool> ExistsForCustomerAsync(Guid productId, Guid customerId, CancellationToken ct = default);
     Task<ProductReview?> GetByProductAndCustomerAsync(Guid productId, Guid customerId, CancellationToken ct = default);
     Task AddAsync(ProductReview review, CancellationToken ct = default);

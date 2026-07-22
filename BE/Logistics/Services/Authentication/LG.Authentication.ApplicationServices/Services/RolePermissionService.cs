@@ -65,6 +65,11 @@ public class RoleService(
         var role = await roleRepo.GetByIdAsync(id, ct)
                    ?? throw new NotFoundException(nameof(Role), id);
 
+        // Vai trò hệ thống (Admin, KhachHang, các vai trò nhân viên) là nền của phân
+        // quyền — xóa Admin sẽ khoá toàn bộ quản trị. Chặn ở đây thay vì chỉ ẩn nút UI.
+        if (role.IsSystem)
+            throw new ConflictException("Không thể xóa vai trò hệ thống.");
+
         await roleRepo.DeleteAsync(role, ct);
         await uow.SaveChangesAsync(ct);
 
