@@ -100,6 +100,7 @@ export default [
       route("orders/:id", "routes/staff/orders.$id.tsx"),
       route("kpi", "routes/staff/kpi.tsx"),
       route("complaints", "routes/staff/complaints.tsx"),
+      route("reviews", "routes/staff/reviews._index.tsx"),
       route("notifications", "routes/staff/notifications.tsx"),
     ]),
   ]),

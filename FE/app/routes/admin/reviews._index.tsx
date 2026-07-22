@@ -28,7 +28,9 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-export default function AdminReviewsPage() {
+// productLinkBase: bỏ trống thì ẩn link "Xem sản phẩm" — portal nhân viên không có
+// màn hình sản phẩm, mà /admin/products lại bị admin-layout đá ra.
+export function ReviewsModerationView({ productLinkBase }: { productLinkBase?: string }) {
   const { t } = useTranslation();
   const { data, loading, error, setData, reload } = useFetch<PagedReviewResponse>(
     async () => (await reviewsApi.getQueue("Pending", 1, 50)).data,
@@ -108,13 +110,15 @@ export default function AdminReviewsPage() {
                     <span className="text-xs text-slate-400">{formatDate(r.createdAt)}</span>
                   </div>
                   <p className="mt-1.5 text-sm text-slate-700">{r.content}</p>
-                  <Link
-                    to={`/admin/products/${r.productId}`}
-                    className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                  >
-                    {t("admin_reviews.view_product", "Xem sản phẩm")}
-                    <ArrowRight size={12} weight="bold" />
-                  </Link>
+                  {productLinkBase && (
+                    <Link
+                      to={`${productLinkBase}/${r.productId}`}
+                      className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      {t("admin_reviews.view_product", "Xem sản phẩm")}
+                      <ArrowRight size={12} weight="bold" />
+                    </Link>
+                  )}
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <Button size="sm" loading={busyId === r.id} onClick={() => approve(r)} className="gap-1.5">
@@ -154,4 +158,8 @@ export default function AdminReviewsPage() {
       </Modal>
     </FadeIn>
   );
+}
+
+export default function AdminReviewsPage() {
+  return <ReviewsModerationView productLinkBase="/admin/products" />;
 }
