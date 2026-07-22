@@ -56,4 +56,8 @@ export {
   Heart,
   Star as StarIcon,
   ChatCircleText,
+  ShoppingCart,
+  CaretDown,
+  Link as LinkIcon,
+  List as ListIcon,
 } from "@phosphor-icons/react";

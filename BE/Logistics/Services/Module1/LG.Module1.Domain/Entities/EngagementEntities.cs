@@ -51,6 +51,18 @@ public enum ReviewStatus
 // Điểm trending của 1 sản phẩm (kết quả tính của job, dùng để ghi cache).
 public readonly record struct TrendingScore(Guid ProductId, double Score);
 
+/// Một lượt tương tác thô — đủ dữ kiện để dựng seed có trọng số ngắn/dài hạn
+/// (cần cả thời điểm lẫn phiên, nên không dùng lại danh sách id trần được).
+public readonly record struct BehaviorEventRow(
+    Guid ProductId, ActivityEventType EventType, DateTime CreatedAt, string? SessionKey);
+
+/// Seed kèm trọng số đã tính: Weight gộp độ mới, loại sự kiện và cân bằng ngắn/dài hạn.
+public readonly record struct WeightedSeed(Guid ProductId, double Weight, bool FromCurrentSession);
+
+/// Một ứng viên kèm seed đã sinh ra nó — Score = Weight(seed) × Similarity.
+/// SeedId để truy vết: gợi ý nào cũng phải chỉ ra được hành vi nào tạo ra nó.
+public readonly record struct SeedMatch(Guid ProductId, double Score, double Similarity, Guid SeedId);
+
 // ── TrendingProduct — cache "đang thịnh hành" do TrendingAggregationJob ghi ──
 public class TrendingProduct
 {

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { logout as logoutThunk } from "~/lib/feature/auth/authThunk";
+import { resetAuth } from "~/lib/feature/auth/authSlice";
 import { cn } from "~/lib/utils/cn";
 import type { UserAuthInfo } from "~/lib/types/auth";
 
@@ -23,8 +24,7 @@ export function AdminTopbar({ user }: AdminTopbarProps) {
         /* ignore */
       }
     } else {
-      // Just clear local state if no refresh token
-      localStorage.removeItem("muaho-auth");
+      dispatch(resetAuth());
     }
     navigate("/");
   }

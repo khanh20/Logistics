@@ -55,10 +55,10 @@ public class RecommendationService(
                 var profile   = await BuildProfileAsync(cid, recentViewed, ct);
                 var purchased = await orderRepo.GetPurchasedProductIdsAsync(cid, 30, ct);
                 var favIds    = (await favoriteRepo.GetByCustomerAsync(cid, ct)).Select(f => f.ProductId).ToList();
-                var seed      = purchased.Concat(favIds).Concat(recentViewed).Distinct().ToList();
+                var seed      = await BuildWeightedSeedsAsync(cid, ct, favIds);
                 var pool      = perSection * opts.CandidatePoolMultiplier;
 
-                var (forYou, forYouSims) = await RecallVectorAsync(seed, shown, pool, ct);
+                var (forYou, forYouSims, _) = await RecallVectorAsync(seed, shown, pool, ct);
                 if (forYou.Count == 0)
                 {
                     var topCats = profile.CategoryWeights.OrderByDescending(kv => kv.Value)
@@ -66,7 +66,7 @@ public class RecommendationService(
                     forYou = await productRepo.GetTopByCategoriesAsync(topCats, shown.Concat(favIds), pool, ct);
                     forYouSims = null;
                 }
-                var coView = await RecallCoViewAsync(seed, shown, pool, ct);
+                var coView = await RecallCoViewAsync(seed.Select(s => s.ProductId).ToList(), shown, pool, ct);
 
                 // ML rerank cả 2 section trong MỘT lượt gọi; null -> rank linear.
                 var ml = await MlRerankAsync(cid,
@@ -86,7 +86,8 @@ public class RecommendationService(
                 await AddSection(sections, shown, "recently_viewed", recentViewed, perSection, ct);
 
                 var pool = perSection * opts.CandidatePoolMultiplier;
-                var (similar, similarSims) = await RecallVectorAsync(recentViewed, shown, pool, ct);
+                var weightedSeeds = await BuildWeightedSeedsAsync(cid, ct);
+                var (similar, similarSims, similarOrder) = await RecallVectorAsync(weightedSeeds, shown, pool, ct);
                 if (similar.Count == 0)
                 {
                     var cats = await activityRepo.GetRecentCategoryIdsAsync(cid, 5, ct);
@@ -95,10 +96,10 @@ public class RecommendationService(
                 }
                 var coView = await RecallCoViewAsync(recentViewed, shown, pool, ct);
 
-                var ml = await MlRerankAsync(cid,
-                    new[] { ("similar_to_viewed", similar), ("also_viewed", coView) }, ct);
+                // similar_to_viewed xếp theo similarity, không qua ML (xem ghi chú ở AddRankedSection).
+                var ml = await MlRerankAsync(cid, new[] { ("also_viewed", coView) }, ct);
                 AddRankedSection(sections, shown, "similar_to_viewed", similar, similarSims, profile, perSection,
-                    ml?.GetValueOrDefault("similar_to_viewed"));
+                    similarOrder);
                 AddRankedSection(sections, shown, "also_viewed", coView, null, profile, perSection,
                     ml?.GetValueOrDefault("also_viewed"));
                 await AddTrending(sections, shown, perSection, ct);
@@ -199,16 +200,22 @@ public class RecommendationService(
     }
 
     // Xếp 1 section: theo thứ tự ML nếu có, ngược lại rank linear.
+    // bySimilarity: xếp thuần theo độ giống seed, bỏ qua ML. Dùng cho section mà hợp đồng
+    // với người dùng LÀ độ giống ("giống thứ bạn đã xem"). Model reco học từ hành vi mô
+    // phỏng nên tối ưu độ phổ biến — đo thực tế nó đẩy SP sim=0.47 lên trên SP sim=1.00,
+    // tức phá đúng thứ section này hứa hẹn.
     private void AddRankedSection(List<RecSection> sections, HashSet<Guid> shown, string key,
         List<ProductMaster> products, IReadOnlyDictionary<Guid, double>? sims, UserProfile profile,
-        int perSection, IReadOnlyList<Guid>? mlOrder)
+        int perSection, IReadOnlyList<Guid>? mlOrder, bool bySimilarity = false)
     {
         var pick = products.Where(p => !shown.Contains(p.Id)).ToList();
         if (pick.Count == 0) return;
 
-        var ranked = mlOrder is { Count: > 0 }
-            ? Common.RankingHelpers.ReorderByIds(pick, mlOrder).Take(perSection).ToList()
-            : Rank(pick, profile, sims, perSection);
+        var ranked = bySimilarity && sims is { Count: > 0 }
+            ? pick.OrderByDescending(p => sims.GetValueOrDefault(p.Id)).Take(perSection).ToList()
+            : mlOrder is { Count: > 0 }
+                ? Common.RankingHelpers.ReorderByIds(pick, mlOrder).Take(perSection).ToList()
+                : Rank(pick, profile, sims, perSection);
         if (ranked.Count == 0) return;
 
         foreach (var p in ranked) shown.Add(p.Id);
@@ -217,23 +224,152 @@ public class RecommendationService(
 
     // ── Recall sources ──────────────────────────────────────────────────────────
 
-    // Vector ANN: user-vector = trung bình embedding seed → top-K + similarity.
-    private async Task<(List<ProductMaster> Products, Dictionary<Guid, double>? Sims)> RecallVectorAsync(
-        List<Guid> seedIds, HashSet<Guid> shown, int pool, CancellationToken ct)
+    // Dựng seed có trọng số từ chuỗi hành vi: tách phiên hiện tại (ý định tức thời) khỏi
+    // lịch sử cũ (sở thích ổn định), rồi cân hai bên bằng α động.
+    //
+    // Vì sao α phải động: phiên mới có 1 item thì chưa đủ căn cứ nói người dùng đang muốn
+    // gì, phải dựa vào lịch sử; phiên đã 5-6 item thì ý định đã rõ và phải ưu tiên nó.
+    // Ngược lại nếu lịch sử quá mỏng thì chính nó mới là nhiễu, lúc đó α tự đẩy về 1.
+    private async Task<List<WeightedSeed>> BuildWeightedSeedsAsync(
+        Guid cid, CancellationToken ct, IEnumerable<Guid>? favoriteIds = null)
     {
-        var seeds = seedIds.Where(id => id != Guid.Empty).Distinct().Take(20).ToList();
-        if (seeds.Count == 0) return (new(), null);
+        var h = opts.Horizon;
+        var events = await activityRepo.GetRecentEventsAsync(cid, h.MaxEventsScanned, ct);
+        if (events.Count == 0) return new();
 
-        var vectors = await embeddingRepo.GetVectorsAsync(seeds, ct);
-        if (vectors.Count == 0) return (new(), null);
+        var now = DateTime.UtcNow;
+        events = events.Where(e => (now - e.CreatedAt).TotalDays <= h.LongTermCutoffDays)
+                       .OrderByDescending(e => e.CreatedAt).ToList();
+        if (events.Count == 0) return new();
 
-        var userVec = AverageVectors(vectors);
-        var scored  = await embeddingRepo.FindNearestWithScoreAsync(userVec, shown.Concat(seeds), pool, ct);
-        if (scored.Count == 0) return (new(), null);
+        // Phiên hiện tại = chuỗi liên tục từ sự kiện mới nhất, cắt khi có khoảng lặng.
+        // Không tin vào SessionKey: nhiều sự kiện (checkout, mua) không mang key.
+        var session = new List<BehaviorEventRow> { events[0] };
+        for (int i = 1; i < events.Count; i++)
+        {
+            if ((events[i - 1].CreatedAt - events[i].CreatedAt).TotalMinutes > h.SessionGapMinutes) break;
+            session.Add(events[i]);
+        }
 
-        var products = await productRepo.GetByIdsAsync(scored.Select(s => s.Id).ToList(), ct);
-        var sims     = scored.ToDictionary(s => s.Id, s => Math.Max(0, 1.0 - s.Distance));
-        return (products, sims);
+        var sessionIds = session.Select(e => e.ProductId).ToHashSet();
+        var history    = events.Skip(session.Count).ToList();
+
+        // n_phiên/n_lịch_sử đếm theo SẢN PHẨM khác nhau — sự kiện đang bị ghi trùng nên
+        // đếm theo lượt sẽ thổi phồng độ tự tin.
+        var nSession = sessionIds.Count;
+        var nHistory = history.Select(e => e.ProductId).Distinct().Count(id => !sessionIds.Contains(id));
+
+        var alpha = h.AlphaMax * (1 - Math.Exp(-nSession / Math.Max(0.1, h.AlphaTau)));
+        var beta  = 1 - Math.Exp(-nHistory / Math.Max(0.1, h.HistoryTau));
+        var denom = alpha + (1 - alpha) * beta;
+        var alphaFinal = denom <= 0 ? 1.0 : alpha / denom;
+
+        // Gom thô từng nhánh trước, CHƯA nhân α. Cùng sản phẩm lặp lại thì giữ lượt nặng
+        // nhất chứ không cộng dồn — cộng dồn sẽ khuếch đại đúng các sự kiện bị ghi trùng.
+        var shortRaw = new Dictionary<Guid, double>();
+        var longRaw  = new Dictionary<Guid, double>();
+
+        static void Bump(Dictionary<Guid, double> bag, Guid pid, double w)
+        {
+            if (!bag.TryGetValue(pid, out var cur) || w > cur) bag[pid] = w;
+        }
+
+        // Ngắn hạn: suy giảm theo vị trí lùi từ cuối phiên (session[0] là mới nhất).
+        for (int i = 0; i < session.Count; i++)
+        {
+            var e = session[i];
+            Bump(shortRaw, e.ProductId,
+                 Math.Exp(-i / Math.Max(0.1, h.SessionPositionLambda)) * TypeWeight(e.EventType));
+        }
+
+        // Dài hạn: bán rã theo tuổi.
+        foreach (var e in history)
+        {
+            if (sessionIds.Contains(e.ProductId)) continue;
+            var ageDays = Math.Max(0, (now - e.CreatedAt).TotalDays);
+            Bump(longRaw, e.ProductId,
+                 Math.Pow(0.5, ageDays / Math.Max(0.1, h.LongTermHalflifeDays)) * TypeWeight(e.EventType));
+        }
+
+        // Yêu thích là tín hiệu bền do người dùng chủ động khai báo — không suy giảm theo
+        // thời gian như lượt xem, nhưng vẫn thuộc nhánh dài hạn.
+        foreach (var pid in favoriteIds ?? Enumerable.Empty<Guid>())
+            if (!sessionIds.Contains(pid)) Bump(longRaw, pid, opts.SignalWeights.Favorite);
+
+        // Chuẩn hoá TỪNG nhánh về max = 1 rồi mới nhân α. Không chuẩn hoá thì trọng số
+        // loại sự kiện (mua = 3× xem) lớn hơn cả tỉ lệ α và nuốt mất phần cân bằng
+        // ngắn/dài hạn — đo thực tế: một lượt mua 4 ngày trước đè bẹp cả phiên đang xem.
+        // Sau chuẩn hoá, recency và loại sự kiện chỉ còn quyết định thứ tự TRONG nhánh.
+        var seeds = new Dictionary<Guid, WeightedSeed>();
+        Emit(shortRaw, alphaFinal, true);
+        Emit(longRaw, 1 - alphaFinal, false);
+
+        void Emit(Dictionary<Guid, double> bag, double share, bool fromSession)
+        {
+            if (bag.Count == 0 || share <= 0) return;
+            var max = bag.Values.Max();
+            if (max <= 0) return;
+            foreach (var (pid, w) in bag)
+            {
+                var scaled = share * (w / max);
+                if (seeds.TryGetValue(pid, out var cur) && cur.Weight >= scaled) continue;
+                seeds[pid] = new WeightedSeed(pid, scaled, fromSession);
+            }
+        }
+
+        return seeds.Values.OrderByDescending(s => s.Weight).Take(h.MaxSeeds).ToList();
+    }
+
+    private double TypeWeight(ActivityEventType t) => t switch
+    {
+        ActivityEventType.Purchase   => opts.SignalWeights.Purchase,
+        ActivityEventType.AddToCart  => opts.SignalWeights.Favorite,
+        _                            => opts.SignalWeights.View,
+    };
+
+    // Vector ANN quanh TỪNG seed rồi gộp (similarity = tới seed gần nhất).
+    // Trước đây gộp seed thành một vector trung bình, nhưng seed của một người thường
+    // rất tạp (đồ trẻ em + điện thoại + túi giấy...) nên vector trung bình rơi vào vùng
+    // dày nhất của catalog và trả về toàn hàng phổ biến chung chung. Đo trên tài khoản
+    // thật: centroid cho sim 0.62-0.70 toàn áo quần brand, per-seed cho 0.60-0.85 đúng
+    // chủng loại đã xem.
+    private async Task<(List<ProductMaster> Products, Dictionary<Guid, double>? Sims, List<Guid> Order)>
+        RecallVectorAsync(IReadOnlyList<WeightedSeed> seeds, HashSet<Guid> shown, int pool, CancellationToken ct)
+    {
+        var use = seeds.Where(s => s.ProductId != Guid.Empty && s.Weight > 0).ToList();
+        if (use.Count == 0) return (new(), null, new());
+
+        // Mỗi seed đóng góp một phần pool, tối thiểu 3 để seed yếu vẫn có đại diện.
+        var perSeed = Math.Max(3, (int)Math.Ceiling((double)pool / use.Count) + 2);
+        var matches = await embeddingRepo.FindNearestPerSeedAsync(
+            use, shown.Concat(use.Select(s => s.ProductId)), perSeed, pool, ct);
+        if (matches.Count == 0) return (new(), null, new());
+
+        var products = await productRepo.GetByIdsAsync(matches.Select(m => m.ProductId).ToList(), ct);
+        var scores   = matches.ToDictionary(m => m.ProductId, m => m.Score);
+
+        // Luân phiên theo seed thay vì xếp thuần theo điểm.
+        var weightOf = use.ToDictionary(s => s.ProductId, s => s.Weight);
+        var groups = matches
+            .GroupBy(m => m.SeedId)
+            .OrderByDescending(g => weightOf.GetValueOrDefault(g.Key))
+            .Select(g => g.OrderByDescending(m => m.Score).Select(m => m.ProductId).ToList())
+            .ToList();
+
+        var order = new List<Guid>();
+        for (int round = 0; order.Count < matches.Count; round++)
+        {
+            var added = false;
+            foreach (var g in groups)
+            {
+                if (round >= g.Count) continue;
+                order.Add(g[round]);
+                added = true;
+            }
+            if (!added) break;
+        }
+
+        return (products, scores, order);
     }
 
     // Co-view: "người xem X cũng xem Y" từ cache.
@@ -242,20 +378,6 @@ public class RecommendationService(
     {
         var ids = await coViewRepo.GetRelatedAsync(seedIds, shown, pool, ct);
         return ids.Count == 0 ? new() : await productRepo.GetByIdsAsync(ids, ct);
-    }
-
-    private static Vector AverageVectors(List<Vector> vectors)
-    {
-        var dim = vectors[0].ToArray().Length;
-        var sum = new float[dim];
-        foreach (var v in vectors)
-        {
-            var arr = v.ToArray();
-            var n   = Math.Min(dim, arr.Length);
-            for (int i = 0; i < n; i++) sum[i] += arr[i];
-        }
-        for (int i = 0; i < dim; i++) sum[i] /= vectors.Count;
-        return new Vector(sum);
     }
 
     private static decimal MinPrice(ProductMaster p)

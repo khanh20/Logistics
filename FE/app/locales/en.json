@@ -623,7 +623,9 @@
     "staff_kpi": "Staff KPI",
     "staff_settings": "Shifts & capacity",
     "complaints": "Complaints",
-    "staff_portal": "Staff portal"
+    "staff_portal": "Staff portal",
+    "my_orders_group": "My orders",
+    "menu": "Menu"
   },
   "roles": {
     "title": "Roles & Permissions",
@@ -790,6 +792,7 @@
     "nav_assignments": "My queue",
     "nav_kpi": "My KPI",
     "nav_complaints": "Complaints",
+    "nav_reviews": "Review moderation",
     "nav_notifications": "Notifications",
     "nav_admin": "Admin area",
     "overview_title": "Welcome 👋",

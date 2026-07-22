@@ -329,6 +329,8 @@ public interface IUserActivityRepository
     Task AddAsync(UserActivityEvent ev, CancellationToken ct = default);
     /// Id sản phẩm user xem gần đây (distinct, mới nhất trước).
     Task<List<Guid>> GetRecentlyViewedProductIdsAsync(Guid customerId, int limit, CancellationToken ct = default);
+    /// Sự kiện gần đây (mới nhất trước) kèm thời điểm/loại/phiên, mọi EventType.
+    Task<List<BehaviorEventRow>> GetRecentEventsAsync(Guid customerId, int limit, CancellationToken ct = default);
     /// Id sản phẩm được tương tác nhiều nhất trong N ngày gần đây (trending).
     Task<List<Guid>> GetTrendingProductIdsAsync(int days, int limit, CancellationToken ct = default);
     /// Danh mục user xem gần đây (distinct) — cho recommend theo nội dung.
@@ -367,6 +369,11 @@ public interface IProductEmbeddingRepository
     Task<List<Guid>> FindNearestAsync(Vector userVector, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default);
     /// Như FindNearest nhưng kèm cosine distance (để dùng làm điểm similarity trong rank).
     Task<List<(Guid Id, double Distance)>> FindNearestWithScoreAsync(Vector userVector, IEnumerable<Guid> excludeIds, int limit, CancellationToken ct = default);
+    /// ANN quanh TỪNG seed rồi gộp, điểm = trọng_số_seed × cosine, giữ seed thắng.
+    /// Không trung bình các seed thành một vector: trung bình của những seed không liên
+    /// quan nhau rơi vào vùng dày nhất của catalog nên trả về toàn hàng phổ biến chung
+    /// chung. Giữ riêng từng seed còn cho phép truy vết gợi ý về đúng hành vi sinh ra nó.
+    Task<List<SeedMatch>> FindNearestPerSeedAsync(IReadOnlyList<WeightedSeed> seeds, IEnumerable<Guid> excludeIds, int perSeed, int limit, CancellationToken ct = default);
     /// Sản phẩm active chưa có embedding (cho backfill job).
     Task<List<Guid>> GetProductIdsMissingEmbeddingAsync(int limit, CancellationToken ct = default);
 }

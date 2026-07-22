@@ -14,10 +14,24 @@
   C.injectPageScript("js/inject_script.js");
 
   // ── Scrape theo lệnh từ background (tab ẩn do web MuaHo yêu cầu) ────────────
-  // Poll adapter.scrape() tới khi có price (SPA load chậm). Tab ẩn bị Chrome bóp
-  // (interval ép ≥1s) nên nới lên 20 lần (~14-20s thực tế, vẫn trong timeout 30s bg).
+  // "scrapeOnce": chụp một phát rồi trả ngay. Vòng lặp thử lại nằm ở service
+  // worker vì nó không bị Chrome bóp timer như tab nền (setInterval trong tab ẩn
+  // bị ép >=1s, đó là lý do luồng URL chậm hơn hẳn luồng mở sẵn trang).
   chrome.runtime.onMessage.addListener(function (req, sender, sendResponse) {
-    if (!req || req.action !== "scrapeNow") return false;
+    if (!req) return false;
+
+    if (req.action === "scrapeOnce") {
+      var snap = null;
+      try { snap = adapter.scrape(); } catch (e) { snap = null; }
+      if (snap && snap.priceOriginal > 0 && snap.platformProductId) {
+        sendResponse({ ok: true, data: snap });
+      } else {
+        sendResponse({ ok: false, reason: "not_ready" });
+      }
+      return false;
+    }
+
+    if (req.action !== "scrapeNow") return false;
     var tries = 0;
     var poll = setInterval(function () {
       tries++;
@@ -358,12 +372,25 @@
     },
   };
 
-  // jQuery ready hoặc DOM sẵn sàng.
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function () {
+  // Tab ẩn do background mở để scrape không cần overlay/auth/observer — dựng
+  // chúng chỉ tổ giành CPU của tab vốn đã bị throttle. Nếu user thật sự mở tab
+  // đó lên thì mới khởi tạo.
+  function bootOverlay() {
+    if (!document.hidden) {
+      AddonTool.init();
+      return;
+    }
+    document.addEventListener("visibilitychange", function onVis() {
+      if (document.hidden) return;
+      document.removeEventListener("visibilitychange", onVis);
       AddonTool.init();
     });
+  }
+
+  // jQuery ready hoặc DOM sẵn sàng.
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootOverlay);
   } else {
-    AddonTool.init();
+    bootOverlay();
   }
 })();

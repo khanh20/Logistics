@@ -613,7 +613,9 @@
     "staff_kpi": "KPI nhân viên",
     "staff_settings": "Ca làm & năng lực",
     "complaints": "Khiếu nại",
-    "staff_portal": "Cổng nhân viên"
+    "staff_portal": "Cổng nhân viên",
+    "my_orders_group": "Đơn của tôi",
+    "menu": "Menu"
   },
   "roles": {
     "title": "Quản lý phân quyền",
@@ -780,6 +782,7 @@
     "nav_assignments": "Hàng đợi của tôi",
     "nav_kpi": "KPI của tôi",
     "nav_complaints": "Khiếu nại",
+    "nav_reviews": "Duyệt đánh giá",
     "nav_notifications": "Thông báo",
     "nav_admin": "Khu quản trị",
     "overview_title": "Xin chào 👋",
