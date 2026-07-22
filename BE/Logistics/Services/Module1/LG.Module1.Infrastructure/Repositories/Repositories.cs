@@ -868,6 +868,7 @@ public class StaffAssignmentRepository(Module1DbContext db) : IStaffAssignmentRe
         // Lấy những assignment chưa complete, chưa đánh dấu overdue, nhưng đã qua deadline
         db.StaffAssignments
           .Where(x => x.CompletedAt == null && !x.IsOverdue && x.SlaDeadline < DateTime.UtcNow)
+          .Include(x => x.Order)
           .ToListAsync(ct);
 
     public Task<int> GetActiveLoadAsync(Guid staffId, CancellationToken ct = default) =>

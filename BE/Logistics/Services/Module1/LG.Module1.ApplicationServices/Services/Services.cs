@@ -426,10 +426,21 @@ public class ProductService(
 
             if (req.Images?.Count > 0)
             {
+                // Giữ LocalCdnUrl đã upload theo SourceUrlHash, tránh mất khi re-crawl
+                var oldCdnByHash = (await imageRepo.GetByProductAsync(product.Id, innerCt))
+                    .Where(e => !string.IsNullOrEmpty(e.SourceUrlHash) && !string.IsNullOrEmpty(e.LocalCdnUrl))
+                    .GroupBy(e => e.SourceUrlHash!)
+                    .ToDictionary(g => g.Key, g => g.First().LocalCdnUrl!);
+
                 await imageRepo.RemoveByProductAsync(product.Id, innerCt);
                 var images = req.Images
-                    .Select(i => ProductImage.Create(
-                        product.Id, i.SourceUrl, i.IsPrimary, i.SortOrder, i.SourceUrlHash))
+                    .Select(i =>
+                    {
+                        var img = ProductImage.Create(product.Id, i.SourceUrl, i.IsPrimary, i.SortOrder, i.SourceUrlHash);
+                        if (!string.IsNullOrEmpty(i.SourceUrlHash) && oldCdnByHash.TryGetValue(i.SourceUrlHash, out var cdn))
+                            img.SetLocalCdnUrl(cdn);
+                        return img;
+                    })
                     .ToList();
                 await imageRepo.AddRangeAsync(images, innerCt);
             }

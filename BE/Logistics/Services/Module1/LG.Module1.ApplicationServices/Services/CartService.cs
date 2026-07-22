@@ -55,6 +55,9 @@ public class CartService(
             var product = await productRepo.GetByIdWithDetailsAsync(req.ProductId, innerCt)
                           ?? throw new ProductNotFoundException(req.ProductId);
 
+            if (product.IsForbidden)
+                throw new ForbiddenProductException(product.TranslatedTitle ?? product.OriginalTitle, "hàng cấm/hạn chế");
+
             var primaryImage = product.Images.FirstOrDefault(i => i.IsPrimary)?.LocalCdnUrl
                             ?? product.Images.FirstOrDefault()?.SourceUrl;
 
@@ -315,6 +318,10 @@ public class CartService(
 
                 foreach (var ci in shopGroup)
                 {
+                    var prod = await productRepo.GetByIdAsync(ci.ProductId, innerCt);
+                    if (prod?.IsForbidden == true)
+                        throw new ForbiddenProductException(ci.ProductTitleSnapshot, "hàng cấm/hạn chế");
+
                     order.AddItem(
                         variantId:    ci.VariantId,
                         productTitle: ci.ProductTitleSnapshot,

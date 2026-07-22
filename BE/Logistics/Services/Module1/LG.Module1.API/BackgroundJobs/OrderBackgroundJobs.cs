@@ -239,11 +239,10 @@ public class StaffKpiAggregationJob(
         using var scope = scopeFactory.CreateScope();
         var perf = scope.ServiceProvider.GetRequiredService<IStaffPerformanceService>();
 
-        var today     = DateOnly.FromDateTime(DateTime.UtcNow);
-        var yesterday = today.AddDays(-1);
-
-        await perf.AggregateDayAsync(yesterday, ct);
-        await perf.AggregateDayAsync(today, ct);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        // Tổng hợp lại nhiều ngày để không sót đơn hoàn thành trễ (qua cuối tuần/SLA dài)
+        for (int d = 7; d >= 0; d--)
+            await perf.AggregateDayAsync(today.AddDays(-d), ct);
     }
 }
 
@@ -255,7 +254,7 @@ public class TrendingAggregationJob(
     ILogger<TrendingAggregationJob> logger
 ) : BackgroundService
 {
-    private const int IntervalSeconds = 72600; 
+    private const int IntervalSeconds = 86400; // 1 ngày
     private const int TrendingDays    = 14;
     private const int TopN            = 200;
 
