@@ -41,32 +41,40 @@ public class OrderTimeoutJob(
 
     private async Task ProcessTimeoutsAsync(CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
-        var orderRepo   = scope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
-        var historyRepo = scope.ServiceProvider.GetRequiredService<IOrderStatusHistoryRepository>();
-        var uow         = scope.ServiceProvider.GetRequiredService<IModule1UnitOfWork>();
-
-        var timedOut = await orderRepo.GetTimedOutPendingOrdersAsync(TimeoutMinutes, ct);
-        if (timedOut.Count == 0) return;
-
-        logger.LogInformation("OrderTimeoutJob: found {Count} timed-out orders", timedOut.Count);
-
-        foreach (var order in timedOut)
+        List<Guid> ids;
+        using (var readScope = scopeFactory.CreateScope())
         {
+            var readRepo = readScope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
+            var timedOut = await readRepo.GetTimedOutPendingOrdersAsync(TimeoutMinutes, ct);
+            ids = timedOut.Select(o => o.Id).ToList();
+        }
+        if (ids.Count == 0) return;
+
+        logger.LogInformation("OrderTimeoutJob: found {Count} timed-out orders", ids.Count);
+
+        foreach (var id in ids)
+        {
+            // Scope riêng mỗi đơn: đọc lại trạng thái mới nhất, bỏ qua nếu đã trả cọc
+            using var scope = scopeFactory.CreateScope();
+            var orderRepo   = scope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
+            var historyRepo = scope.ServiceProvider.GetRequiredService<IOrderStatusHistoryRepository>();
+            var uow         = scope.ServiceProvider.GetRequiredService<IModule1UnitOfWork>();
             try
             {
+                var order = await orderRepo.GetByIdWithDetailsAsync(id, ct);
+                if (order is null || order.Status != OrderStatus.PendingPayment) continue;
+
                 order.CancelByTimeout();
                 await historyRepo.AddAsync(order.History.Last(), ct);
                 await orderRepo.UpdateAsync(order, ct);
+                await uow.SaveChangesAsync(ct);
                 logger.LogInformation("Auto-cancelled timed-out order {OrderCode}", order.OrderCode);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to cancel order {OrderCode}", order.OrderCode);
+                logger.LogWarning(ex, "Failed to cancel timed-out order {OrderId}", id);
             }
         }
-
-        await uow.SaveChangesAsync(ct);
     }
 }
 
