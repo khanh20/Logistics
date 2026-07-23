@@ -168,7 +168,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
 
                     // Lưu bản ghi gian lận vào DB để Admin xem trên Dashboard
                     await _fraudService.CreateFraudRecordAsync(
-                        currentUserId, fraudResult.RiskScore, fraudResult.Reason);
+                        currentUserId, fraudResult.RiskScore, fraudResult.Reason, FraudTypeEnum.VelocityAbuse);
 
                     throw new CoreException(CoreErrorCode.CoreFraudDetected, 400,
                         $"Giao dịch bị từ chối do phát hiện dấu hiệu bất thường (Điểm rủi ro: {fraudResult.RiskScore:F0}/100). Vui lòng liên hệ Admin.");

@@ -211,7 +211,8 @@ public class CartService(
             WalletBalanceVnd:        walletBalance,
             WalletShortageVnd:       shortageVnd,
             ServiceFeeDiscountVnd:   feeCalc.ServiceFeeDiscountVnd,
-            InspectionFeeDiscountVnd: feeCalc.InspectionFeeDiscountVnd
+            InspectionFeeDiscountVnd: feeCalc.InspectionFeeDiscountVnd,
+            FeeRuleId:                feeCalc.FeeRuleId
         );
     }
 

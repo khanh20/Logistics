@@ -82,10 +82,23 @@ export default function AdminFinanceRevenue() {
       totalRevenue: acc.totalRevenue + curr.totalRevenueVnd,
       totalOrders: acc.totalOrders + curr.totalOrdersCompleted,
       totalService: acc.totalService + curr.serviceFeeRevenueVnd,
+      totalShipping: acc.totalShipping + curr.shipFeeRevenueVnd,
+      totalInspection: acc.totalInspection + curr.inspectionFeeRevenueVnd,
+      totalInsurance: acc.totalInsurance + curr.insuranceFeeRevenueVnd,
       totalEntrustment: acc.totalEntrustment + (curr.entrustmentFeeRevenueVnd || 0),
       totalCollected: acc.totalCollected + (curr.totalCollectedOnBehalfVnd || 0),
       totalExchange: acc.totalExchange + (curr.exchangeProfitLossVnd || 0)
-    }), { totalRevenue: 0, totalOrders: 0, totalService: 0, totalEntrustment: 0, totalCollected: 0, totalExchange: 0 });
+    }), { 
+      totalRevenue: 0, 
+      totalOrders: 0, 
+      totalService: 0, 
+      totalShipping: 0, 
+      totalInspection: 0, 
+      totalInsurance: 0, 
+      totalEntrustment: 0, 
+      totalCollected: 0, 
+      totalExchange: 0 
+    });
   }, [reports]);
 
   return (
@@ -147,7 +160,7 @@ export default function AdminFinanceRevenue() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
         <div className="bg-white border border-[#EAEAEA] rounded-lg p-5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-shadow">
           <div className="flex justify-between items-start">
             <div>
@@ -169,6 +182,33 @@ export default function AdminFinanceRevenue() {
         <div className="bg-white border border-[#EAEAEA] rounded-lg p-5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-shadow">
           <div className="flex justify-between items-start">
             <div>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Phí Vận Chuyển</p>
+              <h3 className="text-xl font-serif font-bold text-black">{kpiData.totalShipping.toLocaleString()} ₫</h3>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-[#EAEAEA] rounded-lg p-5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-shadow">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Phí Kiểm Đếm</p>
+              <h3 className="text-xl font-serif font-bold text-black">{kpiData.totalInspection.toLocaleString()} ₫</h3>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-[#EAEAEA] rounded-lg p-5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-shadow">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Phí Bảo Hiểm</p>
+              <h3 className="text-xl font-serif font-bold text-black">{kpiData.totalInsurance.toLocaleString()} ₫</h3>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-[#EAEAEA] rounded-lg p-5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-shadow">
+          <div className="flex justify-between items-start">
+            <div>
               <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Phí Ủy Thác Nhập Khẩu</p>
               <h3 className="text-xl font-serif font-bold text-black">{kpiData.totalEntrustment.toLocaleString()} ₫</h3>
             </div>
@@ -178,7 +218,7 @@ export default function AdminFinanceRevenue() {
         <div className="bg-white border border-[#EAEAEA] rounded-lg p-5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-shadow">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Tiền Thu Hộ (VAT+Nhập Khẩu)</p>
+              <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Tiền Thu Hộ (VAT+NK)</p>
               <h3 className="text-xl font-serif font-bold text-black">{kpiData.totalCollected.toLocaleString()} ₫</h3>
             </div>
           </div>
@@ -193,7 +233,7 @@ export default function AdminFinanceRevenue() {
           </div>
         </div>
 
-        <div className="bg-white border border-[#EAEAEA] rounded-lg p-5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-shadow">
+        <div className="bg-white border border-[#EAEAEA] rounded-lg p-5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-shadow col-span-1 sm:col-span-2 lg:col-span-1">
           <div className="flex justify-between items-start">
             <div>
               <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Tổng Đơn Hàng</p>

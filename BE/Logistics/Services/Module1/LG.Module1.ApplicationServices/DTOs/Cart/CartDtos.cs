@@ -70,7 +70,8 @@ public record CheckoutPreviewResponse(
     decimal                          WalletBalanceVnd,
     decimal                          WalletShortageVnd,
     decimal                          ServiceFeeDiscountVnd,
-    decimal                          InspectionFeeDiscountVnd
+    decimal                          InspectionFeeDiscountVnd,
+    Guid?                            FeeRuleId = null
 );
 
 // ── Confirm checkout ──────────────────────────────────────────────────────────

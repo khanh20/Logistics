@@ -99,6 +99,7 @@ export enum FraudStatusEnum {
   Investigating = 2,
   Confirmed = 3,
   FalsePositive = 4,
+  Resolved = 5,
 }
 
 export enum FraudActionEnum {

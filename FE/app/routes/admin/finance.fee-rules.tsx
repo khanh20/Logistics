@@ -263,7 +263,7 @@ export default function AdminFeeRulesPage() {
                               {tier?.name || record.vipTierId}
                             </span>
                           ) : (
-                            <span className="text-gray-400">Mặc định</span>
+                            <span className="text-gray-400">Tất cả</span>
                           )}
                         </td>
                         <td className="py-3.5 px-6 text-right font-mono font-medium">{toPercentDisplay(record.serviceFeePct)}%</td>

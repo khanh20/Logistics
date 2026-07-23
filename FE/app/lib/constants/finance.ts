@@ -89,6 +89,7 @@ export const FRAUD_STATUS_LABELS: Record<FraudStatusEnum, string> = {
   [FraudStatusEnum.Investigating]: "Đang điều tra",
   [FraudStatusEnum.Confirmed]: "Xác nhận",
   [FraudStatusEnum.FalsePositive]: "Nhầm lẫn",
+  [FraudStatusEnum.Resolved]: "Đã giải quyết",
 };
 
 export const FRAUD_STATUS_COLORS: Record<FraudStatusEnum, string> = {
@@ -96,6 +97,7 @@ export const FRAUD_STATUS_COLORS: Record<FraudStatusEnum, string> = {
   [FraudStatusEnum.Investigating]: "processing",
   [FraudStatusEnum.Confirmed]: "error",
   [FraudStatusEnum.FalsePositive]: "default",
+  [FraudStatusEnum.Resolved]: "success",
 };
 
 export const FRAUD_TYPE_LABELS: Record<FraudTypeEnum, string> = {

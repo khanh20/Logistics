@@ -4,8 +4,7 @@ import { setToken } from "~/lib/feature/auth/authSlice";
 import type { ApiResponse } from "~/lib/types/common";
 import type { RefreshResponse } from "~/lib/types/auth";
 
-const AUTH_BASE_URL =
-  import.meta.env.VITE_AUTH_API_URL ?? "https://localhost:7237";
+const AUTH_BASE_URL = import.meta.env.VITE_AUTH_API_URL;
 
 // ── Helper: đọc token từ Redux store ──────────────────────────────────────────
 function getToken(): string | null {
@@ -149,14 +148,14 @@ export const authClient = createAuthClient(AUTH_BASE_URL);
 
 // Module1 service — port 7167 (with refresh interceptor)
 export const apiModule1Client = createClient(
-  import.meta.env.VITE_MODULE1_API_URL ?? "https://localhost:7167",
+  import.meta.env.VITE_MODULE1_API_URL,
 );
 
 export const apiModule3Client = createClient(
-  import.meta.env.VITE_MODULE3_API_URL ?? "https://localhost:7215",
+  import.meta.env.VITE_MODULE3_API_URL,
 );
 
 // Module2 service — port 7280 (Logistics & Tracking, with refresh interceptor)
 export const apiModule2Client = createClient(
-  import.meta.env.VITE_MODULE2_API_URL ?? "https://localhost:7280",
+  import.meta.env.VITE_MODULE2_API_URL,
 );

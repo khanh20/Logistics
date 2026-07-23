@@ -69,6 +69,26 @@ namespace LG.Core.ApplicationServices.Finance.Services
             detection.ReviewedAt = DateTime.UtcNow;
             detection.ModifiedDate = DateTime.UtcNow;
 
+            // Liên kết trạng thái Ví khách hàng dựa trên trạng thái Review gian lận
+            var wallet = await _db.Wallets.FirstOrDefaultAsync(w => w.Id == detection.WalletId);
+            if (wallet != null)
+            {
+                if (dto.Status == FraudStatusEnum.FalsePositive || dto.Status == FraudStatusEnum.Resolved)
+                {
+                    // Nếu là nhầm lẫn hoặc đã giải quyết xong -> tự động mở khóa ví
+                    wallet.IsFrozen = false;
+                    wallet.ModifiedDate = DateTime.UtcNow;
+                    _logger.LogInformation("Ví {WalletId} đã được tự động MỞ KHÓA sau khi Review gian lận thành {Status}.", wallet.Id, dto.Status);
+                }
+                else if (dto.Status == FraudStatusEnum.Confirmed)
+                {
+                    // Nếu xác nhận gian lận -> đảm bảo ví bị đóng băng
+                    wallet.IsFrozen = true;
+                    wallet.ModifiedDate = DateTime.UtcNow;
+                    _logger.LogWarning("Ví {WalletId} tiếp tục bị KHÓA do xác nhận có hành vi gian lận.", wallet.Id);
+                }
+            }
+
             await _db.SaveChangesAsync();
             return true;
         }
@@ -247,7 +267,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
             };
         }
 
-        public async Task CreateFraudRecordAsync(Guid customerId, decimal riskScore, string reason)
+        public async Task CreateFraudRecordAsync(Guid customerId, decimal riskScore, string reason, FraudTypeEnum? fraudType = null)
         {
             var wallet = await _db.Wallets.FirstOrDefaultAsync(w => w.CustomerId == customerId);
 
@@ -256,6 +276,7 @@ namespace LG.Core.ApplicationServices.Finance.Services
                 WalletId = wallet?.Id ?? Guid.Empty,
                 CustomerId = customerId,
                 RiskScore = riskScore,
+                FraudType = fraudType,
                 EvidenceJson = reason,
                 Action = FraudActionEnum.FreezeWallet,
                 Status = FraudStatusEnum.Open,

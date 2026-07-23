@@ -21,30 +21,26 @@ namespace LG.Core.API.BackgroundJobs
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // Delay 10 giây ban đầu khi khởi động ứng dụng để các service khác sẵn sàng
+            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+
             while (!stoppingToken.IsCancellationRequested)
             {
-                var now = DateTime.UtcNow;
-                // Target execution time is 01:00 AM UTC (you can adjust to local time if preferred)
-                var nextRun = now.Date.AddDays(1).AddHours(1);
-
-                // For testing/development, you might want to run this immediately or run every minute
-                // var delay = TimeSpan.FromMinutes(1);
-                var delay = nextRun - now;
-
-                _logger.LogInformation("DailyRevenueJob is scheduled to run in {DelayTime}", delay);
-
-                await Task.Delay(delay, stoppingToken);
-
-                if (stoppingToken.IsCancellationRequested) break;
-
                 try
                 {
+                    _logger.LogInformation("DailyRevenueJob is executing periodic run...");
                     await RunJobAsync();
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "An error occurred while running the DailyRevenueJob.");
                 }
+
+                // Chạy định kỳ mỗi 30 phút
+                var interval = TimeSpan.FromMinutes(30);
+                _logger.LogInformation("DailyRevenueJob sleeping for {IntervalTime}", interval);
+                
+                await Task.Delay(interval, stoppingToken);
             }
         }
 
@@ -53,14 +49,20 @@ namespace LG.Core.API.BackgroundJobs
             using var scope = _services.CreateScope();
             var revenueService = scope.ServiceProvider.GetRequiredService<IDailyRevenueService>();
 
-            // Generate report for yesterday
-            var targetDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+            // Lấy ngày hiện tại và ngày hôm qua theo múi giờ Việt Nam (UTC + 7) để tính toán chính xác theo giờ đơn hàng
+            var nowVietNam = DateTime.UtcNow.AddHours(7);
+            var today = DateOnly.FromDateTime(nowVietNam);
+            var yesterday = today.AddDays(-1);
             
-            _logger.LogInformation("DailyRevenueJob executing for date: {TargetDate}", targetDate);
+            _logger.LogInformation("DailyRevenueJob executing update for Yesterday: {Yesterday} and Today: {Today}", yesterday, today);
 
-            await revenueService.GenerateForDateAsync(targetDate);
+            // 1. Cập nhật số liệu cho ngày hôm qua
+            await revenueService.GenerateForDateAsync(yesterday);
 
-            _logger.LogInformation("DailyRevenueJob completed successfully for date: {TargetDate}", targetDate);
+            // 2. Cập nhật số liệu cho ngày hôm nay (để số liệu nhảy realtime trong ngày)
+            await revenueService.GenerateForDateAsync(today);
+
+            _logger.LogInformation("DailyRevenueJob completed successfully for yesterday and today.");
         }
     }
 }

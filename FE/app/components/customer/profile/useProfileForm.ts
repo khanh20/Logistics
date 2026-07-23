@@ -161,6 +161,13 @@ export function useProfileForm() {
         await dispatch(
           updateProfile({ id: profile.id, data: payload })
         ).unwrap();
+        
+        // Đồng bộ Họ tên sang Auth/Identity API và Redux local
+        if (payload.fullName) {
+          await authApi.updateMe({ fullName: payload.fullName });
+          dispatch(updateUserLocal({ fullName: payload.fullName }));
+        }
+
         if (payload.phone !== undefined || payload.email !== undefined) {
           dispatch(
             updateUserLocal({ phone: payload.phone, email: payload.email })
@@ -172,6 +179,13 @@ export function useProfileForm() {
         await dispatch(
           createMyProfile({ ...payload, customerCode: `CUST-${Date.now()}` })
         ).unwrap();
+
+        // Đồng bộ Họ tên sang Auth/Identity API và Redux local khi tạo mới profile
+        if (payload.fullName) {
+          await authApi.updateMe({ fullName: payload.fullName });
+          dispatch(updateUserLocal({ fullName: payload.fullName }));
+        }
+
         if (payload.phone !== undefined || payload.email !== undefined) {
           dispatch(
             updateUserLocal({ phone: payload.phone, email: payload.email })
@@ -233,7 +247,7 @@ export function useProfileForm() {
       const name =
         fullName || profile?.fullName || user?.fullName || "Khách hàng";
       await authApi.updateMe({ fullName: name, phone });
-      dispatch(updateUserLocal({ phone }));
+      dispatch(updateUserLocal({ phone, fullName: name }));
       toast.success("Cập nhật thông tin liên hệ thành công");
     } catch (error: unknown) {
       toast.error(
