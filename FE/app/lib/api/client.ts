@@ -1,18 +1,27 @@
 import axios, { type InternalAxiosRequestConfig, type AxiosError } from "axios";
-import { store } from "~/lib/feature/store";
-import { setToken } from "~/lib/feature/auth/authSlice";
 import type { ApiResponse } from "~/lib/types/common";
 import type { RefreshResponse } from "~/lib/types/auth";
 
 const AUTH_BASE_URL = import.meta.env.VITE_AUTH_API_URL;
 
-// ── Helper: đọc token từ Redux store ──────────────────────────────────────────
+// ── Helper: đọc token từ localStorage (authSlice luôn persist "muaho-auth") ────
+// Không import store ở tầng module để tránh vòng import store → authSlice →
+// authThunk → api/auth → client → store (gây TDZ "Cannot access 'login'...").
+function readAuth(): { token?: string | null; refreshToken?: string | null } {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem("muaho-auth") || "{}");
+  } catch {
+    return {};
+  }
+}
+
 function getToken(): string | null {
-  return store.getState().authState.token;
+  return readAuth().token ?? null;
 }
 
 function getRefreshToken(): string | null {
-  return store.getState().authState.refreshToken;
+  return readAuth().refreshToken ?? null;
 }
 
 function handleLogout(): void {
@@ -124,7 +133,12 @@ function createClient(baseURL: string) {
         const newToken = raw.data.data.accessToken;
         const newRefresh = raw.data.data.refreshToken;
 
-        // Update Redux store (rotation: lưu cả refresh token mới cho lần sau)
+        // Update Redux store (rotation: lưu cả refresh token mới cho lần sau).
+        // Lazy import để không tạo vòng import ở tầng module (xem readAuth ở trên).
+        const [{ store }, { setToken }] = await Promise.all([
+          import("~/lib/feature/store"),
+          import("~/lib/feature/auth/authSlice"),
+        ]);
         store.dispatch(setToken({ token: newToken, refreshToken: newRefresh }));
         original.headers.Authorization = `Bearer ${newToken}`;
         flushQueue(null, newToken);
