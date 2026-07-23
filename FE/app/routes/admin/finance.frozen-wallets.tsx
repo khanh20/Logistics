@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { PiLockKeyBold, PiArrowClockwiseBold, PiXBold, PiLockOpenBold, PiShieldCheckBold, PiShieldSlashBold } from "react-icons/pi";
 import { useAppDispatch } from "~/lib/feature/hooks";
 import { fetchFrozenWallets, unlockWallet, toggleTrustWallet } from "~/lib/feature/finance/adminWalletThunk";
 import type { FrozenWalletDto } from "~/lib/types/finance";
@@ -8,6 +7,7 @@ import { Button } from "~/components/ui/Button";
 import { Textarea } from "~/components/ui/Textarea";
 import { toast } from "react-toastify";
 import { Pagination } from "~/components/ui/Pagination";
+import { ArrowClockwise, LockKey, LockOpen, ShieldCheck, ShieldSlash, X } from "~/components/shared/icons";
 
 export default function AdminFrozenWalletsPage() {
   const dispatch = useAppDispatch();
@@ -95,7 +95,7 @@ export default function AdminFrozenWalletsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div className="flex items-center gap-2.5">
-          <PiLockKeyBold className="text-2xl text-rose-600" />
+          <LockKey className="text-2xl text-rose-600" />
           <div>
             <h1 className="text-2xl font-serif font-bold text-black mb-1">Quản lý ví</h1>
             <p className="text-sm text-gray-500">Quản lý và kiểm soát trạng thái, bảo mật của toàn bộ ví khách hàng</p>
@@ -107,7 +107,7 @@ export default function AdminFrozenWalletsPage() {
           variant="secondary"
           className="inline-flex items-center gap-1.5"
         >
-          <PiArrowClockwiseBold className={loading ? "animate-spin" : ""} />
+          <ArrowClockwise className={loading ? "animate-spin" : ""} />
           Làm mới
         </Button>
       </div>
@@ -170,9 +170,9 @@ export default function AdminFrozenWalletsPage() {
                       <td className="py-3.5 px-6 font-mono font-semibold">
                         <div className="flex items-center gap-2">
                           {record.isFrozen ? (
-                            <PiLockKeyBold className="text-rose-500 text-lg" title="Đang bị khóa" />
+                            <LockKey className="text-rose-500 text-lg" />
                           ) : (
-                            <PiLockOpenBold className="text-emerald-500 text-lg" title="Bình thường" />
+                            <LockOpen className="text-emerald-500 text-lg" />
                           )}
                           <span>{record.availableBalance.toLocaleString("en-US")} đ</span>
                         </div>
@@ -212,9 +212,9 @@ export default function AdminFrozenWalletsPage() {
                             title={record.ignoreFraudDetection ? "Gỡ cờ tin cậy" : "Đánh dấu an toàn (Bỏ qua AI)"}
                           >
                             {record.ignoreFraudDetection ? (
-                              <PiShieldCheckBold className="text-emerald-600 text-base" />
+                              <ShieldCheck className="text-emerald-600 text-base" />
                             ) : (
-                              <PiShieldSlashBold className="text-gray-400 text-base" />
+                              <ShieldSlash className="text-gray-400 text-base" />
                             )}
                           </Button>
                           {record.isFrozen && (
@@ -224,7 +224,7 @@ export default function AdminFrozenWalletsPage() {
                               variant="secondary"
                               className="bg-white border-gray-300 hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
                             >
-                              <PiLockOpenBold className="mr-1.5" />
+                              <LockOpen className="mr-1.5" />
                               Mở khóa
                             </Button>
                           )}
@@ -261,14 +261,14 @@ export default function AdminFrozenWalletsPage() {
           <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-md w-full p-6 shadow-2xl flex flex-col font-sans">
             <div className="flex items-center justify-between pb-3 border-b border-[#EAEAEA] mb-4">
               <h3 className="text-base font-serif font-bold text-black flex items-center gap-2">
-                <PiLockOpenBold className="text-green-600" />
+                <LockOpen className="text-green-600" />
                 Xác nhận mở khóa ví
               </h3>
               <button
                 onClick={() => setIsModalVisible(false)}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 

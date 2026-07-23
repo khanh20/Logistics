@@ -323,6 +323,7 @@ public class OrderManagementService(
     ILogisticsService               logisticsService,
     IModule1UnitOfWork              uow,
     IWalletService                  walletService,
+    IInternalAuthClient             authClient,
     ILogger<OrderManagementService> logger
 ) : IOrderManagementService
 {
@@ -397,6 +398,8 @@ public class OrderManagementService(
                 logger.LogWarning(ex, "Logistics stub failed for order {OrderCode} (non-fatal)", order.OrderCode);
             }
 
+            await NotifyStatusChangeAsync(order, innerCt);
+
             return CustomerOrderService.MapToDetail(order);
         }, ct);
     }
@@ -412,6 +415,9 @@ public class OrderManagementService(
             if (req.Note is not null) order.UpdateStaffNote(req.Note);
             await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
+            
+            await NotifyStatusChangeAsync(order, innerCt);
+
             return CustomerOrderService.MapToDetail(order);
         }, ct);
     }
@@ -445,6 +451,8 @@ public class OrderManagementService(
 
                 logger.LogInformation("Order {OrderCode} marked ArrivedVietnam by staff {StaffId}. Shipping Fee: {ShippingFee}", 
                     order.OrderCode, staffId, shippingFeeCalc.TotalShippingFeeVnd);
+
+                await NotifyStatusChangeAsync(order, innerCt);
 
                 return CustomerOrderService.MapToDetail(order);
             }, ct);
@@ -503,6 +511,8 @@ public class OrderManagementService(
                 }
             }
 
+            await NotifyStatusChangeAsync(order, innerCt);
+
             return CustomerOrderService.MapToDetail(order);
         }, ct);
     }
@@ -540,13 +550,39 @@ public class OrderManagementService(
         return uow.ExecuteInTransactionAsync(async innerCt =>
         {
             var order = await RequireOrderAsync(orderId, innerCt);
+            var oldStatus = order.Status;
             transition(order, note);
             await historyRepo.AddAsync(order.History.Last(), innerCt);
             await orderRepo.UpdateAsync(order, innerCt);
             logger.LogInformation("Order {OrderCode} → {Status} by staff {StaffId}",
                 order.OrderCode, order.Status, staffId);
+            
+            if (oldStatus != order.Status)
+            {
+                await NotifyStatusChangeAsync(order, innerCt);
+            }
+
             return CustomerOrderService.MapToDetail(order);
         }, ct);
+    }
+
+    private async Task NotifyStatusChangeAsync(CustomerOrder order, CancellationToken ct)
+    {
+        try
+        {
+            await authClient.SendCustomerNotificationAsync(new SendNotificationRequest(
+                UserId: order.CustomerId,
+                Title: "Cập nhật đơn hàng",
+                Content: $"Đơn hàng {order.OrderCode} đã chuyển sang trạng thái: {order.Status}",
+                Type: "System",
+                ReferenceType: "Order",
+                ReferenceId: order.Id
+            ), ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Lỗi gửi thông báo cho khách hàng khi chuyển trạng thái đơn hàng {OrderCode}", order.OrderCode);
+        }
     }
 
     private async Task<CustomerOrder> RequireOrderAsync(Guid orderId, CancellationToken ct)

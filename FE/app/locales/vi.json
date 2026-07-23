@@ -71,7 +71,7 @@
     "all": "Tất cả",
     "prev_page": "← Trước",
     "next_page": "Tiếp →",
-    "browse_products": "Tìm sản phẩm →",
+    "browse_products": "Tìm sản phẩm",
     "optional": "tuỳ chọn",
     "edit": "Sửa",
     "refresh": "Tải lại"
@@ -262,7 +262,7 @@
     "confirm_dialog": "Xác nhận đặt hàng? Số tiền cọc sẽ được trừ từ ví của bạn.",
     "preview_error": "Không thể tính tổng",
     "checkout_error": "Đặt hàng thất bại",
-    "browse_products": "Tìm sản phẩm →"
+    "browse_products": "Tìm sản phẩm"
   },
   "product": {
     "title": "Sản phẩm",
@@ -764,7 +764,7 @@
     "hero_title": "Mua hộ hàng nước ngoài",
     "hero_highlight": "uy tín",
     "hero_subtitle": "Tỉ giá minh bạch, phí rõ ràng, theo dõi đơn thời gian thực từ kho TQ về tận tay bạn.",
-    "cta_browse": "Tìm sản phẩm →",
+    "cta_browse": "Tìm sản phẩm ",
     "cta_register": "Đăng ký miễn phí",
     "rate_today": "Tỉ giá hôm nay:",
     "see_all": "Xem tất cả →",

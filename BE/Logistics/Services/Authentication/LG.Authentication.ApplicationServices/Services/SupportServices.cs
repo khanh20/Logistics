@@ -58,7 +58,8 @@ public class SystemConfigService(
 public class NotificationService(
     INotificationRepository notifRepo,
     IUnitOfWork             uow,
-    ILogger<NotificationService> logger
+    ILogger<NotificationService> logger,
+    INotificationPusher     pusher = null! // Inject nullable but treat as required in DI
 ) : INotificationService
 {
     public async Task<PagedResponse<NotificationResponse>> GetMyNotificationsAsync(
@@ -87,6 +88,12 @@ public class NotificationService(
         await uow.SaveChangesAsync(ct);
 
         logger.LogInformation("Notification sent to user {UserId}: {Title}", req.UserId, req.Title);
+
+        if (pusher != null)
+        {
+            var notifResponse = SupportMapper.ToResponse(notif);
+            await pusher.PushToUserAsync(notif.UserId, notifResponse, ct);
+        }
     }
 
     public async Task MarkReadAsync(Guid notificationId, Guid userId, CancellationToken ct = default)

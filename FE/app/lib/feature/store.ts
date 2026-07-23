@@ -3,6 +3,7 @@ import financeReducer from "./finance/financeSlice";
 import authReducer from "./auth/authSlice";
 import adminFinanceReducer from "./adminFinance/adminFinanceSlice";
 import customerProfileReducer from "./customerProfile/customerProfileSlice";
+import notificationReducer from "./notification/notificationSlice";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     authState: authReducer,
     adminFinanceState: adminFinanceReducer,
     customerProfileState: customerProfileReducer,
+    notificationState: notificationReducer,
   },
 });
 

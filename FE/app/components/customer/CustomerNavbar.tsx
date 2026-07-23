@@ -7,6 +7,7 @@ import { store } from "~/lib/feature/store";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { UrlOrderModal } from "./UrlOrderModal";
+import { NotificationBell } from "~/components/NotificationBell";
 import {
   CaretDown,
   Heart,
@@ -209,7 +210,9 @@ export function CustomerNavbar() {
             </button>
 
             {isAuthenticated ? (
-              <>
+              <div className="flex items-center gap-1 lg:gap-3">
+                <NotificationBell type="customer" />
+                
                 <NavLink
                   to="/profile"
                   className="hidden max-w-[10rem] truncate px-2 text-sm font-medium text-red-100
@@ -224,7 +227,7 @@ export function CustomerNavbar() {
                 >
                   {t("auth.logout")}
                 </button>
-              </>
+              </div>
             ) : (
               <>
                 <NavLink

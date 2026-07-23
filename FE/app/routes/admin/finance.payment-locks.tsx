@@ -1,6 +1,5 @@
 import { normalizeError } from "~/lib/utils/errors";
 import React, { useState, useMemo } from "react";
-import { PiMagnifyingGlassBold, PiLockOpenBold, PiXBold, PiCopyBold, PiCheckBold } from "react-icons/pi";
 import { financeApi } from "~/lib/api/finance";
 import { manageOrdersApi } from "~/lib/api/orders";
 import { Button } from "~/components/ui/Button";
@@ -16,6 +15,7 @@ import {
 import type { PaymentLockDto } from "~/lib/types/finance";
 import dayjs from "dayjs";
 import { Pagination } from "~/components/ui/Pagination";
+import { Check, Copy, LockOpen, MagnifyingGlass, Warning, X } from "~/components/shared/icons";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -34,7 +34,7 @@ function CopyableText({ text }: { text: string }) {
         className="text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
         title="Copy ID"
       >
-        {copied ? <PiCheckBold className="text-green-600 text-xs" /> : <PiCopyBold className="text-xs" />}
+        {copied ? <Check className="text-green-600 text-xs" /> : <Copy className="text-xs" />}
       </button>
     </div>
   );
@@ -190,7 +190,7 @@ export default function AdminPaymentLocksPage() {
         <form onSubmit={handleSearch} className="flex gap-3 mb-6 items-end">
           <div className="relative flex-1 max-w-md">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none mt-[0.15rem]">
-              <PiMagnifyingGlassBold className="text-sm" />
+              <MagnifyingGlass className="text-sm" />
             </span>
             <Input
               type="text"
@@ -267,7 +267,7 @@ export default function AdminPaymentLocksPage() {
                             onClick={() => handleOpenReleaseModal(record)}
                             className="inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded transition-colors"
                           >
-                            <PiLockOpenBold />
+                            <LockOpen />
                             Giải phóng
                           </button>
                         )}
@@ -307,7 +307,7 @@ export default function AdminPaymentLocksPage() {
                 onClick={() => setIsModalOpen(false)}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 

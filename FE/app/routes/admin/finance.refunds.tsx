@@ -3,7 +3,6 @@ import React, { useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
 import { FiCheck, FiPlus, FiX, FiCopy } from "react-icons/fi";
 import { adminFinanceApi } from "~/lib/api/adminFinance";
-import { PiWarningCircleBold, PiCheckCircleBold } from "react-icons/pi";
 import { Input } from "~/components/ui/Input";
 import { Textarea } from "~/components/ui/Textarea";
 import { Button } from "~/components/ui/Button";
@@ -15,6 +14,7 @@ import {
 } from "~/lib/constants/finance";
 import { RefundReasonEnum, RefundStatusEnum } from "~/lib/enums/finance";
 import type { CreateRefundDto, RefundDto } from "~/lib/types/adminFinance";
+import { Copy, Wallet, Warning, WarningCircle, X } from "~/components/shared/icons";
 
 function StatusBadge({ status }: { status: RefundStatusEnum }) {
   const label = REFUND_STATUS_LABELS[status] || "Không xác định";
@@ -499,7 +499,7 @@ export default function AdminRefundsPage() {
           <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-sm w-full p-6 shadow-2xl flex flex-col font-sans">
             <div className="space-y-3">
               <h4 className="text-base font-serif font-bold text-black flex items-center gap-1.5">
-                <PiWarningCircleBold className="text-primary text-lg" />
+                <WarningCircle className="text-primary text-lg" />
                 Xác nhận duyệt hoàn tiền
               </h4>
               <p className="text-xs text-gray-600 leading-normal">

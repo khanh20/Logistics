@@ -76,31 +76,25 @@ namespace LG.Core.ApplicationServices.Common
         {
             try
             {
-                using var command = _dbContext.Database.GetDbConnection().CreateCommand();
-                command.CommandText = @"
-                    INSERT INTO auth.notifications 
-                    (""Id"", ""UserId"", ""Title"", ""Content"", ""Type"", ""ReferenceType"", ""ReferenceId"", ""IsRead"", ""CreatedAt"")
-                    VALUES (@id, @userId, @title, @content, @type, @refType, @refId, false, @createdAt)";
+                // Gọi API sang Auth để vừa lưu DB vừa đẩy SignalR
+                var authClient = _httpContext.HttpContext?.RequestServices.GetService(typeof(LG.Core.ApplicationServices.Common.Interfaces.IInternalAuthClient)) 
+                    as LG.Core.ApplicationServices.Common.Interfaces.IInternalAuthClient;
                 
-                var paramId = command.CreateParameter(); paramId.ParameterName = "@id"; paramId.Value = Guid.NewGuid(); command.Parameters.Add(paramId);
-                var paramUserId = command.CreateParameter(); paramUserId.ParameterName = "@userId"; paramUserId.Value = userId; command.Parameters.Add(paramUserId);
-                var paramTitle = command.CreateParameter(); paramTitle.ParameterName = "@title"; paramTitle.Value = title; command.Parameters.Add(paramTitle);
-                var paramContent = command.CreateParameter(); paramContent.ParameterName = "@content"; paramContent.Value = content; command.Parameters.Add(paramContent);
-                var paramType = command.CreateParameter(); paramType.ParameterName = "@type"; paramType.Value = type; command.Parameters.Add(paramType);
-                var paramRefType = command.CreateParameter(); paramRefType.ParameterName = "@refType"; paramRefType.Value = (object?)referenceType ?? DBNull.Value; command.Parameters.Add(paramRefType);
-                var paramRefId = command.CreateParameter(); paramRefId.ParameterName = "@refId"; paramRefId.Value = (object?)referenceId ?? DBNull.Value; command.Parameters.Add(paramRefId);
-                var paramCreatedAt = command.CreateParameter(); paramCreatedAt.ParameterName = "@createdAt"; paramCreatedAt.Value = DateTime.UtcNow; command.Parameters.Add(paramCreatedAt);
-                
-                await _dbContext.Database.OpenConnectionAsync();
-                await command.ExecuteNonQueryAsync();
+                if (authClient != null)
+                {
+                    await authClient.SendCustomerNotificationAsync(new LG.Core.ApplicationServices.Common.Interfaces.SendNotificationRequest(
+                        UserId: userId,
+                        Title: title,
+                        Content: content,
+                        Type: type,
+                        ReferenceType: referenceType,
+                        ReferenceId: referenceId
+                    ));
+                }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Silently fail if notification DB is unavailable to not block main transaction
-            }
-            finally
-            {
-                await _dbContext.Database.CloseConnectionAsync();
+                _logger.LogWarning(ex, "Failed to send web notification for user {UserId}", userId);
             }
         }
     }

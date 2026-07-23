@@ -2,7 +2,7 @@
 
 var DEFAULTS = {
   backendHost: "http://localhost:5066",
-  webHost: "http://localhost:3000",
+  webHost: "http://localhost:5173",
 };
 
 document.addEventListener("DOMContentLoaded", function () {

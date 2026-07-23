@@ -1,11 +1,13 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using LG.Authentication.ApplicationServices;
+using LG.Authentication.ApplicationServices.Interfaces;
 using LG.Authentication.Infrastructure;
 using LG.Authentication.Infrastructure.Data;
 using LG.Authentication.Infrastructure.Security;
 using LG.Authentication.API.Middleware;
+using LG.Authentication.API.Hubs;
 using LG.Shared.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -255,6 +257,10 @@ builder.Services.AddSwaggerGen(opt =>
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>("postgres");
 
+// ── SignalR & Pusher ─────────────────────────────────────────────────────────
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationPusher, SignalRCustomerNotificationPusher>();
+
 // 3. BUILD
 var app = builder.Build();
 
@@ -306,5 +312,6 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<CustomerNotificationHub>("/hubs/notifications");
 
 await app.RunAsync();

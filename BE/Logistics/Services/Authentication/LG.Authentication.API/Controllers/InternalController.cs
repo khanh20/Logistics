@@ -1,3 +1,4 @@
+using LG.Authentication.ApplicationServices.DTOs.Support;
 using LG.Authentication.ApplicationServices.DTOs.User;
 using LG.Authentication.ApplicationServices.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -59,6 +60,23 @@ public class InternalController(
 
         var users = await userService.GetUsersByIdsAsync(ids, ct);
         return Ok(users);
+    }
+
+    // POST /api/internal/notifications/send
+    // Tạo thông báo in-app cho Customer. Module1 và Core dùng endpoint này.
+    [HttpPost("notifications/send")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> SendNotification(
+        [FromBody] SendNotificationRequest req,
+        [FromServices] INotificationService notifService,
+        CancellationToken ct = default)
+    {
+        if (!IsValidInternalKey())
+            return Unauthorized(new { success = false, message = "Invalid internal key.", errorCode = "UNAUTHORIZED_INTERNAL" });
+
+        await notifService.SendAsync(req, ct);
+        return Ok(new { success = true });
     }
 
     // Constant-time compare để tránh timing attack.

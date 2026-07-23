@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
-import { PiPlusBold, PiCheckCircleBold, PiXBold, PiWarningCircleBold, PiDotsThreeBold, PiFileTextBold } from "react-icons/pi";
 import { Input } from "~/components/ui/Input";
 import { Textarea } from "~/components/ui/Textarea";
 import { Button } from "~/components/ui/Button";
@@ -21,6 +20,7 @@ import { ReconcileStatusEnum } from "~/lib/enums/finance";
 import dayjs from "dayjs";
 import { ReduxStatus } from "~/lib/feature/const";
 import { Pagination } from "~/components/ui/Pagination";
+import { CheckCircle, FileText, Plus, WarningCircle, X } from "~/components/shared/icons";
 
 function StatusBadge({ status }: { status: ReconcileStatusEnum }) {
   const label = RECONCILE_STATUS_LABELS[status] || status;
@@ -160,7 +160,7 @@ export default function ReconcilePage() {
           onClick={() => setIsModalVisible(true)}
           className="px-4.5 py-2"
         >
-          <PiPlusBold />
+          <Plus />
           Tạo đối soát
         </Button>
       </div>
@@ -218,7 +218,7 @@ export default function ReconcilePage() {
                               onClick={() => handleConfirm(record.id)}
                               className="h-7 text-xs px-2.5"
                             >
-                              <PiCheckCircleBold className="mr-1" />
+                              <CheckCircle className="mr-1" />
                               Khớp
                             </Button>
                           )}
@@ -230,7 +230,7 @@ export default function ReconcilePage() {
                               className="inline-flex items-center justify-center h-7 w-7 rounded border border-[#EAEAEA] text-gray-500 hover:text-black hover:border-gray-300 transition-colors bg-white"
                               title="Xem sao kê"
                             >
-                              <PiFileTextBold />
+                              <FileText />
                             </a>
                           )}
                         </div>
@@ -279,7 +279,7 @@ export default function ReconcilePage() {
                 onClick={() => setIsModalVisible(false)}
                 className="text-gray-400 hover:text-black transition-colors rounded-full p-1 hover:bg-gray-100"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 
@@ -393,7 +393,7 @@ export default function ReconcilePage() {
           <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-sm w-full p-6 shadow-2xl flex flex-col font-sans">
             <div className="space-y-3">
               <h4 className="text-base font-serif font-bold text-black flex items-center gap-1.5">
-                <PiWarningCircleBold className="text-amber-500 text-lg" />
+                <WarningCircle className="text-amber-500 text-lg" />
                 Xác nhận đối soát
               </h4>
               <p className="text-sm text-gray-600 leading-relaxed">

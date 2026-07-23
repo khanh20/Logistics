@@ -12,13 +12,7 @@ import { selectBankAccounts, selectFinanceStatus } from "~/lib/feature/finance/f
 import { BANK_ACCOUNT_RULES } from "~/lib/validations/finance";
 import { VIETNAM_BANKS } from "~/lib/constants/banks";
 import type { CreateBankAccountDto } from "~/lib/types/bankAccount";
-import {
-  PiPlusBold,
-  PiTrashBold,
-  PiCopyBold,
-  PiArrowLeftBold
-} from "react-icons/pi";
-
+import { ArrowLeft, Bank, Copy, Plus, Trash, X } from "~/components/shared/icons";
 export default function CustomerBankAccountsPage() {
   const dispatch = useAppDispatch();
   const bankAccounts = useAppSelector(selectBankAccounts);
@@ -75,7 +69,7 @@ export default function CustomerBankAccountsPage() {
           to="/finance"
           className="inline-flex items-center text-sm font-mono uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors"
         >
-          <PiArrowLeftBold className="mr-2 text-base" /> Tài chính
+          <ArrowLeft className="mr-2 text-base" /> Tài chính
         </Link>
       </div>
 
@@ -91,7 +85,7 @@ export default function CustomerBankAccountsPage() {
             onClick={() => setIsModalVisible(true)}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#111111] hover:bg-[#333333] text-white text-xs font-mono uppercase tracking-widest transition-all rounded active:scale-[0.98]"
           >
-            <PiPlusBold /> Thêm tài khoản mới
+            <Plus /> Thêm tài khoản mới
           </button>
         </div>
       </div>
@@ -157,7 +151,7 @@ export default function CustomerBankAccountsPage() {
                           className="p-1 rounded text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-all"
                           title="Sao chép số tài khoản"
                         >
-                          <PiCopyBold className="text-sm" />
+                          <Copy className="text-sm" />
                         </button>
                       </span>
                     </td>
@@ -186,7 +180,7 @@ export default function CustomerBankAccountsPage() {
                           className="p-2 text-[#9F2F2D] hover:bg-[#FDEBEC] rounded transition-all active:scale-95"
                           title="Xóa tài khoản"
                         >
-                          <PiTrashBold className="text-base" />
+                          <Trash className="text-base" />
                         </button>
                       </Popconfirm>
                     </td>

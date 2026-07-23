@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { PiWarningBold, PiArrowClockwiseBold, PiXBold, PiCopyBold, PiCheckBold } from "react-icons/pi";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { fetchFraudCases, reviewFraudCase } from "~/lib/feature/adminFinance/adminFinanceThunk";
 import { selectFraudCases, selectAdminFinanceStatus } from "~/lib/feature/adminFinance/adminFinanceSelector";
 import { ReduxStatus } from "~/lib/feature/const";
-import { 
-  FRAUD_STATUS_LABELS, 
-  FRAUD_STATUS_COLORS, 
+import {
+  FRAUD_STATUS_LABELS,
+  FRAUD_STATUS_COLORS,
   FRAUD_TYPE_LABELS,
   FRAUD_ACTION_LABELS
 } from "~/lib/constants/finance";
@@ -17,6 +16,7 @@ import { Button } from "~/components/ui/Button";
 import { Select } from "~/components/ui/Select";
 import { Textarea } from "~/components/ui/Textarea";
 import { Pagination } from "~/components/ui/Pagination";
+import { ArrowClockwise, Check, Copy, Warning, X } from "~/components/shared/icons";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -35,7 +35,7 @@ function CopyableText({ text }: { text: string }) {
         className="text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
         title="Copy Customer ID"
       >
-        {copied ? <PiCheckBold className="text-green-600 text-xs" /> : <PiCopyBold className="text-xs" />}
+        {copied ? <Check className="text-green-600 text-xs" /> : <Copy className="text-xs" />}
       </button>
     </div>
   );
@@ -99,8 +99,8 @@ export default function AdminFraudPage() {
     try {
       setErrorMessage("");
       setSuccessMessage("");
-      await dispatch(reviewFraudCase({ 
-        id: selectedCase.id, 
+      await dispatch(reviewFraudCase({
+        id: selectedCase.id,
         data: {
           status: caseStatus,
           resolutionNote: resolutionNote.trim()
@@ -128,7 +128,7 @@ export default function AdminFraudPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div className="flex items-center gap-2.5">
-          <PiWarningBold className="text-2xl text-rose-600" />
+          <Warning className="text-2xl text-rose-600" />
           <div>
             <h1 className="text-2xl font-serif font-bold text-black mb-1">Phát hiện gian lận</h1>
             <p className="text-sm text-gray-500">Giám sát các cảnh báo rủi ro giao dịch của hệ thống</p>
@@ -140,14 +140,14 @@ export default function AdminFraudPage() {
           variant="secondary"
           className="inline-flex items-center gap-1.5"
         >
-          <PiArrowClockwiseBold className={loading ? "animate-spin" : ""} />
+          <ArrowClockwise className={loading ? "animate-spin" : ""} />
           Làm mới
         </Button>
       </div>
 
       {/* AI Fallback Warning */}
       <div className="mb-6 p-4 text-sm rounded-lg bg-amber-50 border border-amber-200 text-amber-800 flex items-start gap-3">
-        <PiWarningBold className="text-lg shrink-0 mt-0.5" />
+        <Warning className="text-lg shrink-0 mt-0.5" />
         <div>
           <p className="font-semibold mb-1">Chế độ dự phòng (Heuristic Fallback)</p>
           <p>Dịch vụ AI phân tích gian lận hiện không khả dụng. Hệ thống đang tự động sử dụng các quy tắc đánh giá cơ bản (Heuristics) để phát hiện rủi ro.</p>
@@ -255,7 +255,7 @@ export default function AdminFraudPage() {
                 onClick={() => setIsModalVisible(false)}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 

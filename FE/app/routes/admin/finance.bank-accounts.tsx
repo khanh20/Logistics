@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { PiPlusBold, PiTrashBold, PiBankBold, PiXBold, PiCopyBold, PiCheckBold } from "react-icons/pi";
 import { Input } from "~/components/ui/Input";
 import { Select } from "~/components/ui/Select";
 import { Button } from "~/components/ui/Button";
@@ -21,6 +20,7 @@ import { VIETNAM_BANKS } from "~/lib/constants/banks";
 import dayjs from "dayjs";
 import type { CreateBankAccountDto } from "~/lib/types/bankAccount";
 import { Pagination } from "~/components/ui/Pagination";
+import { Bank, Check, Copy, Plus, Trash, X } from "~/components/shared/icons";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -39,7 +39,7 @@ function CopyableText({ text }: { text: string }) {
         className="text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
         title="Copy"
       >
-        {copied ? <PiCheckBold className="text-green-600 text-xs" /> : <PiCopyBold className="text-xs" />}
+        {copied ? <Check className="text-green-600 text-xs" /> : <Copy className="text-xs" />}
       </button>
     </div>
   );
@@ -155,7 +155,7 @@ export default function SystemBankAccountsPage() {
           onClick={() => setIsModalVisible(true)}
           className="px-4.5 py-2.5"
         >
-          <PiPlusBold />
+          <Plus />
           Thêm tài khoản
         </Button>
       </div>
@@ -176,7 +176,7 @@ export default function SystemBankAccountsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
         <div className="bg-white border border-[#EAEAEA] rounded-lg p-6 flex items-center gap-4">
           <div className="p-3 bg-blue-50 text-blue-700 rounded-lg">
-            <PiBankBold className="text-xl" />
+            <Bank className="text-xl" />
           </div>
           <div>
             <p className="text-xs font-mono uppercase tracking-wider text-gray-500 mb-0.5">Tổng số tài khoản</p>
@@ -185,7 +185,7 @@ export default function SystemBankAccountsPage() {
         </div>
         <div className="bg-white border border-[#EAEAEA] rounded-lg p-6 flex items-center gap-4">
           <div className="p-3 bg-green-50 text-green-700 rounded-lg">
-            <PiBankBold className="text-xl" />
+            <Bank className="text-xl" />
           </div>
           <div>
             <p className="text-xs font-mono uppercase tracking-wider text-gray-500 mb-0.5">Tài khoản hoạt động</p>
@@ -263,7 +263,7 @@ export default function SystemBankAccountsPage() {
                           className="p-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
                           title="Xóa"
                         >
-                          <PiTrashBold className="text-sm" />
+                          <Trash className="text-sm" />
                         </button>
                       </td>
                     </tr>
@@ -301,7 +301,7 @@ export default function SystemBankAccountsPage() {
                 onClick={() => setIsModalVisible(false)}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 

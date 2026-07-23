@@ -172,6 +172,7 @@ export default function CustomerOrderDetailPage({
       showToast(errMsg, "error");
     } finally {
       setLoading(false);
+      dispatch(fetchMyWallet());
     }
   }
 
@@ -603,7 +604,20 @@ export default function CustomerOrderDetailPage({
                   </div>
                 </div>
 
-                {(wallet?.availableBalance || 0) < paymentAmount ? (
+                {wallet?.isFrozen ? (
+                  <div className="space-y-3">
+                    <div className="border border-[#EAEAEA] bg-[#FDEBEC] rounded p-4 text-xs text-[#9F2F2D] font-mono">
+                      Ví của bạn đang bị khóa do vi phạm hoặc chờ rà soát. Bạn không thể thực hiện giao dịch lúc này.
+                    </div>
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full py-3 bg-neutral-300 text-neutral-500 rounded text-center text-xs font-mono uppercase tracking-wider cursor-not-allowed"
+                    >
+                      Xác nhận thanh toán từ Ví
+                    </button>
+                  </div>
+                ) : (wallet?.availableBalance || 0) < paymentAmount ? (
                   <div className="space-y-3">
                     <div className="border border-[#EAEAEA] bg-[#FDEBEC] rounded p-4 text-xs text-[#9F2F2D] font-mono">
                       Số dư khả dụng không đủ! Bạn cần nạp thêm ít nhất{" "}

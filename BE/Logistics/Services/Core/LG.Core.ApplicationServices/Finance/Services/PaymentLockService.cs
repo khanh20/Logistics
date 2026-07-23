@@ -77,6 +77,9 @@ namespace LG.Core.ApplicationServices.Finance.Services
                     var wallet = await _db.Wallets.FirstOrDefaultAsync(w => w.CustomerId == dto.CustomerId && w.Currency == "VND");
                     if (wallet == null) throw new CoreException(CoreErrorCode.CoreWalletNotFound);
 
+                    if (wallet.IsFrozen)
+                        throw new CoreException(CoreErrorCode.CoreWalletFrozen);
+
                     if (wallet.AvailableBalance < dto.LockedAmountVnd)
                         throw new CoreException(CoreErrorCode.CoreInsufficientBalance);
 

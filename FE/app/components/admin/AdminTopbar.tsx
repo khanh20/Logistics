@@ -5,6 +5,7 @@ import { logout as logoutThunk } from "~/lib/feature/auth/authThunk";
 import { resetAuth } from "~/lib/feature/auth/authSlice";
 import { cn } from "~/lib/utils/cn";
 import type { UserAuthInfo } from "~/lib/types/auth";
+import { NotificationBell } from "~/components/NotificationBell";
 
 interface AdminTopbarProps {
   user: UserAuthInfo;
@@ -38,7 +39,9 @@ export function AdminTopbar({ user }: AdminTopbarProps) {
   return (
     <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
       <div />
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
+        <NotificationBell type="staff" />
+        
         {/* Language toggle */}
         <button
           onClick={toggleLanguage}

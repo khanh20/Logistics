@@ -242,6 +242,24 @@ public static class Module1ServiceExtensions
         })
         .AddPolicyHandler(GetRetryPolicy("Auth"));
 
+        // HttpClient cho IInternalAuthClient
+        services.AddHttpClient<IInternalAuthClient, InternalAuthClient>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var baseUrl = cfg["Auth:BaseUrl"]
+                       ?? Environment.GetEnvironmentVariable("AUTH__BASEURL")
+                       ?? "https://localhost:7237";
+            var key = cfg["Auth:InternalApiKey"]
+                   ?? Environment.GetEnvironmentVariable("AUTH__INTERNALAPIKEY")
+                   ?? throw new InvalidOperationException(
+                       "Auth:InternalApiKey is required for cross-service calls.");
+
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout     = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("X-Internal-Key", key);
+        })
+        .AddPolicyHandler(GetRetryPolicy("Auth"));
+
         return services;
     }
 

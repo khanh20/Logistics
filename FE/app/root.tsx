@@ -15,6 +15,7 @@ import { Provider } from "react-redux";
 import { store } from "~/lib/feature/store";
 import { AuthExtensionSync } from "~/components/AuthExtensionSync";
 import { AuthTabSync } from "~/components/AuthTabSync";
+import { SignalRSync } from "~/components/SignalRSync";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -60,6 +61,7 @@ export default function App() {
     <Provider store={store}>
       <AuthExtensionSync />
       <AuthTabSync />
+      <SignalRSync />
       <Outlet />
     </Provider>
   );

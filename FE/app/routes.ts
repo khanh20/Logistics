@@ -33,7 +33,7 @@ export default [
     route("products", "routes/customer/products._index.tsx"),
     route("products/:slug", "routes/customer/products.$slug.tsx"),
     route("favorites", "routes/customer/favorites.tsx"),
-    // route("profile",        "routes/customer/profile.tsx"),
+    route("notifications", "routes/customer/notifications.tsx"),
   ]),
 
   // Admin / Staff app

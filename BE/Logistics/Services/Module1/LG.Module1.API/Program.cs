@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using LG.Module1.ApplicationServices.Interfaces;
+using LG.Module1.API.Hubs;
 using LG.Module1.API.BackgroundJobs;
 using LG.Module1.API.Middleware;
 using LG.Module1.Infrastructure;
@@ -261,6 +263,10 @@ builder.Services.AddSwaggerGen(opt =>
 // ── Health checks ─────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks().AddDbContextCheck<Module1DbContext>("postgres-mod1");
 
+// ── SignalR & Pusher ─────────────────────────────────────────────────────────
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IStaffNotificationPusher, SignalRStaffNotificationPusher>();
+
 // ── Background jobs ─────────────────────────────────────────────────
 builder.Services.AddHostedService<OrderTimeoutJob>();
 builder.Services.AddHostedService<OrderAssignmentJob>();
@@ -322,6 +328,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<StaffNotificationHub>("/hubs/staff-notifications");
 app.MapGrpcService<AiAssistantGrpcService>()
    .EnableGrpcWeb()
    .RequireCors("FE");

@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useAppDispatch } from "~/lib/feature/hooks";
-import { submitTopup } from "~/lib/feature/finance/financeThunk";
+import { submitTopup, fetchMyWallet } from "~/lib/feature/finance/financeThunk";
 import { KycStatus } from "~/lib/enums/finance";
 import { ReduxStatus } from "~/lib/feature/const";
-import { PiBankBold, PiInfoBold } from "react-icons/pi";
 import { toast } from "react-toastify";
 import { FINANCE_LIMITS } from "~/lib/constants/finance";
+import { Bank, Info, SpinnerGap, Wallet, X } from "~/components/shared/icons";
 
 interface TopupFormProps {
   kyc: any;
@@ -61,6 +61,8 @@ export const TopupForm: React.FC<TopupFormProps> = ({
       setTopupSystemBankId("");
     } catch (err: unknown) {
       toast.error((err as string) || "Không thể gửi yêu cầu nạp tiền");
+    } finally {
+      dispatch(fetchMyWallet());
     }
   };
 
@@ -91,7 +93,7 @@ export const TopupForm: React.FC<TopupFormProps> = ({
             ))}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
-            <PiBankBold />
+            <Bank />
           </div>
         </div>
       </div>
@@ -119,7 +121,7 @@ export const TopupForm: React.FC<TopupFormProps> = ({
       </div>
 
       <div className="p-3.5 rounded-lg border border-[#D1E7DD] bg-[#EDF3EC] text-[#346538] text-sm flex gap-2">
-        <PiInfoBold className="text-base shrink-0 mt-0.5" />
+        <Info className="text-base shrink-0 mt-0.5" />
         <span>
           Sau khi tạo yêu cầu, hãy thực hiện chuyển khoản đúng theo thông tin tài khoản hiển thị trong danh sách giao dịch bên phải.
         </span>
@@ -130,11 +132,16 @@ export const TopupForm: React.FC<TopupFormProps> = ({
         disabled={status === ReduxStatus.LOADING || wallet?.isFrozen}
         className="w-full inline-flex justify-center items-center py-2.5 px-4 text-base font-semibold text-white bg-[#111111] hover:bg-[#2F3437] rounded-md transition-colors active:scale-[0.98] disabled:bg-gray-400 disabled:pointer-events-none"
       >
-        {status === ReduxStatus.LOADING
-          ? "Đang xử lý..."
-          : wallet?.isFrozen
-          ? "Ví đang bị khóa"
-          : "Tạo yêu cầu nạp tiền"}
+        {status === ReduxStatus.LOADING ? (
+          <>
+            <SpinnerGap className="animate-spin text-lg mr-2" />
+            Đang xử lý...
+          </>
+        ) : wallet?.isFrozen ? (
+          "Ví đang bị khóa"
+        ) : (
+          "Tạo yêu cầu nạp tiền"
+        )}
       </button>
     </form>
   );

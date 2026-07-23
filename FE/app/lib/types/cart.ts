@@ -68,6 +68,8 @@ export interface CheckoutPreviewResponse {
   walletBalanceSufficient: boolean;
   walletBalanceVnd: number;
   walletShortageVnd: number;
+  serviceFeeDiscountVnd?: number;
+  inspectionFeeDiscountVnd?: number;
 }
 
 // ── Confirm checkout ──────────────────────────────────────────────────────────
