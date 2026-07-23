@@ -41,32 +41,40 @@ public class OrderTimeoutJob(
 
     private async Task ProcessTimeoutsAsync(CancellationToken ct)
     {
-        using var scope = scopeFactory.CreateScope();
-        var orderRepo   = scope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
-        var historyRepo = scope.ServiceProvider.GetRequiredService<IOrderStatusHistoryRepository>();
-        var uow         = scope.ServiceProvider.GetRequiredService<IModule1UnitOfWork>();
-
-        var timedOut = await orderRepo.GetTimedOutPendingOrdersAsync(TimeoutMinutes, ct);
-        if (timedOut.Count == 0) return;
-
-        logger.LogInformation("OrderTimeoutJob: found {Count} timed-out orders", timedOut.Count);
-
-        foreach (var order in timedOut)
+        List<Guid> ids;
+        using (var readScope = scopeFactory.CreateScope())
         {
+            var readRepo = readScope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
+            var timedOut = await readRepo.GetTimedOutPendingOrdersAsync(TimeoutMinutes, ct);
+            ids = timedOut.Select(o => o.Id).ToList();
+        }
+        if (ids.Count == 0) return;
+
+        logger.LogInformation("OrderTimeoutJob: found {Count} timed-out orders", ids.Count);
+
+        foreach (var id in ids)
+        {
+            // Scope riêng mỗi đơn: đọc lại trạng thái mới nhất, bỏ qua nếu đã trả cọc
+            using var scope = scopeFactory.CreateScope();
+            var orderRepo   = scope.ServiceProvider.GetRequiredService<ICustomerOrderRepository>();
+            var historyRepo = scope.ServiceProvider.GetRequiredService<IOrderStatusHistoryRepository>();
+            var uow         = scope.ServiceProvider.GetRequiredService<IModule1UnitOfWork>();
             try
             {
+                var order = await orderRepo.GetByIdWithDetailsAsync(id, ct);
+                if (order is null || order.Status != OrderStatus.PendingPayment) continue;
+
                 order.CancelByTimeout();
                 await historyRepo.AddAsync(order.History.Last(), ct);
                 await orderRepo.UpdateAsync(order, ct);
+                await uow.SaveChangesAsync(ct);
                 logger.LogInformation("Auto-cancelled timed-out order {OrderCode}", order.OrderCode);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to cancel order {OrderCode}", order.OrderCode);
+                logger.LogWarning(ex, "Failed to cancel timed-out order {OrderId}", id);
             }
         }
-
-        await uow.SaveChangesAsync(ct);
     }
 }
 
@@ -239,11 +247,10 @@ public class StaffKpiAggregationJob(
         using var scope = scopeFactory.CreateScope();
         var perf = scope.ServiceProvider.GetRequiredService<IStaffPerformanceService>();
 
-        var today     = DateOnly.FromDateTime(DateTime.UtcNow);
-        var yesterday = today.AddDays(-1);
-
-        await perf.AggregateDayAsync(yesterday, ct);
-        await perf.AggregateDayAsync(today, ct);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        // Tổng hợp lại nhiều ngày để không sót đơn hoàn thành trễ (qua cuối tuần/SLA dài)
+        for (int d = 7; d >= 0; d--)
+            await perf.AggregateDayAsync(today.AddDays(-d), ct);
     }
 }
 
@@ -255,7 +262,7 @@ public class TrendingAggregationJob(
     ILogger<TrendingAggregationJob> logger
 ) : BackgroundService
 {
-    private const int IntervalSeconds = 72600; 
+    private const int IntervalSeconds = 86400; // 1 ngày
     private const int TrendingDays    = 14;
     private const int TopN            = 200;
 

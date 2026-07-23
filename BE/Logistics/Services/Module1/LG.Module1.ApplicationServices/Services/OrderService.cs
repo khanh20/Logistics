@@ -123,6 +123,10 @@ public class CustomerOrderService(
         if (order.Status != OrderStatus.PendingPayment)
             throw new Exception("Đơn hàng không ở trạng thái chờ thanh toán đặt cọc.");
 
+        // Quá hạn thì không cho trả cọc nữa (tránh đua với job tự hủy)
+        if (DateTime.UtcNow > order.PaymentDeadline)
+            throw new Exception("Đơn hàng đã quá hạn thanh toán đặt cọc.");
+
         // 1. Đóng băng tiền cọc (thay vì trừ trực tiếp)
         await walletService.LockFundsAsync(customerId, order.Id, order.DepositVnd, ct);
 

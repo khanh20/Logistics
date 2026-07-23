@@ -868,6 +868,7 @@ public class StaffAssignmentRepository(Module1DbContext db) : IStaffAssignmentRe
         // Lấy những assignment chưa complete, chưa đánh dấu overdue, nhưng đã qua deadline
         db.StaffAssignments
           .Where(x => x.CompletedAt == null && !x.IsOverdue && x.SlaDeadline < DateTime.UtcNow)
+          .Include(x => x.Order)
           .ToListAsync(ct);
 
     public Task<int> GetActiveLoadAsync(Guid staffId, CancellationToken ct = default) =>
@@ -1352,6 +1353,11 @@ public class ProductReviewRepository(Module1DbContext db) : IProductReviewReposi
                            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
         return (items, total);
     }
+
+    public Task<List<ProductReview>> GetPendingUnscannedAsync(int limit, CancellationToken ct = default) =>
+        db.ProductReviews
+          .Where(x => x.Status == ReviewStatus.Pending && x.AiScannedAt == null)
+          .OrderBy(x => x.CreatedAt).Take(limit).ToListAsync(ct);
 
     public Task<bool> ExistsForCustomerAsync(Guid productId, Guid customerId, CancellationToken ct = default) =>
         db.ProductReviews.AnyAsync(x => x.ProductId == productId && x.CustomerId == customerId, ct);

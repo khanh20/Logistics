@@ -113,6 +113,11 @@ public class StaffAssignmentService(
             var order = await orderRepo.GetByIdWithDetailsAsync(orderId, innerCt)
                         ?? throw new OrderNotFoundException(orderId);
 
+            // Idempotent: đã có assignment active thì trả lại, không tạo trùng
+            var existing = await assignmentRepo.GetActiveByOrderIdAsync(orderId, innerCt);
+            if (existing is not null)
+                return MapToDto(existing);
+
             // Lọc NV đủ điều kiện theo work-setting: online, bật auto-assign, trong ca,
             // còn dưới hạn năng lực. NV chưa có setting → coi như mặc định (đủ điều kiện).
             var settings = (await workSettingRepo.GetByStaffIdsAsync(availableStaffIds, innerCt))

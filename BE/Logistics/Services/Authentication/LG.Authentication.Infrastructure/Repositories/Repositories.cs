@@ -237,6 +237,18 @@ public class RefreshTokenRepository(AppDbContext db) : IRefreshTokenRepository
         foreach (var t in tokens) t.Revoke(ip);
         db.RefreshTokens.UpdateRange(tokens);
     }
+
+    public async Task<bool> TryRevokeForRotateAsync(string token, string? ip, string replacedBy, CancellationToken ct = default)
+    {
+        // UPDATE có điều kiện RevokedAt IS NULL -> chỉ một request xoay thành công
+        var affected = await db.RefreshTokens
+            .Where(rt => rt.Token == token && rt.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(rt => rt.RevokedAt, DateTime.UtcNow)
+                .SetProperty(rt => rt.RevokedByIp, ip)
+                .SetProperty(rt => rt.ReplacedBy, replacedBy), ct);
+        return affected == 1;
+    }
 }
 
 // ── SystemConfig ──────────────────────────────────────────────────────────────

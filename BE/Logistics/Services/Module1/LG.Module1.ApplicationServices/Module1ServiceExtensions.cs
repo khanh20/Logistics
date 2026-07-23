@@ -143,6 +143,14 @@ public static class Module1ServiceExtensions
         services.AddScoped<CategoryAutoClassifier>();
         services.AddSingleton<BackgroundCategoryClassifier>();
 
+        // Lọc spam đánh giá — dùng bởi ReviewSpamScanJob quét theo lô.
+        WithAiResilience(services.AddHttpClient<IReviewSpamClassifier, HttpReviewSpamClassifier>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            client.BaseAddress = new Uri(cfg["LlmGateway:BaseUrl"] ?? "http://localhost:8000");
+            client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("ReviewSpam:TimeoutSeconds", 15));
+        }));
+
         // Recommendation: options từ appsettings (mục "Recommendation"; thiếu -> defaults
         // = hành vi cũ) + reranker ML (LightGBM bên serving_pipeline, fallback linear).
         services.AddSingleton(

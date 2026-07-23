@@ -275,6 +275,7 @@ builder.Services.AddHostedService<StaffKpiAggregationJob>();
 builder.Services.AddHostedService<TrendingAggregationJob>();
 builder.Services.AddHostedService<EmbeddingBackfillJob>();
 builder.Services.AddHostedService<CoViewMatrixJob>();
+builder.Services.AddHostedService<ReviewSpamScanJob>();
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 3. BUILD

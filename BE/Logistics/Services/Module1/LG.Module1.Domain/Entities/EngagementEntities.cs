@@ -158,6 +158,10 @@ public class ProductReview
     public DateTime     CreatedAt          { get; private set; } = DateTime.UtcNow;
     public DateTime     UpdatedAt          { get; private set; } = DateTime.UtcNow;
 
+    // AI chỉ GẮN điểm và có thể TỰ DUYỆT, KHÔNG bao giờ tự từ chối — spam luôn để nhân viên.
+    public double?      AiSpamScore        { get; private set; }
+    public DateTime?    AiScannedAt        { get; private set; }
+
     // Navigation
     public ProductMaster Product { get; private set; } = default!;
 
@@ -194,6 +198,24 @@ public class ProductReview
         Status             = ReviewStatus.Rejected;
         ModeratedByStaffId = staffId;
         RejectReason       = reason?.Trim();
+        ModeratedAt        = DateTime.UtcNow;
+        Touch();
+    }
+
+    // Ghi điểm spam của mô hình. Không đổi trạng thái — chỉ là gợi ý cho nhân viên.
+    public void ApplyAiSpamScore(double score)
+    {
+        AiSpamScore = score;
+        AiScannedAt = DateTime.UtcNow;
+        Touch();
+    }
+
+    // AI tự duyệt khi tin chắc là KHÔNG spam (ModeratedByStaffId = null -> hệ thống, không phải nhân viên).
+    public void AutoApprove()
+    {
+        if (Status != ReviewStatus.Pending) return;
+        Status             = ReviewStatus.Approved;
+        ModeratedByStaffId = null;
         ModeratedAt        = DateTime.UtcNow;
         Touch();
     }
