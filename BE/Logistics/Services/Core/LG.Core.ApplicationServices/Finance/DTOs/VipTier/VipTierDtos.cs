@@ -14,7 +14,6 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.VipTier
         public short FreeStorageDays { get; set; }
         public bool PrioritySupport { get; set; }
         public decimal? DepositPctOverride { get; set; }
-        public decimal CashbackPct { get; set; }
         public string? ColorHex { get; set; }
     }
 
@@ -35,7 +34,6 @@ namespace LG.Core.ApplicationServices.Finance.DTOs.VipTier
         public short FreeStorageDays { get; set; } = 7;
         public bool PrioritySupport { get; set; } = false;
         public decimal? DepositPctOverride { get; set; }
-        public decimal CashbackPct { get; set; } = 0;
 
         [MaxLength(6)]
         public string? ColorHex { get; set; }

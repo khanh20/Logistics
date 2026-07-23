@@ -140,15 +140,6 @@ export default function VipTierPage() {
       }, {} as Record<string, any>)
     },
     {
-      key: "cashback",
-      benefit: "Tỷ lệ hoàn tiền chi tiêu",
-      ...vipTiers.reduce((acc, t) => {
-        const cashback = formatPct(t.cashbackPct);
-        acc[t.id] = cashback > 0 ? `${cashback}%` : "—";
-        return acc;
-      }, {} as Record<string, string>)
-    },
-    {
       key: "depositOverride",
       benefit: "Tỷ lệ cọc tối thiểu",
       ...vipTiers.reduce((acc, t) => {
@@ -304,7 +295,6 @@ export default function VipTierPage() {
           const nextRange = idx < vipTiers.length - 1 ? vipTiers[idx + 1].minSpendVnd : null;
 
           const discount = formatPct(t.serviceFeeDiscountPct);
-          const cashback = formatPct(t.cashbackPct);
           const deposit = formatPct(t.depositPctOverride);
 
           const privileges = [
@@ -312,7 +302,6 @@ export default function VipTierPage() {
             { label: "Miễn phí kiểm hàng", active: t.freeInspection },
             { label: `${t.freeStorageDays} ngày lưu kho`, active: t.freeStorageDays > 0 },
             { label: "Hỗ trợ ưu tiên 24/7", active: t.prioritySupport },
-            { label: `Hoàn tiền ${cashback}%`, active: cashback > 0 },
             { label: `Cọc từ ${deposit}%`, active: t.depositPctOverride !== undefined && deposit < 100 }
           ];
 

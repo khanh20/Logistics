@@ -1105,9 +1105,6 @@ namespace LG.Core.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("CashbackPct")
-                        .HasColumnType("decimal(5,4)");
-
                     b.Property<string>("ColorHex")
                         .HasMaxLength(6)
                         .HasColumnType("character varying(6)");

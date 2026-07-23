@@ -322,14 +322,16 @@ export default function RolesIndexPage({ loaderData }: Route.ComponentProps) {
                       >
                         {t("roles.btn_edit")}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteTarget(role)}
-                        className="text-xs px-2.5 py-1.5 rounded-md border border-red-200
-                                   text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        {t("roles.btn_delete")}
-                      </button>
+                      {!role.isSystem && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(role)}
+                          className="text-xs px-2.5 py-1.5 rounded-md border border-red-200
+                                     text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          {t("roles.btn_delete")}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

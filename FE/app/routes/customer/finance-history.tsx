@@ -4,15 +4,8 @@ import { Link } from "react-router";
 import { financeApi } from "~/lib/api/finance";
 import type { WalletTransactionDto } from "~/lib/types/finance";
 import { formatVND, formatDate } from "~/lib/utils/format";
-import {
-  PiClockBold,
-  PiCaretLeftBold,
-  PiCaretRightBold,
-  PiArrowLeftBold,
-  PiFunnelBold,
-  PiMagnifyingGlassBold
-} from "react-icons/pi";
 import { Pagination } from "~/components/ui/Pagination";
+import { ArrowLeft, MagnifyingGlass, X } from "~/components/shared/icons";
 
 export default function FinanceHistoryPage() {
   const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
@@ -115,7 +108,7 @@ export default function FinanceHistoryPage() {
           to="/finance"
           className="inline-flex items-center text-sm font-mono uppercase tracking-widest text-neutral-400 hover:text-neutral-900 transition-colors"
         >
-          <PiArrowLeftBold className="mr-2 text-base" /> Tài chính
+          <ArrowLeft className="mr-2 text-base" /> Tài chính
         </Link>
       </div>
 
@@ -188,7 +181,7 @@ export default function FinanceHistoryPage() {
               onChange={(e) => setSearchText(e.target.value)}
               className="w-full pl-9 pr-3 py-2 border border-[#EAEAEA] bg-white rounded text-sm focus:outline-none focus:border-neutral-900"
             />
-            <PiMagnifyingGlassBold className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           </div>
         </div>
       </div>

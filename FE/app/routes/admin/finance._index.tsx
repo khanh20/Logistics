@@ -1,16 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import dayjs from "dayjs";
-import {
-  PiBankBold,
-  PiWarningBold,
-  PiArrowClockwiseBold,
-  PiScalesBold,
-  PiArrowRightBold,
-  PiCopyBold,
-  PiCheckBold
-} from "react-icons/pi";
-
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import {
   fetchPendingWithdraws,
@@ -35,6 +25,7 @@ import {
 import type { WithdrawResponseDto } from "~/lib/types/finance";
 import type { FraudDetectionDto } from "~/lib/types/adminFinance";
 import { ReduxStatus } from "~/lib/feature/const";
+import { ArrowClockwise, ArrowRight, Bank, Check, Copy, Scales, Warning, X } from "~/components/shared/icons";
 
 function StatusBadge({ status, label, colorsMap }: { status: string | number; label: string; colorsMap: Record<string | number, string> }) {
   const color = colorsMap[status] || "default";
@@ -70,7 +61,7 @@ function CopyableText({ text }: { text: string }) {
         className="text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
         title="Copy"
       >
-        {copied ? <PiCheckBold className="text-green-600" /> : <PiCopyBold />}
+        {copied ? <Check className="text-green-600" /> : <Copy />}
       </button>
     </div>
   );
@@ -132,13 +123,13 @@ export default function AdminFinanceDashboard() {
                   <h3 className="text-3xl font-serif font-bold text-black">{pendingWithdrawCount}</h3>
                 </div>
                 <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100/50">
-                  <PiBankBold className="text-xl" />
+                  <Bank className="text-xl" />
                 </div>
               </div>
               <div className="mt-6 pt-4 border-t border-[#EAEAEA] flex justify-between items-center">
                 <span className="text-xs text-gray-400">yêu cầu chờ duyệt</span>
                 <Link to="/admin/finance/withdraws" className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors">
-                  Chi tiết <PiArrowRightBold />
+                  Chi tiết <ArrowRight />
                 </Link>
               </div>
             </div>
@@ -151,13 +142,13 @@ export default function AdminFinanceDashboard() {
                   <h3 className="text-3xl font-serif font-bold text-black">{pendingRefundCount}</h3>
                 </div>
                 <div className="p-2.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-100/50">
-                  <PiArrowClockwiseBold className="text-xl" />
+                  <ArrowClockwise className="text-xl" />
                 </div>
               </div>
               <div className="mt-6 pt-4 border-t border-[#EAEAEA] flex justify-between items-center">
                 <span className="text-xs text-gray-400">yêu cầu cần xử lý</span>
                 <Link to="/admin/finance/refunds" className="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-1 transition-colors">
-                  Chi tiết <PiArrowRightBold />
+                  Chi tiết <ArrowRight />
                 </Link>
               </div>
             </div>
@@ -170,13 +161,13 @@ export default function AdminFinanceDashboard() {
                   <h3 className="text-3xl font-serif font-bold text-black">{openFraudCount}</h3>
                 </div>
                 <div className="p-2.5 rounded-lg bg-rose-50 text-rose-600 border border-rose-100/50">
-                  <PiWarningBold className="text-xl" />
+                  <Warning className="text-xl" />
                 </div>
               </div>
               <div className="mt-6 pt-4 border-t border-[#EAEAEA] flex justify-between items-center">
                 <span className="text-xs text-gray-400">vấn đề chưa giải quyết</span>
                 <Link to="/admin/finance/fraud" className="text-xs font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1 transition-colors">
-                  Chi tiết <PiArrowRightBold />
+                  Chi tiết <ArrowRight />
                 </Link>
               </div>
             </div>
@@ -189,13 +180,13 @@ export default function AdminFinanceDashboard() {
                   <h3 className="text-3xl font-serif font-bold text-black">Live</h3>
                 </div>
                 <div className="p-2.5 rounded-lg bg-green-50 text-green-600 border border-green-100/50">
-                  <PiScalesBold className="text-xl" />
+                  <Scales className="text-xl" />
                 </div>
               </div>
               <div className="mt-6 pt-4 border-t border-[#EAEAEA] flex justify-between items-center">
                 <span className="text-xs text-gray-400">cập nhật hàng ngày</span>
                 <Link to="/admin/finance/revenue" className="text-xs font-semibold text-green-600 hover:text-green-700 flex items-center gap-1 transition-colors">
-                  Chi tiết <PiArrowRightBold />
+                  Chi tiết <ArrowRight />
                 </Link>
               </div>
             </div>
@@ -207,7 +198,7 @@ export default function AdminFinanceDashboard() {
             <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAEAEA]">
                 <div className="flex items-center gap-2">
-                  <PiBankBold className="text-lg text-blue-500" />
+                  <Bank className="text-lg text-blue-500" />
                   <span className="text-base font-semibold text-black">Rút tiền gần đây</span>
                 </div>
                 <Link to="/admin/finance/withdraws" className="text-xs font-semibold text-gray-500 hover:text-black">
@@ -265,7 +256,7 @@ export default function AdminFinanceDashboard() {
             <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAEAEA]">
                 <div className="flex items-center gap-2">
-                  <PiWarningBold className="text-lg text-rose-500" />
+                  <Warning className="text-lg text-rose-500" />
                   <span className="text-base font-semibold text-black">Cảnh báo gian lận mới</span>
                 </div>
                 <Link to="/admin/finance/fraud" className="text-xs font-semibold text-gray-500 hover:text-black">

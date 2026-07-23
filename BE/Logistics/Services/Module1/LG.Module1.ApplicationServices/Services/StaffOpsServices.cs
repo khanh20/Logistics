@@ -9,7 +9,8 @@ namespace LG.Module1.ApplicationServices.Services;
 // ── StaffNotifier — port impl ghi vào StaffNotification (DB) ──────────────────
 public class StaffNotifier(
     IStaffNotificationRepository repo,
-    IModule1UnitOfWork           uow
+    IModule1UnitOfWork           uow,
+    IStaffNotificationPusher     pusher = null!
 ) : IStaffNotifier
 {
     public async Task NotifyAsync(Guid staffId, StaffNotificationType type, string title, string body,
@@ -18,6 +19,12 @@ public class StaffNotifier(
         var n = StaffNotification.Create(staffId, type, title, body, refOrderId);
         await repo.AddAsync(n, ct);
         await uow.SaveChangesAsync(ct);
+
+        if (pusher != null)
+        {
+            var dto = new StaffNotificationDto(n.Id, n.Type.ToString(), n.Title, n.Body, n.RefOrderId, n.IsRead, n.CreatedAt);
+            await pusher.PushToStaffAsync(staffId, dto, ct);
+        }
     }
 }
 

@@ -373,6 +373,12 @@ public interface IStaffNotificationService
     Task MarkAllReadAsync(Guid staffId, CancellationToken ct = default);
 }
 
+// ── Staff Notification Pusher (SignalR) ────────────────────────────────────────
+public interface IStaffNotificationPusher
+{
+    Task PushToStaffAsync(Guid staffId, StaffNotificationDto notification, CancellationToken ct = default);
+}
+
 // ── Complaint ───────────────────────────────────────────────────────────────────
 public interface IComplaintService
 {

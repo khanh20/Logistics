@@ -47,6 +47,9 @@ public class RoleService(
         var role = await roleRepo.GetByIdAsync(id, ct)
                    ?? throw new NotFoundException(nameof(Role), id);
 
+        if (role.IsSystem)
+            throw new ConflictException("Không thể sửa vai trò hệ thống.");
+
         // Check name conflict with another role
         var existing = await roleRepo.GetByNameAsync(req.Name, ct);
         if (existing is not null && existing.Id != id)
@@ -64,6 +67,11 @@ public class RoleService(
     {
         var role = await roleRepo.GetByIdAsync(id, ct)
                    ?? throw new NotFoundException(nameof(Role), id);
+
+        // Vai trò hệ thống (Admin, KhachHang, các vai trò nhân viên) là nền của phân
+        // quyền — xóa Admin sẽ khoá toàn bộ quản trị. Chặn ở đây thay vì chỉ ẩn nút UI.
+        if (role.IsSystem)
+            throw new ConflictException("Không thể xóa vai trò hệ thống.");
 
         await roleRepo.DeleteAsync(role, ct);
         await uow.SaveChangesAsync(ct);
@@ -193,6 +201,9 @@ public class PermissionService(
     {
         var role = await roleRepo.GetByIdAsync(req.RoleId, ct)
                    ?? throw new NotFoundException(nameof(Role), req.RoleId);
+
+        if (role.IsSystem)
+            throw new ConflictException("Không thể thay đổi quyền của vai trò hệ thống.");
 
         // Validate tất cả codes trước khi mở transaction
         var allPerms = await permRepo.GetAllAsync(ct);

@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { PiPlusBold, PiPencilSimpleBold, PiTrashBold, PiStarBold, PiXBold } from "react-icons/pi";
 import { Input } from "~/components/ui/Input";
 import { Button } from "~/components/ui/Button";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
@@ -13,6 +12,7 @@ import { selectVipTiers, selectAdminFinanceStatus } from "~/lib/feature/adminFin
 import { ReduxStatus } from "~/lib/feature/const";
 import type { VipTierDto, CreateVipTierDto } from "~/lib/types/adminFinance";
 import { Pagination } from "~/components/ui/Pagination";
+import { PencilSimple, Plus, Star, Trash, X } from "~/components/shared/icons";
 
 export default function AdminVipTiersPage() {
   const dispatch = useAppDispatch();
@@ -29,7 +29,6 @@ export default function AdminVipTiersPage() {
   const [minSpendVnd, setMinSpendVnd] = useState(0);
   const [colorHex, setColorHex] = useState("");
   const [serviceFeeDiscountPct, setServiceFeeDiscountPct] = useState(0);
-  const [cashbackPct, setCashbackPct] = useState(0);
   const [depositPctOverride, setDepositPctOverride] = useState<number | undefined>(undefined);
   const [freeInspection, setFreeInspection] = useState(false);
   const [prioritySupport, setPrioritySupport] = useState(false);
@@ -52,7 +51,6 @@ export default function AdminVipTiersPage() {
     setMinSpendVnd(0);
     setColorHex("");
     setServiceFeeDiscountPct(0);
-    setCashbackPct(0);
     setDepositPctOverride(undefined);
     setFreeInspection(false);
     setPrioritySupport(false);
@@ -69,7 +67,6 @@ export default function AdminVipTiersPage() {
     setMinSpendVnd(record.minSpendVnd);
     setColorHex(record.colorHex || "");
     setServiceFeeDiscountPct(record.serviceFeeDiscountPct);
-    setCashbackPct(record.cashbackPct);
     setDepositPctOverride(record.depositPctOverride ?? undefined);
     setFreeInspection(record.freeInspection);
     setPrioritySupport(record.prioritySupport);
@@ -108,7 +105,6 @@ export default function AdminVipTiersPage() {
         minSpendVnd,
         colorHex: colorHex.trim() ? colorHex.trim() : undefined,
         serviceFeeDiscountPct,
-        cashbackPct,
         depositPctOverride: depositPctOverride !== undefined ? depositPctOverride : undefined,
         freeInspection,
         prioritySupport,
@@ -143,7 +139,7 @@ export default function AdminVipTiersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div className="flex items-center gap-2.5">
-          <PiStarBold className="text-2xl text-yellow-500 animate-none" />
+          <Star className="text-2xl text-yellow-500 animate-none" />
           <div>
             <h1 className="text-2xl font-serif font-bold text-black mb-1">Quản lý Hạng VIP</h1>
             <p className="text-sm text-gray-500">Cấu hình cấp độ, hạn mức chi tiêu và đặc quyền của khách hàng</p>
@@ -153,7 +149,7 @@ export default function AdminVipTiersPage() {
           onClick={handleCreate}
           className="px-4.5 py-2.5"
         >
-          <PiPlusBold />
+          <Plus />
           Thêm hạng VIP
         </Button>
       </div>
@@ -187,7 +183,6 @@ export default function AdminVipTiersPage() {
                     <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Chi tiêu tối thiểu (VND)</th>
                     <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Giảm phí DV (%)</th>
                     <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Ưu đãi đặc quyền</th>
-                    <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6">Hoàn tiền (%)</th>
                     <th className="font-mono text-xs uppercase text-gray-400 tracking-wider py-4 px-6 text-center">Thao tác</th>
                   </tr>
                 </thead>
@@ -221,9 +216,6 @@ export default function AdminVipTiersPage() {
                           {record.freeStorageDays > 0 && <span>• Lưu kho miễn phí {record.freeStorageDays} ngày</span>}
                         </div>
                       </td>
-                      <td className="py-3.5 px-6 font-mono">
-                        {record.cashbackPct}%
-                      </td>
                       <td className="py-3.5 px-6 text-center">
                         <div className="inline-flex gap-2.5 justify-center">
                           <button
@@ -231,14 +223,14 @@ export default function AdminVipTiersPage() {
                             className="p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded transition-colors"
                             title="Sửa"
                           >
-                            <PiPencilSimpleBold className="text-sm" />
+                            <PencilSimple className="text-sm" />
                           </button>
                           <button
                             onClick={() => handleDelete(record.id)}
                             className="p-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
                             title="Xóa"
                           >
-                            <PiTrashBold className="text-sm" />
+                            <Trash className="text-sm" />
                           </button>
                         </div>
                       </td>
@@ -246,7 +238,7 @@ export default function AdminVipTiersPage() {
                   ))}
                   {vipTiers.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="text-center py-12 text-gray-400">
+                      <td colSpan={6} className="text-center py-12 text-gray-400">
                         Chưa cấu hình hạng VIP nào.
                       </td>
                     </tr>
@@ -279,7 +271,7 @@ export default function AdminVipTiersPage() {
                 onClick={() => setIsModalVisible(false)}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 
@@ -334,27 +326,15 @@ export default function AdminVipTiersPage() {
                   Đặc quyền & Ưu đãi
                 </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <Input
-                      label="Giảm phí dịch vụ (%)"
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={serviceFeeDiscountPct}
-                      onChange={(e) => setServiceFeeDiscountPct(Number(e.target.value))}
-                    />
-                  </div>
-                  <div>
-                    <Input
-                      label="Tỷ lệ hoàn tiền (%)"
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={cashbackPct}
-                      onChange={(e) => setCashbackPct(Number(e.target.value))}
-                    />
-                  </div>
+                <div>
+                  <Input
+                    label="Giảm phí dịch vụ (%)"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={serviceFeeDiscountPct}
+                    onChange={(e) => setServiceFeeDiscountPct(Number(e.target.value))}
+                  />
                 </div>
 
                 <div>

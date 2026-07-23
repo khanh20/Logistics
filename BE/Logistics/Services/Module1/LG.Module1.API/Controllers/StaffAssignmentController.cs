@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace LG.Module1.API.Controllers;
 
 /// Quản lý phân công nhân viên và SLA cho đơn hàng.
-/// Tất cả endpoints đều yêu cầu quyền order.manage.
 [Route("api/manage/assignments")]
 public class StaffAssignmentController(IStaffAssignmentService assignmentService)
     : Module1BaseController
@@ -15,7 +14,7 @@ public class StaffAssignmentController(IStaffAssignmentService assignmentService
     // POST /api/manage/assignments/auto/{orderId}
     /// Auto-assign một đơn cụ thể (admin muốn trigger thủ công).
     [HttpPost("auto/{orderId:guid}")]
-    [Authorize(Policy = Permissions.OrderManage)]
+    [Authorize(Policy = Permissions.StaffManage)]
     [ProducesResponseType(typeof(ApiResponse<StaffAssignmentDto>), 200)]
     [ProducesResponseType(400)]
     [ProducesResponseType(401)]
@@ -35,7 +34,7 @@ public class StaffAssignmentController(IStaffAssignmentService assignmentService
     // POST /api/manage/assignments/manual
     /// Admin tự chọn staff cho một đơn.
     [HttpPost("manual")]
-    [Authorize(Policy = Permissions.OrderManage)]
+    [Authorize(Policy = Permissions.StaffManage)]
     [ProducesResponseType(typeof(ApiResponse<StaffAssignmentDto>), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(401)]
@@ -53,7 +52,7 @@ public class StaffAssignmentController(IStaffAssignmentService assignmentService
     // PUT /api/manage/assignments/{orderId}/reassign
     /// Chuyển đơn sang nhân viên khác.
     [HttpPut("{orderId:guid}/reassign")]
-    [Authorize(Policy = Permissions.OrderManage)]
+    [Authorize(Policy = Permissions.StaffManage)]
     [ProducesResponseType(typeof(ApiResponse<StaffAssignmentDto>), 200)]
     [ProducesResponseType(400)]
     [ProducesResponseType(401)]

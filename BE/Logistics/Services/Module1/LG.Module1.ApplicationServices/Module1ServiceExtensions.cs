@@ -143,6 +143,14 @@ public static class Module1ServiceExtensions
         services.AddScoped<CategoryAutoClassifier>();
         services.AddSingleton<BackgroundCategoryClassifier>();
 
+        // Lọc spam đánh giá — dùng bởi ReviewSpamScanJob quét theo lô.
+        WithAiResilience(services.AddHttpClient<IReviewSpamClassifier, HttpReviewSpamClassifier>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            client.BaseAddress = new Uri(cfg["LlmGateway:BaseUrl"] ?? "http://localhost:8000");
+            client.Timeout     = TimeSpan.FromSeconds(cfg.GetValue("ReviewSpam:TimeoutSeconds", 15));
+        }));
+
         // Recommendation: options từ appsettings (mục "Recommendation"; thiếu -> defaults
         // = hành vi cũ) + reranker ML (LightGBM bên serving_pipeline, fallback linear).
         services.AddSingleton(
@@ -226,6 +234,24 @@ public static class Module1ServiceExtensions
 
         // HttpClient cho StaffDirectoryHttpService — cùng cấu hình Auth internal.
         services.AddHttpClient<IStaffDirectoryService, StaffDirectoryHttpService>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<IConfiguration>();
+            var baseUrl = cfg["Auth:BaseUrl"]
+                       ?? Environment.GetEnvironmentVariable("AUTH__BASEURL")
+                       ?? "https://localhost:7237";
+            var key = cfg["Auth:InternalApiKey"]
+                   ?? Environment.GetEnvironmentVariable("AUTH__INTERNALAPIKEY")
+                   ?? throw new InvalidOperationException(
+                       "Auth:InternalApiKey is required for cross-service calls.");
+
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout     = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("X-Internal-Key", key);
+        })
+        .AddPolicyHandler(GetRetryPolicy("Auth"));
+
+        // HttpClient cho IInternalAuthClient
+        services.AddHttpClient<IInternalAuthClient, InternalAuthClient>((sp, client) =>
         {
             var cfg = sp.GetRequiredService<IConfiguration>();
             var baseUrl = cfg["Auth:BaseUrl"]

@@ -69,7 +69,6 @@ export interface VipTierDto {
   freeStorageDays: number;
   prioritySupport: boolean;
   depositPctOverride?: number;
-  cashbackPct: number;
   colorHex?: string;
 }
 
@@ -82,7 +81,6 @@ export interface CreateVipTierDto {
   freeStorageDays?: number;
   prioritySupport?: boolean;
   depositPctOverride?: number;
-  cashbackPct?: number;
   colorHex?: string;
 }
 

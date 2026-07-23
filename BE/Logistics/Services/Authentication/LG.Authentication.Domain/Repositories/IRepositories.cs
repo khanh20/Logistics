@@ -69,6 +69,8 @@ public interface IRefreshTokenRepository
     Task AddAsync(RefreshToken token, CancellationToken ct = default);
     Task UpdateAsync(RefreshToken token, CancellationToken ct = default);
     Task RevokeAllForUserAsync(Guid userId, string? ip, CancellationToken ct = default);
+    // Thu hồi có điều kiện, trả true nếu token còn hiệu lực lúc thu hồi
+    Task<bool> TryRevokeForRotateAsync(string token, string? ip, string replacedBy, CancellationToken ct = default);
 }
 
 public interface ISystemConfigRepository

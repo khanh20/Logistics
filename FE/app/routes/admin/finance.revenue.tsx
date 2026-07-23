@@ -8,8 +8,7 @@ import dayjs from "dayjs";
 import { toast } from "react-toastify";
 import { financeApi } from "~/lib/api/finance";
 import type { DailyRevenueReport } from "~/lib/types/finance";
-import { PiChartBarBold, PiChartLineUpBold, PiMoneyBold, PiClockClockwiseBold, PiArrowLeftBold } from "react-icons/pi";
-
+import { ArrowLeft, ChartBar, ChartLineUp, X } from "~/components/shared/icons";
 export default function AdminFinanceRevenue() {
   const navigate = useNavigate();
   const [reports, setReports] = useState<DailyRevenueReport[]>([]);
@@ -96,7 +95,7 @@ export default function AdminFinanceRevenue() {
           onClick={() => navigate(-1)} 
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors mb-4"
         >
-          <PiArrowLeftBold />
+          <ArrowLeft />
           Quay lại
         </button>
       </div>
@@ -213,7 +212,7 @@ export default function AdminFinanceRevenue() {
           {/* Main Chart */}
           <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm p-6">
             <h3 className="text-base font-semibold text-black mb-6 flex items-center gap-2">
-              <PiChartLineUpBold className="text-lg text-indigo-500" /> Xu hướng Tổng Doanh Thu
+              <ChartLineUp className="text-lg text-indigo-500" /> Xu hướng Tổng Doanh Thu
             </h3>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -234,7 +233,7 @@ export default function AdminFinanceRevenue() {
           {/* Breakdown Chart */}
           <div className="bg-white border border-[#EAEAEA] rounded-lg shadow-sm p-6">
             <h3 className="text-base font-semibold text-black mb-6 flex items-center gap-2">
-              <PiChartBarBold className="text-lg text-emerald-500" /> Cấu trúc Doanh Thu Phí
+              <ChartBar className="text-lg text-emerald-500" /> Cấu trúc Doanh Thu Phí
             </h3>
             <div className="h-[350px] w-full">
               <ResponsiveContainer width="100%" height="100%">

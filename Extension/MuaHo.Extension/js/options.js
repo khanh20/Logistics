@@ -2,7 +2,7 @@
 
 var DEFAULTS = {
   backendHost: "http://localhost:5066",
-  webHost: "http://localhost:3000",
+  webHost: "http://localhost:5173",
   authHost: "http://localhost:5016",
   isTranslate: true,
 };
@@ -13,7 +13,7 @@ var DEFAULTS = {
 // nên phải đọc cookie từ đó. webHost = FE để "mở giỏ / đăng nhập" trỏ đúng.
 var NGROK = "https://climatologic-engrained-dann.ngrok-free.dev";
 var PRESETS = {
-  local: { backendHost: "http://localhost:5066", webHost: "http://localhost:3000",      authHost: "http://localhost:5016" },
+  local: { backendHost: "http://localhost:5066", webHost: "http://localhost:5173",      authHost: "http://localhost:5016" },
   demo:  { backendHost: "http://localhost:5066", webHost: "https://muaho-fe.vercel.app", authHost: NGROK },
 };
 

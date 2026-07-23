@@ -1,11 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
 import dayjs from "dayjs";
-import {
-  PiArrowClockwiseBold,
-  PiMagnifyingGlassBold,
-  PiCopyBold,
-  PiCheckBold
-} from "react-icons/pi";
 import { Input } from "~/components/ui/Input";
 import { Button } from "~/components/ui/Button";
 
@@ -22,6 +16,7 @@ import { TransactionDirectionEnum } from "~/lib/enums/finance";
 import { ReduxStatus } from "~/lib/feature/const";
 import type { WalletTransactionDto } from "~/lib/types/adminFinance";
 import { Pagination } from "~/components/ui/Pagination";
+import { ArrowClockwise, Check, Copy, MagnifyingGlass, Wallet, X } from "~/components/shared/icons";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -40,7 +35,7 @@ function CopyableText({ text }: { text: string }) {
         className="text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
         title="Copy ID"
       >
-        {copied ? <PiCheckBold className="text-green-600 text-xs" /> : <PiCopyBold className="text-xs" />}
+        {copied ? <Check className="text-green-600 text-xs" /> : <Copy className="text-xs" />}
       </button>
     </div>
   );
@@ -147,7 +142,7 @@ export default function AdminFinanceTransactionsPage() {
           variant="secondary"
           className="px-4.5 py-2.5"
         >
-          <PiArrowClockwiseBold />
+          <ArrowClockwise />
           Làm mới
         </Button>
       </div>
@@ -164,7 +159,7 @@ export default function AdminFinanceTransactionsPage() {
           {/* Wallet ID Input */}
           <div className="relative flex-1 sm:flex-initial">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 pointer-events-none z-10">
-              <PiMagnifyingGlassBold className="text-sm" />
+              <MagnifyingGlass className="text-sm" />
             </span>
             <Input
               type="text"

@@ -40,9 +40,6 @@ namespace LG.Core.Domain.Finance
         [Column(TypeName = "decimal(5,4)")]
         public decimal? DepositPctOverride { get; set; }   // Ghi đè % đặt cọc riêng cho hạng này
 
-        [Column(TypeName = "decimal(5,4)")]
-        public decimal CashbackPct { get; set; } = 0;      // % hoàn tiền
-
         [MaxLength(6)]
         public string? ColorHex { get; set; }               // Màu hiển thị hạng (mã HEX)
 

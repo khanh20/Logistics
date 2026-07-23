@@ -5,7 +5,7 @@
 
 var DEFAULTS = {
   backendHost: "http://localhost:5066",
-  webHost: "http://localhost:3000",
+  webHost: "http://localhost:5173",
   authHost: "http://localhost:5016",
 };
 
@@ -147,24 +147,82 @@ chrome.runtime.onMessageExternal.addListener(function (req, sender, sendResponse
   return false;
 });
 
-// Mở tab ẩn, chờ content script scrape xong, đóng tab. Timeout 15s.
+// Mở tab ẩn, hỏi content script tới khi có data, rồi đóng tab.
+//
+// Vòng thử lại đặt ở service worker chứ không phải setInterval trong content
+// script: tab nền bị Chrome ép timer >=1s, còn service worker thì không. Cũng
+// không dùng tabs.onUpdated nữa — nếu tab đạt "complete" trước lúc listener kịp
+// gắn thì event mất luôn và cả lượt scrape treo tới hết timeout.
+var SCRAPE_DEADLINE_MS = 30000;
+var SCRAPE_PROBE_MS = 800;
+// platformProductId lấy từ URL và giá có thể đọc được từ DOM trước khi window
+// data (chứa imageList) kịp có. Nên snapshot "có giá" chưa chắc đã đủ ảnh: giữ
+// nó lại làm dự phòng và hỏi thêm chừng này nữa để đợi ảnh, hết thì trả tạm.
+var SCRAPE_IMAGE_GRACE_MS = 15000;
+
 function scrapeUrlInHiddenTab(url) {
   return new Promise(function (resolve) {
     var settled = false;
     var tabId = null;
     var timer = null;
+    var probeTimer = null;
     var startedAt = Date.now();
+    var probes = 0;
+    var lastErr = "";
+    var best = null;      // snapshot có giá nhưng chưa đủ ảnh
+    var bestAt = 0;
 
     function cleanup(result) {
       if (settled) return;
       settled = true;
       if (timer) clearTimeout(timer);
+      if (probeTimer) clearTimeout(probeTimer);
       if (tabId != null) {
         try { chrome.tabs.remove(tabId); } catch (e) {}
       }
       console.log("[MuaHo] scrape", (Date.now() - startedAt) + "ms",
-        result.ok ? "OK" : ("FAIL:" + result.reason), url);
+        result.ok ? (result.partial ? "OK(thieu anh)" : "OK") : ("FAIL:" + result.reason),
+        "probes=" + probes, url);
       resolve(result);
+    }
+
+    function hasImages(d) {
+      return !!(d && d.imageUrls && d.imageUrls.length);
+    }
+
+    // Hết giờ mà vẫn chưa có ảnh thì trả snapshot tốt nhất còn hơn trả lỗi.
+    function finishWithBest(reasonIfNone) {
+      if (best) cleanup({ ok: true, data: best, partial: true });
+      else cleanup({ ok: false, reason: reasonIfNone });
+    }
+
+    // Hỏi liên tục từ lúc tab vừa tạo. Các lượt đầu chắc chắn trượt (content
+    // script chưa inject / trang chưa có window data) — đó là chuyện bình thường.
+    function probe() {
+      if (settled) return;
+      probes++;
+      chrome.tabs.sendMessage(tabId, { action: "scrapeOnce" }, function (resp) {
+        if (settled) return;
+        if (chrome.runtime.lastError) {
+          lastErr = chrome.runtime.lastError.message || "no_content_script";
+        } else if (resp && resp.ok && resp.data) {
+          if (hasImages(resp.data)) {
+            cleanup({ ok: true, data: resp.data });
+            return;
+          }
+          // Có giá nhưng window data (imageList) chưa tới — đợi thêm chút.
+          best = resp.data;
+          if (!bestAt) bestAt = Date.now();
+          if (Date.now() - bestAt >= SCRAPE_IMAGE_GRACE_MS) {
+            finishWithBest("no_data");
+            return;
+          }
+          lastErr = "no_images";
+        } else if (resp && resp.reason) {
+          lastErr = resp.reason;
+        }
+        probeTimer = setTimeout(probe, SCRAPE_PROBE_MS);
+      });
     }
 
     try {
@@ -175,30 +233,11 @@ function scrapeUrlInHiddenTab(url) {
         }
         tabId = tab.id;
 
-        // Timeout 30s — 1688 nặng + tab nền bị Chrome bóp nên render/scrape chậm.
         timer = setTimeout(function () {
-          cleanup({ ok: false, reason: "timeout" });
-        }, 30000);
+          finishWithBest("timeout" + (lastErr ? " (" + lastErr + ")" : ""));
+        }, SCRAPE_DEADLINE_MS);
 
-        // Chờ tab load xong rồi yêu cầu content script scrape.
-        function onUpdated(updatedTabId, info) {
-          if (updatedTabId !== tabId || info.status !== "complete") return;
-          chrome.tabs.onUpdated.removeListener(onUpdated);
-
-          // Content script đã được inject (matches domain sàn). Nhờ nó scrape.
-          // Cho trang 2s để window object / SPA kịp khởi tạo trước khi hỏi.
-          setTimeout(function () {
-            chrome.tabs.sendMessage(tabId, { action: "scrapeNow" }, function (resp) {
-              if (chrome.runtime.lastError) {
-                cleanup({ ok: false, reason: "no_content_script (" + (chrome.runtime.lastError.message || "") + ")" });
-                return;
-              }
-              if (resp && resp.ok && resp.data) cleanup({ ok: true, data: resp.data });
-              else cleanup({ ok: false, reason: (resp && resp.reason) || "scrape_failed" });
-            });
-          }, 2000);
-        }
-        chrome.tabs.onUpdated.addListener(onUpdated);
+        probe();
       });
     } catch (e) {
       cleanup({ ok: false, reason: String(e) });

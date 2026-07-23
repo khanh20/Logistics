@@ -1,6 +1,5 @@
 import React from "react";
-import { PiCaretLeftBold, PiCaretRightBold } from "react-icons/pi";
-
+import { CaretLeft, CaretRight } from "~/components/shared/icons";
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -34,7 +33,7 @@ export function Pagination({
           onClick={() => onPageChange(currentPage - 1)}
           className="inline-flex items-center gap-1 px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
         >
-          <PiCaretLeftBold className="text-[10px]" />
+          <CaretLeft className="text-[10px]" />
           Trước
         </button>
         <button
@@ -43,7 +42,7 @@ export function Pagination({
           className="inline-flex items-center gap-1 px-3 py-1.5 border border-[#EAEAEA] bg-white rounded text-black font-semibold hover:bg-gray-100 disabled:opacity-40 transition-colors"
         >
           Sau
-          <PiCaretRightBold className="text-[10px]" />
+          <CaretRight className="text-[10px]" />
         </button>
       </div>
     </div>

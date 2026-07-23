@@ -12,14 +12,8 @@ import { selectAuth } from "~/lib/feature/auth/authSelector";
 import type { ProductListItem } from "~/lib/types/product";
 import type { ExchangeRate } from "~/lib/types/category";
 
-import {
-  PiPackageBold,
-  PiGlobeBold,
-  PiShieldCheckBold,
-  PiArrowRightBold,
-  PiTrendUpBold,
-} from "react-icons/pi";
 import { SiTaobao, SiAliexpress, SiEbay, SiRakuten } from "react-icons/si";
+import { ArrowRight, Copy, Globe, Package, ShieldCheck, TrendUp } from "~/components/shared/icons";
 
 /* ── Scroll Reveal Hook (IntersectionObserver, never window.scroll) ── */
 function useScrollReveal() {
@@ -128,7 +122,7 @@ export default function CustomerHomePage({
                   }}
                 >
                   {t("home.cta_browse")}
-                  <PiArrowRightBold className="text-base" />
+                  <ArrowRight className="text-base" />
                 </Link>
                 {!token && (
                   <Link
@@ -157,7 +151,7 @@ export default function CustomerHomePage({
                     transitionDelay: "300ms",
                   }}
                 >
-                  <PiTrendUpBold
+                  <TrendUp
                     className="text-base"
                     style={{ color: "var(--mu-pastel-green-text)" }}
                   />
@@ -234,7 +228,7 @@ export default function CustomerHomePage({
                     borderRadius: "8px",
                   }}
                 >
-                  <PiGlobeBold
+                  <Globe
                     className="text-xl"
                     style={{ color: "var(--mu-pastel-blue-text)" }}
                   />
@@ -287,7 +281,7 @@ export default function CustomerHomePage({
                   borderRadius: "8px",
                 }}
               >
-                <PiShieldCheckBold
+                <ShieldCheck
                   className="text-xl"
                   style={{ color: "var(--mu-pastel-green-text)" }}
                 />
@@ -323,7 +317,7 @@ export default function CustomerHomePage({
                   borderRadius: "8px",
                 }}
               >
-                <PiPackageBold
+                <Package
                   className="text-xl"
                   style={{ color: "var(--mu-pastel-yellow-text)" }}
                 />
@@ -438,7 +432,7 @@ export default function CustomerHomePage({
                   style={{ color: "var(--mu-text-secondary)" }}
                 >
                   {t("home.see_all")}
-                  <PiArrowRightBold className="text-xs" />
+                  <ArrowRight className="text-xs" />
                 </Link>
               </div>
             </div>

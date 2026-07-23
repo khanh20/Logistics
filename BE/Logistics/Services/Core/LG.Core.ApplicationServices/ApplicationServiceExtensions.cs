@@ -85,6 +85,22 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IBankWebhookLogService, BankWebhookLogService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+
+        services.AddHttpClient<IInternalAuthClient, InternalAuthClient>((sp, client) =>
+        {
+            var cfg = sp.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+            var baseUrl = cfg["ApiUris:Auth"]
+                       ?? Environment.GetEnvironmentVariable("APIURIS__AUTH")
+                       ?? "https://localhost:7082";
+            client.BaseAddress = new Uri(baseUrl);
+            
+            var internalKey = cfg["Auth:InternalApiKey"] ?? Environment.GetEnvironmentVariable("AUTH__INTERNALAPIKEY");
+            if (!string.IsNullOrEmpty(internalKey))
+            {
+                client.DefaultRequestHeaders.Add("X-Internal-Key", internalKey);
+            }
+        });
+
         // ── Wallet Payment Service ──────────────────────────────────────────────
         services.AddScoped<IWalletPaymentService, WalletPaymentService>();
 

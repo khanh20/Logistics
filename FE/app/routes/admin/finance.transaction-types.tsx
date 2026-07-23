@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { PiPlusBold, PiPencilSimpleBold, PiTrashBold, PiArrowClockwiseBold, PiXBold } from "react-icons/pi";
 import { adminFinanceApi } from "~/lib/api/adminFinance";
 import { Input } from "~/components/ui/Input";
 import { Button } from "~/components/ui/Button";
@@ -8,6 +7,7 @@ import { TransactionDirectionEnum } from "~/lib/enums/finance";
 import { TRANSACTION_DIRECTION_COLORS, TRANSACTION_DIRECTION_LABELS } from "~/lib/constants/finance";
 import type { TransactionTypeDto } from "~/lib/types/adminFinance";
 import { Pagination } from "~/components/ui/Pagination";
+import { ArrowClockwise, PencilSimple, Plus, Trash, Warning, X } from "~/components/shared/icons";
 
 function DirectionBadge({ direction }: { direction?: TransactionDirectionEnum }) {
   if (!direction) {
@@ -165,13 +165,13 @@ export default function AdminTransactionTypesPage() {
             variant="secondary"
             loading={loading}
           >
-            <PiArrowClockwiseBold />
+            <ArrowClockwise />
             Làm mới
           </Button>
           <Button
             onClick={() => handleOpenModal()}
           >
-            <PiPlusBold />
+            <Plus />
             Thêm mới
           </Button>
         </div>
@@ -240,14 +240,14 @@ export default function AdminTransactionTypesPage() {
                             className="p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded transition-colors"
                             title="Sửa"
                           >
-                            <PiPencilSimpleBold className="text-sm" />
+                            <PencilSimple className="text-sm" />
                           </button>
                           <button
                             onClick={() => handleDelete(record.id)}
                             className="p-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
                             title="Xóa"
                           >
-                            <PiTrashBold className="text-sm" />
+                            <Trash className="text-sm" />
                           </button>
                         </div>
                       </td>
@@ -288,7 +288,7 @@ export default function AdminTransactionTypesPage() {
                 onClick={handleCloseModal}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 

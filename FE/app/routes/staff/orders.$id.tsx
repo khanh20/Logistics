@@ -5,5 +5,6 @@ export function meta() {
 }
 
 export default function StaffOrderDetailPage() {
-  return <OrderDetailView backTo="/staff/assignments" />;
+  // Nhân viên xử lý đơn nhưng không được tự phân công / chuyển việc cho người khác.
+  return <OrderDetailView backTo="/staff/assignments" canManageStaff={false} />;
 }

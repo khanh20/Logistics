@@ -21,20 +21,11 @@ import {
 } from "~/lib/feature/finance/financeSelector";
 import { formatVND } from "~/lib/utils/format";
 
-import {
-  PiWalletBold,
-  PiArrowUpRightBold,
-  PiArrowDownLeftBold,
-  PiClockBold,
-  PiBankBold,
-  PiWarningBold,
-  PiLockKeyBold
-} from "react-icons/pi";
-
 import { TopupForm } from "~/components/finance/TopupForm";
 import { WithdrawForm } from "~/components/finance/WithdrawForm";
 import { TransactionHistoryTable } from "~/components/finance/TransactionHistoryTable";
 import { SkeletonPanel, StatGroupSkeleton, Skeleton } from "~/components/shared/Skeleton";
+import { ArrowDownLeft, ArrowUpRight, Bank, Clock, LockKey, Wallet, Warning, X } from "~/components/shared/icons";
 
 /* ── Scroll Reveal Hook (IntersectionObserver) ── */
 function useScrollReveal(deps: any[] = []) {
@@ -107,7 +98,9 @@ const FinancePage: React.FC = () => {
   const systemBankAccounts = useAppSelector(selectSystemBankAccounts) || [];
   const kyc = useAppSelector(selectKyc);
 
-  const scrollRef = useScrollReveal([status]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  const scrollRef = useScrollReveal([status, isInitialLoading]);
 
   const activeBankAccounts = bankAccounts.filter((b) => b.isActive);
   const activeSystemBankAccounts = systemBankAccounts.filter((b) => b.isActive);
@@ -122,12 +115,16 @@ const FinancePage: React.FC = () => {
   const ITEMS_PER_PAGE = 5;
 
   useEffect(() => {
-    dispatch(fetchMyWallet());
-    dispatch(fetchMyTopups());
-    dispatch(fetchMyWithdraws());
-    dispatch(fetchMyBankAccounts());
-    dispatch(fetchSystemBankAccounts());
-    dispatch(fetchKyc());
+    Promise.all([
+      dispatch(fetchMyWallet()),
+      dispatch(fetchMyTopups()),
+      dispatch(fetchMyWithdraws()),
+      dispatch(fetchMyBankAccounts()),
+      dispatch(fetchSystemBankAccounts()),
+      dispatch(fetchKyc())
+    ]).finally(() => {
+      setIsInitialLoading(false);
+    });
   }, [dispatch]);
 
   return (
@@ -159,12 +156,12 @@ const FinancePage: React.FC = () => {
               color: "var(--mu-text)"
             }}
           >
-            <PiBankBold className="text-base" />
+            <Bank className="text-base" />
             Tài khoản ngân hàng
           </Link>
         </div>
 
-        {status === "loading" || (!wallet && topups.length === 0 && withdraws.length === 0) ? (
+        {isInitialLoading ? (
           <FinancePageSkeleton />
         ) : (
           <>
@@ -172,7 +169,7 @@ const FinancePage: React.FC = () => {
 
         {(!kyc || (kyc.status !== "Approved" && kyc.status !== KycStatus.Approved.toString())) && (
           <div className="reveal-hidden p-4 mb-8 text-sm flex items-start gap-3 rounded-lg border border-[#F8E3A1] bg-[#FBF3DB] text-[#956400]">
-            <PiWarningBold className="text-lg shrink-0 mt-0.5" />
+            <Warning className="text-lg shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold mb-1">Chưa hoàn thành Xác minh danh tính</p>
               <p className="mb-2">Bạn cần hoàn thành Xác minh danh tính để thực hiện giao dịch nạp và rút tiền.</p>
@@ -185,7 +182,7 @@ const FinancePage: React.FC = () => {
 
         {bankAccounts.length === 0 && (
           <div className="reveal-hidden p-4 mb-8 text-sm flex items-start gap-3 rounded-lg border border-[#F8E3A1] bg-[#FBF3DB] text-[#956400]">
-            <PiWarningBold className="text-lg shrink-0 mt-0.5" />
+            <Warning className="text-lg shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold mb-1">Chưa có tài khoản ngân hàng liên kết</p>
               <p className="mb-2">Bạn cần thêm tài khoản ngân hàng cá nhân để thực hiện giao dịch nạp và rút tiền.</p>
@@ -201,7 +198,7 @@ const FinancePage: React.FC = () => {
           {wallet?.isFrozen && (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/40 backdrop-blur-[2px] transition-all duration-300 cursor-not-allowed">
               <div className="w-16 h-16 rounded-full bg-white/90 shadow-sm flex items-center justify-center border border-gray-100 transition-transform duration-300 group-hover:scale-110">
-                <PiLockKeyBold className="text-3xl text-gray-700" />
+                <LockKey className="text-3xl text-gray-700" />
               </div>
               
               <div className="absolute opacity-0 group-hover:opacity-100 transition-all duration-300 bottom-[15%] bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-md shadow-lg pointer-events-none translate-y-2 group-hover:translate-y-0">
@@ -228,7 +225,7 @@ const FinancePage: React.FC = () => {
                   className="w-7 h-7 flex items-center justify-center rounded-md"
                   style={{ backgroundColor: "var(--mu-pastel-green-bg)" }}
                 >
-                  <PiWalletBold style={{ color: "var(--mu-pastel-green-text)" }} />
+                  <Wallet style={{ color: "var(--mu-pastel-green-text)" }} />
                 </div>
               </div>
               <div
@@ -261,7 +258,7 @@ const FinancePage: React.FC = () => {
                   className="w-7 h-7 flex items-center justify-center rounded-md"
                   style={{ backgroundColor: "var(--mu-pastel-red-bg)" }}
                 >
-                  <PiWarningBold style={{ color: "var(--mu-pastel-red-text)" }} />
+                  <Warning style={{ color: "var(--mu-pastel-red-text)" }} />
                 </div>
               </div>
               <div
@@ -294,7 +291,7 @@ const FinancePage: React.FC = () => {
                   className="w-7 h-7 flex items-center justify-center rounded-md"
                   style={{ backgroundColor: "var(--mu-pastel-blue-bg)" }}
                 >
-                  <PiWalletBold style={{ color: "var(--mu-pastel-blue-text)" }} />
+                  <Wallet style={{ color: "var(--mu-pastel-blue-text)" }} />
                 </div>
               </div>
               <div
@@ -332,7 +329,7 @@ const FinancePage: React.FC = () => {
                   : "text-gray-400 hover:text-black"
                   }`}
               >
-                <PiArrowUpRightBold className="text-sm" />
+                <ArrowUpRight className="text-sm" />
                 Nạp tiền
               </button>
               <button
@@ -343,7 +340,7 @@ const FinancePage: React.FC = () => {
                   : "text-gray-400 hover:text-black"
                   }`}
               >
-                <PiArrowDownLeftBold className="text-sm" />
+                <ArrowDownLeft className="text-sm" />
                 Rút tiền
               </button>
             </div>
@@ -382,7 +379,7 @@ const FinancePage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center justify-between w-full">
                 <h2 className="text-base font-semibold text-black flex items-center gap-2">
-                  <PiClockBold className="text-lg text-gray-400" />
+                  <Clock className="text-lg text-gray-400" />
                   Lịch sử giao dịch
                 </h2>
                 <Link

@@ -10,7 +10,7 @@ class FraudService:
     def __init__(self):
         if not settings.OPENAI_API_KEY:
             logger.warning("OPENAI_API_KEY is not set in .env file!")
-        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else None
+        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY, base_url="https://api.groq.com/openai/v1") if settings.OPENAI_API_KEY else None
 
     async def evaluate_transaction(self, req: FraudEvaluationRequest) -> FraudEvaluationResponse:
         if not self.client:
@@ -52,7 +52,7 @@ Return ONLY valid JSON:
 
         try:
             response = await self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="llama-3.1-8b-instant",
                 messages=[
                     {"role": "system", "content": "You are a fraud detection AI. Return only valid JSON."},
                     {"role": "user", "content": prompt}

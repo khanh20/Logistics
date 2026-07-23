@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { PiTerminalBold, PiArrowClockwiseBold, PiXBold, PiCopyBold, PiCheckBold } from "react-icons/pi";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { fetchWebhookLogs } from "~/lib/feature/adminFinance/adminFinanceThunk";
 import { selectWebhookLogs, selectAdminFinanceStatus } from "~/lib/feature/adminFinance/adminFinanceSelector";
@@ -12,6 +11,7 @@ import { Pagination } from "~/components/ui/Pagination";
 import { Select } from "~/components/ui/Select";
 import { Input } from "~/components/ui/Input";
 import { Button } from "~/components/ui/Button";
+import { ArrowClockwise, Check, Copy, Terminal, X } from "~/components/shared/icons";
 
 function CopyableText({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -30,7 +30,7 @@ function CopyableText({ text }: { text: string }) {
         className="text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
         title="Copy ID"
       >
-        {copied ? <PiCheckBold className="text-green-600 text-xs" /> : <PiCopyBold className="text-xs" />}
+        {copied ? <Check className="text-green-600 text-xs" /> : <Copy className="text-xs" />}
       </button>
     </div>
   );
@@ -115,7 +115,7 @@ export default function AdminWebhookLogsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div className="flex items-center gap-2.5">
-          <PiTerminalBold className="text-2xl text-blue-600 animate-none" />
+          <Terminal className="text-2xl text-blue-600 animate-none" />
           <div>
             <h1 className="text-2xl font-serif font-bold text-black mb-1">Nhật ký Webhook Ngân hàng</h1>
             <p className="text-sm text-gray-500">Giám sát các phản hồi webhook tự động từ đối tác thanh toán</p>
@@ -126,7 +126,7 @@ export default function AdminWebhookLogsPage() {
           disabled={loading}
           className="inline-flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white text-xs font-semibold px-4 py-2.5 rounded transition-colors disabled:opacity-50"
         >
-          <PiArrowClockwiseBold className={loading ? "animate-spin" : ""} />
+          <ArrowClockwise className={loading ? "animate-spin" : ""} />
           Làm mới
         </button>
       </div>
@@ -282,7 +282,7 @@ export default function AdminWebhookLogsPage() {
                 onClick={() => setSelectedLog(null)}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 

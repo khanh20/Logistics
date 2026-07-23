@@ -56,7 +56,7 @@ export default function CustomerOrdersPage({
         page: p,
         pageSize: PAGE_SIZE,
       });
-      setItems(res.data.items);
+      setItems(res.data.items ?? []);
       setTotalPages(res.data.totalPages);
       setTotalCount(res.data.totalCount);
     } finally {

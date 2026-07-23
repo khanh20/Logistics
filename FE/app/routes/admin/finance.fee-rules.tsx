@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { PiPlusBold, PiPencilSimpleBold, PiTrashBold, PiXBold } from "react-icons/pi";
 import { Input } from "~/components/ui/Input";
 import { Select } from "~/components/ui/Select";
 import { Button } from "~/components/ui/Button";
@@ -20,6 +19,7 @@ import dayjs from "dayjs";
 import type { FeeRuleDto, CreateFeeRuleDto } from "~/lib/types/adminFinance";
 import { ReduxStatus } from "~/lib/feature/const";
 import { Pagination } from "~/components/ui/Pagination";
+import { PencilSimple, Plus, Trash, X } from "~/components/shared/icons";
 
 function StatusBadge({ active }: { active: boolean }) {
   return (
@@ -201,7 +201,7 @@ export default function AdminFeeRulesPage() {
           onClick={() => handleOpenModal()}
           className="px-4.5 py-2.5"
         >
-          <PiPlusBold />
+          <Plus />
           Thêm quy tắc mới
         </Button>
       </div>
@@ -291,14 +291,14 @@ export default function AdminFeeRulesPage() {
                               className="p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded transition-colors"
                               title="Sửa"
                             >
-                              <PiPencilSimpleBold className="text-sm" />
+                              <PencilSimple className="text-sm" />
                             </button>
                             <button
                               onClick={() => handleDelete(record.id)}
                               className="p-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
                               title="Xóa"
                             >
-                              <PiTrashBold className="text-sm" />
+                              <Trash className="text-sm" />
                             </button>
                           </div>
                         </td>
@@ -340,7 +340,7 @@ export default function AdminFeeRulesPage() {
                 onClick={handleCloseModal}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 

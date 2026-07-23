@@ -1397,6 +1397,12 @@ namespace LG.Module1.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("AiScannedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("AiSpamScore")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -1440,6 +1446,8 @@ namespace LG.Module1.Infrastructure.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("ProductId", "Status");
+
+                    b.HasIndex("Status", "AiScannedAt");
 
                     b.ToTable("product_reviews", "mod1");
                 });

@@ -72,6 +72,11 @@ public interface INotificationService
     Task       MarkAllReadAsync(Guid userId, CancellationToken ct = default);
 }
 
+public interface INotificationPusher
+{
+    Task PushToUserAsync(Guid userId, NotificationResponse notification, CancellationToken ct = default);
+}
+
 public interface IAuditLogService
 {
     Task<PagedResponse<AuditLogResponse>> GetAllAsync(int page, int pageSize, CancellationToken ct = default);

@@ -1,15 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import dayjs from "dayjs";
-import {
-  PiEyeBold,
-  PiCheckCircleBold,
-  PiXCircleBold,
-  PiXBold,
-  PiCheckBold,
-  PiCopyBold,
-  PiWarningCircleBold
-} from "react-icons/pi";
 import { Button } from "~/components/ui/Button";
 import { Textarea } from "~/components/ui/Textarea";
 import type { CustomerKycDto } from "~/lib/types/customerProfile";
@@ -17,6 +8,7 @@ import type { CustomerKycDto } from "~/lib/types/customerProfile";
 import { useAppDispatch, useAppSelector } from "~/lib/feature/hooks";
 import { ReduxStatus } from "~/lib/feature/const";
 import { fetchAdminKycs, approveAdminKyc, rejectAdminKyc } from "~/lib/feature/adminFinance/adminFinanceThunk";
+import { Check, CheckCircle, Copy, Eye, WarningCircle, X, XCircle } from "~/components/shared/icons";
 
 function StatusBadge({ status }: { status: string }) {
   let classes = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ";
@@ -51,7 +43,7 @@ function CopyableText({ text }: { text: string }) {
         className="text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
         title="Copy"
       >
-        {copied ? <PiCheckBold className="text-green-600 text-xs" /> : <PiCopyBold className="text-xs" />}
+        {copied ? <Check className="text-green-600 text-xs" /> : <Copy className="text-xs" />}
       </button>
     </div>
   );
@@ -159,7 +151,7 @@ export default function AdminFinanceKycPage() {
                           setIsReviewModalOpen(true);
                         }}
                       >
-                        <PiEyeBold />
+                        <Eye />
                         Chi tiết
                       </Button>
                     </td>
@@ -189,7 +181,7 @@ export default function AdminFinanceKycPage() {
                 onClick={() => setIsReviewModalOpen(false)}
                 className="text-gray-400 hover:text-black transition-colors p-1"
               >
-                <PiXBold className="text-lg" />
+                <X className="text-lg" />
               </button>
             </div>
 
@@ -297,7 +289,7 @@ export default function AdminFinanceKycPage() {
                     onClick={() => setIsRejectModalOpen(true)}
                     loading={actionLoading}
                   >
-                    <PiXCircleBold />
+                    <XCircle />
                     Từ chối
                   </Button>
                   <Button
@@ -305,7 +297,7 @@ export default function AdminFinanceKycPage() {
                     onClick={() => handleApprove(selectedKyc.id)}
                     loading={actionLoading}
                   >
-                    <PiCheckCircleBold />
+                    <CheckCircle />
                     Phê duyệt
                   </Button>
                 </>
@@ -325,7 +317,7 @@ export default function AdminFinanceKycPage() {
                 onClick={() => setIsRejectModalOpen(false)}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold />
+                <X />
               </button>
             </div>
 
@@ -368,7 +360,7 @@ export default function AdminFinanceKycPage() {
           <div className="bg-white border border-[#EAEAEA] rounded-lg max-w-sm w-full p-6 shadow-2xl flex flex-col font-sans">
             <div className="space-y-3">
               <h4 className="text-base font-serif font-bold text-black flex items-center gap-1.5">
-                <PiWarningCircleBold className="text-primary text-lg" />
+                <WarningCircle className="text-primary text-lg" />
                 Xác nhận phê duyệt KYC
               </h4>
               <p className="text-xs text-gray-600 leading-normal">

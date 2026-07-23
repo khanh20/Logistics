@@ -538,6 +538,7 @@ public class ProductReviewConfig : IEntityTypeConfiguration<ProductReview>
         b.Property(x => x.RejectReason).HasMaxLength(500);
         b.HasIndex(x => new { x.ProductId, x.Status });
         b.HasIndex(x => x.CustomerId);
+        b.HasIndex(x => new { x.Status, x.AiScannedAt });
         b.HasOne(x => x.Product).WithMany()
          .HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);
     }

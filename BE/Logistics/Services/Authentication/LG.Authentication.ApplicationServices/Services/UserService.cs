@@ -14,6 +14,7 @@ public class UserService(
     IRoleRepository     roleRepo,
     IUserRoleRepository userRoleRepo,
     IAuditLogRepository auditRepo,
+    IRefreshTokenRepository rtRepo,
     IUnitOfWork         uow,
     IPasswordHasher     hasher,
     ICurrentUserService currentUser,
@@ -77,17 +78,22 @@ public class UserService(
 
         var oldStatus = user.Status.ToString();
 
+        var revokeSessions = false;
         switch (req.Status.ToLowerInvariant())
         {
             case "active": user.Activate(); break;
-            case "banned": user.Ban(); break;
-            case "suspended": user.Suspend(); break;
+            case "banned": user.Ban(); revokeSessions = true; break;
+            case "suspended": user.Suspend(); revokeSessions = true; break;
             default: throw new ValidationException($"Unknown status: {req.Status}");
         }
 
         await uow.ExecuteInTransactionAsync(async innerCt =>
         {
             await userRepo.UpdateAsync(user, innerCt);
+
+            // Khóa/cấm thì thu hồi mọi refresh token đang mở
+            if (revokeSessions)
+                await rtRepo.RevokeAllForUserAsync(userId, null, innerCt);
 
             var log = AuditLog.Create(adminId, "UPDATE_STATUS", "users", userId,
                 System.Text.Json.JsonSerializer.Serialize(new { Status = oldStatus }),

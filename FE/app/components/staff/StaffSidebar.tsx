@@ -11,6 +11,7 @@ import {
   ChatCircleDots,
   Bell,
   Wrench,
+  StarIcon,
 } from "~/components/shared/icons";
 import type { UserAuthInfo } from "~/lib/types/auth";
 
@@ -36,6 +37,7 @@ export function StaffSidebar({ user, unreadCount = 0 }: StaffSidebarProps) {
     { to: "/staff/assignments",   label: t("staff_portal.nav_assignments"),   icon: ListChecks,     roles: [ROLES.NV_MUA_HANG] },
     { to: "/staff/kpi",           label: t("staff_portal.nav_kpi"),           icon: ChartLineUp,    roles: [ROLES.NV_MUA_HANG] },
     { to: "/staff/complaints",    label: t("staff_portal.nav_complaints"),    icon: ChatCircleDots, roles: [ROLES.NV_CSKH] },
+    { to: "/staff/reviews",       label: t("staff_portal.nav_reviews"),       icon: StarIcon,       roles: [ROLES.NV_CSKH, ROLES.NV_MUA_HANG] },
     { to: "/staff/notifications", label: t("staff_portal.nav_notifications"), icon: Bell, badge: unreadCount },
   ];
 

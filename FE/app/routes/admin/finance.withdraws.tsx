@@ -1,15 +1,6 @@
 import { normalizeError } from "~/lib/utils/errors";
 import React, { useEffect, useState } from "react";
 import dayjs from "dayjs";
-import {
-  PiCheckBold,
-  PiXBold,
-  PiBankBold,
-  PiClockBold,
-  PiCoinsBold,
-  PiCopyBold,
-  PiCheckBold as PiCheckIcon
-} from "react-icons/pi";
 import { Input } from "~/components/ui/Input";
 import { Textarea } from "~/components/ui/Textarea";
 import { Button } from "~/components/ui/Button";
@@ -27,6 +18,7 @@ import {
 import { ReduxStatus } from "~/lib/feature/const";
 import type { WithdrawResponseDto } from "~/lib/types/finance";
 import { WITHDRAW_STATUS_LABELS, WITHDRAW_STATUS_COLORS } from "~/lib/constants/finance";
+import { Bank, Check, Clock, Coins, Copy, Info, Wallet, Warning, X } from "~/components/shared/icons";
 
 function StatusBadge({ status }: { status: number }) {
   const label = WITHDRAW_STATUS_LABELS[status as keyof typeof WITHDRAW_STATUS_LABELS] || "Không xác định";
@@ -65,7 +57,7 @@ function CopyableText({ text }: { text: string }) {
         className="text-gray-400 hover:text-black opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
         title="Copy Wallet ID"
       >
-        {copied ? <PiCheckIcon className="text-green-600 text-xs" /> : <PiCopyBold className="text-xs" />}
+        {copied ? <Check className="text-green-600 text-xs" /> : <Copy className="text-xs" />}
       </button>
     </div>
   );
@@ -178,7 +170,7 @@ export default function AdminFinanceWithdraws() {
             <h3 className="text-2xl font-serif font-bold text-black">{pendingWithdraws.length}</h3>
           </div>
           <div className="p-3 rounded-full bg-blue-50 text-blue-600 border border-blue-100/50">
-            <PiClockBold className="text-xl" />
+            <Clock className="text-xl" />
           </div>
         </div>
 
@@ -188,7 +180,7 @@ export default function AdminFinanceWithdraws() {
             <h3 className="text-2xl font-serif font-bold text-rose-600">{totalPendingAmount.toLocaleString()} ₫</h3>
           </div>
           <div className="p-3 rounded-full bg-rose-50 text-rose-600 border border-rose-100/50">
-            <PiCoinsBold className="text-xl" />
+            <Coins className="text-xl" />
           </div>
         </div>
       </div>
@@ -223,7 +215,7 @@ export default function AdminFinanceWithdraws() {
                     <td className="py-3.5 px-6">
                       <div className="flex flex-col gap-0.5">
                         <span className="font-semibold text-black flex items-center gap-1.5">
-                          <PiBankBold className="text-gray-400 text-xs" />
+                          <Bank className="text-gray-400 text-xs" />
                           {record.bankName}
                         </span>
                         <span className="text-xs font-mono font-medium text-black">{record.bankAccountNo}</span>
@@ -252,7 +244,7 @@ export default function AdminFinanceWithdraws() {
                           className="bg-green-600 text-white hover:bg-green-700 border-transparent"
                           onClick={() => openApproveModal(record)}
                         >
-                          <PiCheckBold />
+                          <Check />
                           Duyệt
                         </Button>
                         <Button
@@ -260,7 +252,7 @@ export default function AdminFinanceWithdraws() {
                           variant="danger"
                           onClick={() => openRejectModal(record)}
                         >
-                          <PiXBold />
+                          <X />
                           Từ chối
                         </Button>
                       </div>
@@ -290,7 +282,7 @@ export default function AdminFinanceWithdraws() {
                 onClick={() => setApproveModalVisible(false)}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold />
+                <X />
               </button>
             </div>
 
@@ -348,7 +340,7 @@ export default function AdminFinanceWithdraws() {
                 onClick={() => setRejectModalVisible(false)}
                 className="text-gray-400 hover:text-black transition-colors"
               >
-                <PiXBold />
+                <X />
               </button>
             </div>
 

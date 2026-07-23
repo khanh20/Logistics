@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useAppDispatch } from "~/lib/feature/hooks";
-import { submitWithdraw } from "~/lib/feature/finance/financeThunk";
+import { submitWithdraw, fetchMyWallet } from "~/lib/feature/finance/financeThunk";
 import { KycStatus } from "~/lib/enums/finance";
 import { ReduxStatus } from "~/lib/feature/const";
-import { PiBankBold } from "react-icons/pi";
 import { toast } from "react-toastify";
 import { FINANCE_LIMITS } from "~/lib/constants/finance";
+import { Bank, SpinnerGap, Wallet, X } from "~/components/shared/icons";
 
 interface WithdrawFormProps {
   kyc: any;
@@ -65,6 +65,8 @@ export const WithdrawForm: React.FC<WithdrawFormProps> = ({
       setWithdrawUserBankId("");
     } catch (err: unknown) {
       toast.error((err as string) || "Không thể gửi yêu cầu rút tiền");
+    } finally {
+      dispatch(fetchMyWallet());
     }
   };
 
@@ -95,7 +97,7 @@ export const WithdrawForm: React.FC<WithdrawFormProps> = ({
             ))}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
-            <PiBankBold />
+            <Bank />
           </div>
         </div>
       </div>
@@ -133,11 +135,16 @@ export const WithdrawForm: React.FC<WithdrawFormProps> = ({
         disabled={status === ReduxStatus.LOADING || wallet?.isFrozen}
         className="w-full inline-flex justify-center items-center py-2.5 px-4 text-base font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors active:scale-[0.98] disabled:bg-gray-400 disabled:pointer-events-none"
       >
-        {status === ReduxStatus.LOADING
-          ? "Đang xử lý..."
-          : wallet?.isFrozen
-          ? "Ví đang bị khóa"
-          : "Tạo yêu cầu rút tiền"}
+        {status === ReduxStatus.LOADING ? (
+          <>
+            <SpinnerGap className="animate-spin text-lg mr-2" />
+            Đang xử lý...
+          </>
+        ) : wallet?.isFrozen ? (
+          "Ví đang bị khóa"
+        ) : (
+          "Tạo yêu cầu rút tiền"
+        )}
       </button>
     </form>
   );

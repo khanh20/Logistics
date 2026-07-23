@@ -121,11 +121,11 @@ public class AuthService(
             var permissions = await userRepo.GetPermissionCodesAsync(user.Id, innerCt);
             var newAccess   = tokenSvc.GenerateAccessToken(user, roles, permissions);
 
-            // Xoay refresh token: cap cai moi, thu hoi cai cu va tro ReplacedBy sang cai moi.
+            // Xoay refresh token: thu hoi cai cu co dieu kien roi moi cap cai moi.
             var newRt = tokenSvc.GenerateRefreshToken(user.Id, ip);
+            if (!await rtRepo.TryRevokeForRotateAsync(rt.Token, ip, newRt.Token, innerCt))
+                throw new InvalidTokenException("Refresh token has been revoked.");
             await rtRepo.AddAsync(newRt, innerCt);
-            rt.Revoke(ip, newRt.Token);
-            await rtRepo.UpdateAsync(rt, innerCt);
             await uow.SaveChangesAsync(innerCt);
 
             logger.LogInformation("Token rotated for user: {UserId}", user.Id);

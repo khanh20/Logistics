@@ -2,6 +2,7 @@ using LG.Module1.Domain.Entities;
 using LG.Module1.Domain.Repositories;
 using LG.Module1.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Pgvector;
 using Pgvector.EntityFrameworkCore;
 
@@ -867,6 +868,7 @@ public class StaffAssignmentRepository(Module1DbContext db) : IStaffAssignmentRe
         // Lấy những assignment chưa complete, chưa đánh dấu overdue, nhưng đã qua deadline
         db.StaffAssignments
           .Where(x => x.CompletedAt == null && !x.IsOverdue && x.SlaDeadline < DateTime.UtcNow)
+          .Include(x => x.Order)
           .ToListAsync(ct);
 
     public Task<int> GetActiveLoadAsync(Guid staffId, CancellationToken ct = default) =>
@@ -1109,6 +1111,17 @@ public class UserActivityRepository(Module1DbContext db) : IUserActivityReposito
         return cats.Distinct().Take(limit).ToList();
     }
 
+    public async Task<List<BehaviorEventRow>> GetRecentEventsAsync(Guid customerId, int limit, CancellationToken ct = default)
+    {
+        var rows = await db.UserActivityEvents
+            .Where(x => x.CustomerId == customerId && x.ProductId != null)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(limit)
+            .Select(x => new { Pid = x.ProductId!.Value, x.EventType, x.CreatedAt, x.SessionKey })
+            .ToListAsync(ct);
+        return rows.Select(r => new BehaviorEventRow(r.Pid, r.EventType, r.CreatedAt, r.SessionKey)).ToList();
+    }
+
     public async Task<List<TrendingScore>> GetTrendingScoredAsync(int days, int limit, CancellationToken ct = default)
     {
         var since = DateTime.UtcNow.AddDays(-days);
@@ -1192,6 +1205,61 @@ public class ProductEmbeddingRepository(Module1DbContext db) : IProductEmbedding
             .Take(limit)
             .ToListAsync(ct);
         return rows.Select(a => (a.ProductId, a.Dist)).ToList();
+    }
+
+    private sealed class SeedMatchRow
+    {
+        public Guid Id { get; set; }
+        public double Score { get; set; }
+        public double Similarity { get; set; }
+        public Guid SeedId { get; set; }
+    }
+
+    public async Task<List<SeedMatch>> FindNearestPerSeedAsync(
+        IReadOnlyList<WeightedSeed> seeds, IEnumerable<Guid> excludeIds, int perSeed, int limit,
+        CancellationToken ct = default)
+    {
+        if (seeds.Count == 0 || perSeed <= 0 || limit <= 0) return new();
+        var seedIds = seeds.Select(s => s.ProductId).ToArray();
+        var weights = seeds.Select(s => s.Weight).ToArray();
+        var exclude = excludeIds.Distinct().ToArray();
+
+        // LATERAL: mỗi seed lấy perSeed hàng xóm gần nhất (dùng index HNSW), gộp lại và
+        // giữ điểm CAO NHẤT = trọng_số_seed × cosine. Vì trọng số đã mã hoá độ mới và mức
+        // cam kết, seed của phiên hiện tại tự động thắng seed cũ dù cosine thấp hơn.
+        // Raw SQL vì LINQ không diễn đạt được LATERAL, còn mỗi seed một query thì tốn N
+        // vòng round-trip sang Neon. DISTINCT ON giữ luôn seed nào đã sinh ra điểm đó.
+        const string sql = """
+            SELECT DISTINCT ON (nn."ProductId")
+                   nn."ProductId" AS "Id",
+                   nn.score       AS "Score",
+                   nn.sim         AS "Similarity",
+                   nn.seed_id     AS "SeedId"
+            FROM unnest(@seeds, @weights) AS s(seed_id, w)
+            JOIN mod1.product_embeddings se ON se."ProductId" = s.seed_id
+            CROSS JOIN LATERAL (
+                SELECT e."ProductId",
+                       s.seed_id,
+                       1 - (e."Embedding" <=> se."Embedding")       AS sim,
+                       s.w * (1 - (e."Embedding" <=> se."Embedding")) AS score
+                FROM mod1.product_embeddings e
+                WHERE NOT (e."ProductId" = ANY(@exclude))
+                ORDER BY e."Embedding" <=> se."Embedding"
+                LIMIT @perSeed
+            ) nn
+            ORDER BY nn."ProductId", nn.score DESC
+            """;
+
+        var rows = await db.Database.SqlQueryRaw<SeedMatchRow>(
+                sql,
+                new NpgsqlParameter("seeds", seedIds),
+                new NpgsqlParameter("weights", weights),
+                new NpgsqlParameter("exclude", exclude),
+                new NpgsqlParameter("perSeed", perSeed))
+            .ToListAsync(ct);
+
+        return rows.OrderByDescending(r => r.Score).Take(limit)
+                   .Select(r => new SeedMatch(r.Id, r.Score, r.Similarity, r.SeedId)).ToList();
     }
 
     public Task<List<Guid>> GetProductIdsMissingEmbeddingAsync(int limit, CancellationToken ct = default) =>
@@ -1285,6 +1353,11 @@ public class ProductReviewRepository(Module1DbContext db) : IProductReviewReposi
                            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
         return (items, total);
     }
+
+    public Task<List<ProductReview>> GetPendingUnscannedAsync(int limit, CancellationToken ct = default) =>
+        db.ProductReviews
+          .Where(x => x.Status == ReviewStatus.Pending && x.AiScannedAt == null)
+          .OrderBy(x => x.CreatedAt).Take(limit).ToListAsync(ct);
 
     public Task<bool> ExistsForCustomerAsync(Guid productId, Guid customerId, CancellationToken ct = default) =>
         db.ProductReviews.AnyAsync(x => x.ProductId == productId && x.CustomerId == customerId, ct);
