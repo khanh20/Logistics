@@ -28,6 +28,28 @@ function Stars({ value }: { value: number }) {
   );
 }
 
+// Điểm nghi spam do AI (ReviewSpamScanJob) chấm. score = P(spam) ∈ [0,1]; càng thấp càng "sạch".
+function SpamBadge({ score, scanned }: { score: number | null; scanned: string | null }) {
+  const { t } = useTranslation();
+  if (scanned == null) {
+    return (
+      <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-400">
+        {t("admin_reviews.ai_pending", "AI: chưa chấm")}
+      </span>
+    );
+  }
+  const s = score ?? 0;
+  const tone = s >= 0.5 ? "bg-red-100 text-red-700"
+    : s >= 0.15 ? "bg-amber-100 text-amber-700"
+    : "bg-emerald-100 text-emerald-700";
+  return (
+    <span className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}
+          title={t("admin_reviews.ai_spam_hint", "Điểm nghi spam do AI chấm (càng thấp càng an toàn)")}>
+      {t("admin_reviews.ai_spam", "AI spam")}: {Math.round(s * 100)}%
+    </span>
+  );
+}
+
 // productLinkBase: bỏ trống thì ẩn link "Xem sản phẩm" — portal nhân viên không có
 // màn hình sản phẩm, mà /admin/products lại bị admin-layout đá ra.
 export function ReviewsModerationView({ productLinkBase }: { productLinkBase?: string }) {
@@ -108,6 +130,7 @@ export function ReviewsModerationView({ productLinkBase }: { productLinkBase?: s
                   <div className="flex items-center gap-2">
                     <Stars value={r.rating} />
                     <span className="text-xs text-slate-400">{formatDate(r.createdAt)}</span>
+                    <SpamBadge score={r.aiSpamScore} scanned={r.aiScannedAt} />
                   </div>
                   <p className="mt-1.5 text-sm text-slate-700">{r.content}</p>
                   {productLinkBase && (

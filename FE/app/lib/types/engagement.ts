@@ -34,6 +34,8 @@ export interface ReviewResponse {
   status: ReviewStatus;
   rejectReason: string | null;
   createdAt: string;
+  aiSpamScore: number | null;
+  aiScannedAt: string | null;
 }
 
 export interface PagedReviewResponse {

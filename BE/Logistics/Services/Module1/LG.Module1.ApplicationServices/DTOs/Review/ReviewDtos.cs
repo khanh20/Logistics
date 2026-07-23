@@ -16,7 +16,9 @@ public record ReviewResponse(
     string       Content,
     ReviewStatus Status,
     string?      RejectReason,
-    DateTime     CreatedAt
+    DateTime     CreatedAt,
+    double?      AiSpamScore,
+    DateTime?    AiScannedAt
 );
 
 public record PagedReviewResponse(
@@ -37,5 +39,5 @@ public static class ReviewMapper
 {
     public static ReviewResponse ToResponse(ProductReview r) => new(
         r.Id, r.ProductId, r.CustomerId, r.Rating, r.Content,
-        r.Status, r.RejectReason, r.CreatedAt);
+        r.Status, r.RejectReason, r.CreatedAt, r.AiSpamScore, r.AiScannedAt);
 }
