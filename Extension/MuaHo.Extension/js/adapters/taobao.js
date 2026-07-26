@@ -63,6 +63,7 @@
       // ── Variant ──────────────────────────────────────────────────────────
       var selectedProps = this.readSelectedProps();
       var skuId = (page.skuId && String(page.skuId)) || C.getUrlParam("skuId") || "";
+      var variants = C.buildVariants(page, priceOriginal);
 
       return {
         platform: "TAOBAO",
@@ -82,6 +83,7 @@
         propertiesTranslated: selectedProps ? C.translateProps(selectedProps) : null,
         selectedSkuId: skuId,
         priceTiers: [],
+        variants: variants,
         originalUrl: location.href.split("&")[0],
         confidence: priceOriginal > 0 ? confidence : "low",
       };

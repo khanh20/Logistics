@@ -84,7 +84,12 @@ public class ExtensionProductUpserter(
         // 7. Price tiers — sanitize vì data scrape không đáng tin (max < min làm vỡ entity).
         var tiers = SanitizeTiers(d.PriceTiers, d.Currency);
 
-        // 8. Upsert product (UpsertFromRawAsync tự kiểm tra hàng cấm + tự transaction)
+        // 8. Variants: nếu extension liệt kê được toàn bộ SKU thì upsert tất cả;
+        //    không thì giữ 1 variant từ lựa chọn hiện tại (như cũ). Mọi variant cùng
+        //    thừa hưởng bậc giá offer-level khi bản thân nó không có bậc giá riêng.
+        var variantReqs = BuildVariantRequests(d, variantName, translatedName, priceCny, tiers);
+
+        // 9. Upsert product (UpsertFromRawAsync tự kiểm tra hàng cấm + tự transaction)
         var slug = SlugHelper.GenerateSlug(d.TitleTranslated ?? d.TitleOriginal, d.PlatformProductId);
         var upsertReq = new UpsertProductRequest(
             ShopId:            shop.Id,
@@ -96,19 +101,9 @@ public class ExtensionProductUpserter(
             TranslatedTitle:   d.TitleTranslated,
             SeoDescription:    null,
             CrawlTaskId:       null,
-            Variants: new List<UpsertVariantRequest>
-            {
-                new(VariantName:     variantName,
-                    TranslatedName:  translatedName,
-                    PriceCny:        priceCny,
-                    SkuIdOnPlatform: d.SelectedSkuId ?? d.PlatformProductId,
-                    StockRaw:        d.Stock,
-                    ImageUrl:        d.PrimaryImageUrl,
-                    SortOrder:       0,
-                    PriceTiers:      tiers),
-            },
-            Images:     images,
-            Attributes: new List<UpsertAttributeRequest>());
+            Variants:          variantReqs,
+            Images:            images,
+            Attributes:        new List<UpsertAttributeRequest>());
 
         var savedProduct = await productService.UpsertFromRawAsync(upsertReq, ct);
 
@@ -119,11 +114,71 @@ public class ExtensionProductUpserter(
             backgroundClassifier.Enqueue(savedProduct.Id,
                 d.TitleTranslated ?? d.TitleOriginal, d.PrimaryImageUrl, null);
 
-        var matchedVariant = savedProduct.Variants.FirstOrDefault(v => v.VariantName == variantName)
-                          ?? savedProduct.Variants.First();
+        // Variant khớp lựa chọn hiện tại (để add cart). Tên từ DOM (PropertiesOriginal)
+        // có thể khác định dạng nhãn với tên liệt kê từ skuMap → so khớp thêm theo tập
+        // GIÁ TRỊ (bỏ nhãn "颜色:") để không add nhầm variant khi có nhiều SKU.
+        var selKey = VariantValueKey(variantName);
+        var matchedVariant =
+            savedProduct.Variants.FirstOrDefault(v => v.VariantName == variantName)
+            ?? (selKey.Length > 0
+                    ? savedProduct.Variants.FirstOrDefault(v => VariantValueKey(v.VariantName) == selKey)
+                    : null)
+            ?? savedProduct.Variants.First();
 
         return new Result(savedProduct, matchedVariant.Id,
             savedProduct.IsForbidden, savedProduct.ForbiddenReason);
+    }
+
+    // Tập giá trị đã chuẩn hoá của 1 tên variant, bỏ nhãn: "颜色:红色;尺码:S" → "S|红色".
+    private static string VariantValueKey(string? name) =>
+        string.Join("|", (name ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => { var i = p.LastIndexOf(':'); return (i >= 0 ? p[(i + 1)..] : p).Trim(); })
+            .Where(s => s.Length > 0)
+            .OrderBy(s => s, StringComparer.Ordinal));
+
+    // Dựng danh sách UpsertVariantRequest. Có d.Variants → map toàn bộ (dedupe theo
+    // SkuId/Name); không thì trả 1 variant từ lựa chọn hiện tại (hành vi cũ).
+    private List<UpsertVariantRequest> BuildVariantRequests(
+        ExtensionScrapedData d, string variantName, string? translatedName,
+        decimal priceCny, List<UpsertPriceTierRequest> offerTiers)
+    {
+        if (d.Variants is not { Count: > 0 })
+        {
+            return new List<UpsertVariantRequest>
+            {
+                new(VariantName:     variantName,
+                    TranslatedName:  translatedName,
+                    PriceCny:        priceCny,
+                    SkuIdOnPlatform: d.SelectedSkuId ?? d.PlatformProductId,
+                    StockRaw:        d.Stock,
+                    ImageUrl:        d.PrimaryImageUrl,
+                    SortOrder:       0,
+                    PriceTiers:      offerTiers),
+            };
+        }
+
+        var list  = new List<UpsertVariantRequest>();
+        var seen  = new HashSet<string>(StringComparer.Ordinal);
+        var order = 0;
+        foreach (var v in d.Variants)
+        {
+            var name = string.IsNullOrWhiteSpace(v.Name) ? "Default" : v.Name.Trim();
+            var sku  = string.IsNullOrWhiteSpace(v.SkuId) ? null : v.SkuId!.Trim();
+            var key  = sku ?? name;
+            if (!seen.Add(key)) continue;   // trùng SKU/tên → bỏ (tránh tạo variant nhân đôi)
+
+            list.Add(new UpsertVariantRequest(
+                VariantName:     name,
+                TranslatedName:  string.IsNullOrWhiteSpace(v.NameTranslated) ? null : v.NameTranslated!.Trim(),
+                PriceCny:        ConvertToCny(v.PriceOriginal, d.Currency),
+                SkuIdOnPlatform: sku,
+                StockRaw:        v.Stock,
+                ImageUrl:        string.IsNullOrWhiteSpace(v.ImageUrl) ? d.PrimaryImageUrl : v.ImageUrl,
+                SortOrder:       order++,
+                PriceTiers:      offerTiers));
+        }
+        return list;
     }
 
     // ── Helpers (shared) ────────────────────────────────────────────────────────

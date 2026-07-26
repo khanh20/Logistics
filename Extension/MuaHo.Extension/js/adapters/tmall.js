@@ -72,6 +72,7 @@
       // ── Variant đang chọn ────────────────────────────────────────────────
       var selectedProps = this.readSelectedProps();
       var skuId = C.getUrlParam("skuId");
+      var variants = C.buildVariants(page, priceOriginal);
 
       return {
         platform: "TMALL",
@@ -91,6 +92,7 @@
         propertiesTranslated: selectedProps ? C.translateProps(selectedProps) : null,
         selectedSkuId: skuId || "",
         priceTiers: [],
+        variants: variants,
         originalUrl: location.href.split("&")[0],
         confidence: priceOriginal > 0 ? confidence : "low",
       };

@@ -42,6 +42,7 @@ public class ExtensionCartService(
                 PropertiesOriginal:   req.PropertiesOriginal,
                 SelectedSkuId:        req.SelectedSkuId,
                 PriceTiers:           req.PriceTiers,
+                Variants:             req.Variants,
                 ConfidenceTier:       req.ConfidenceTier);
 
             var upsert = await upserter.UpsertAsync(scraped, req.CategoryId, req.OriginalUrl, ct);
