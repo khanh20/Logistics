@@ -253,7 +253,7 @@ async function tryRefresh(cfg) {
   try {
     var res = await fetch(cfg.authHost + "/api/auth/refresh", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
       credentials: "include",
       body: JSON.stringify({ refreshToken: refresh }),
     });
@@ -267,7 +267,11 @@ async function tryRefresh(cfg) {
 async function postAddToCart(cfg, token, data) {
   return fetch(cfg.backendHost + "/api/cart/add-from-extension", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+    headers: {
+      "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true", // demo qua ngrok: né trang cảnh báo HTML
+      Authorization: "Bearer " + token,
+    },
     body: JSON.stringify(data),
   });
 }
@@ -302,7 +306,9 @@ async function handleAddToCart(req) {
 async function handleGetExchangeRate() {
   var cfg = await getConfig();
   try {
-    var res = await fetch(cfg.backendHost + "/api/exchange-rates/current");
+    var res = await fetch(cfg.backendHost + "/api/exchange-rates/current", {
+      headers: { "ngrok-skip-browser-warning": "true" },
+    });
     var body = await res.json();
     var rate = body && body.data && body.data.rateVndPerCny;
     return { ok: res.ok && !!rate, rateVndPerCny: rate };
@@ -314,7 +320,9 @@ async function handleGetExchangeRate() {
 async function handleGetCategories() {
   var cfg = await getConfig();
   try {
-    var res = await fetch(cfg.backendHost + "/api/categories");
+    var res = await fetch(cfg.backendHost + "/api/categories", {
+      headers: { "ngrok-skip-browser-warning": "true" },
+    });
     var body = await res.json();
     var cats = body && body.data ? body.data : [];
     return { ok: res.ok, categories: cats };
