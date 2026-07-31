@@ -35,17 +35,17 @@ export function meta(_: Route.MetaArgs) {
 // ── Helper: which actions are available for a given status ────────────────────
 function availableActions(status: OrderStatus) {
   return {
-    canAssign:         status === "Paid",
-    canPlaceManual:    status === "AwaitingManualPlace",
+    canAssign: status === "Paid",
+    canPlaceManual: status === "AwaitingManualPlace",
     canUpdateTracking: status === "OrderedOnPlatform",
-    canArrivedChina:   status === "ShippedFromShop",
-    canShippingToVN:   status === "ArrivedChinaWh",
-    canArrivedVN:      status === "ShippingToVN",
-    canDelivering:     status === "ArrivedVietnam",
-    canComplete:       status === "Delivering",
-    canReturn:         status === "Delivering",
-    canRecordIssue:    !["Completed","CancelledByTimeout","CancelledByCustomer","CancelledByStaff","Returned"].includes(status),
-    canCancelByStaff:  ["AwaitingApiPlace","AwaitingManualPlace"].includes(status),
+    canArrivedChina: status === "ShippedFromShop",
+    canShippingToVN: status === "ArrivedChinaWh",
+    canArrivedVN: status === "ShippingToVN",
+    canDelivering: status === "ArrivedVietnam",
+    canComplete: status === "Delivering",
+    canReturn: status === "Delivering",
+    canRecordIssue: !["Completed", "CancelledByTimeout", "CancelledByCustomer", "CancelledByStaff", "Returned"].includes(status),
+    canCancelByStaff: ["AwaitingApiPlace", "AwaitingManualPlace"].includes(status),
   };
 }
 
@@ -496,7 +496,31 @@ function OrderDetailInner({
                 size="sm"
                 className="mt-2 w-full"
                 loading={loading}
-                onClick={() => callAction(() => staffAssignmentsApi.manualAssign(order.id, assignStaffId), t("order.assign_success"))}
+                onClick={async () => {
+                  if (!assignStaffId.trim()) return;
+
+                  setLoading(true);
+                  try {
+                    const assignRes = await staffAssignmentsApi.manualAssign(
+                      order.id,
+                      assignStaffId.trim()
+                    );
+
+                    setAssignment(assignRes.data as StaffAssignmentDto);
+
+                    const orderRes = await manageOrdersApi.getDetail(order.id);
+                    setOrder(orderRes.data as OrderDetailResponse);
+
+                    toast.success(t("order.assign_success"));
+                    setAssignStaffId("");
+                  } catch (err) {
+                    const errMsg =
+                      (err as { message?: string })?.message ?? t("common.error");
+                    toast.error(errMsg);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
                 disabled={!assignStaffId.trim()}
               >
                 {t("order.assign_btn")}
@@ -566,86 +590,86 @@ function OrderDetailInner({
             actions.canDelivering ||
             actions.canComplete ||
             actions.canReturn) && (
-            <ActionCard title={t("order.action_transition")}>
-              <textarea
-                value={transitionNote}
-                onChange={(e) => setTransitionNote(e.target.value)}
-                placeholder={t("order.note_optional_placeholder")}
-                rows={2}
-                className="action-textarea mb-2"
-              />
+              <ActionCard title={t("order.action_transition")}>
+                <textarea
+                  value={transitionNote}
+                  onChange={(e) => setTransitionNote(e.target.value)}
+                  placeholder={t("order.note_optional_placeholder")}
+                  rows={2}
+                  className="action-textarea mb-2"
+                />
 
-              {actions.canArrivedChina && (
-                <TransitionBtn
-                  label={t("order.transition_arrived_china")}
-                  loading={loading}
-                  onClick={() => callAction(() => manageOrdersApi.arrivedChina(order.id, { note: transitionNote || undefined }), t("order.arrived_china_success"))}
-                />
-              )}
-              {actions.canShippingToVN && (
-                <TransitionBtn
-                  label={t("order.transition_shipping_to_vn")}
-                  loading={loading}
-                  onClick={() => callAction(() => manageOrdersApi.shippingToVN(order.id, { note: transitionNote || undefined }), t("order.shipping_to_vn_success"))}
-                />
-              )}
-              {actions.canArrivedVN && (
-                <div className="mb-2 rounded-xl border border-blue-100 bg-blue-50 p-3">
-                  <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-blue-800">
-                    <Package size={15} weight="bold" />
-                    {t("order.arrived_vn_form", "Nhập thông tin hàng về kho VN")}
-                  </p>
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-[11px] text-slate-500">{t("order.actual_weight_required", "Cân nặng thực (kg) *")}</label>
-                      <input type="number" min="0" step="0.01" value={weightKg} onChange={(e) => { setWeightKg(e.target.value); clearErr("weightKg"); }} placeholder="VD: 1.5" className="action-input mt-0.5" />
-                      {errors.weightKg && <p className="mt-1 text-xs text-red-500">{errors.weightKg}</p>}
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-slate-500">{t("order.volume_optional", "Thể tích (cm³) — tuỳ chọn")}</label>
-                      <input type="number" min="0" step="1" value={volumeCm3} onChange={(e) => { setVolumeCm3(e.target.value); clearErr("volumeCm3"); }} placeholder="VD: 3000" className="action-input mt-0.5" />
-                      {errors.volumeCm3 && <p className="mt-1 text-xs text-red-500">{errors.volumeCm3}</p>}
-                    </div>
-                    <div>
-                      <label className="text-[11px] text-slate-500">{t("order.storage_days_over", "Ngày lưu kho vượt miễn phí")}</label>
-                      <input type="number" min="0" step="1" value={storageDays} onChange={(e) => { setStorageDays(e.target.value); clearErr("storageDays"); }} className="action-input mt-0.5" />
-                      {errors.storageDays && <p className="mt-1 text-xs text-red-500">{errors.storageDays}</p>}
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="mt-3 w-full"
+                {actions.canArrivedChina && (
+                  <TransitionBtn
+                    label={t("order.transition_arrived_china")}
                     loading={loading}
-                    onClick={submitArrivedVN}
-                  >
-                    {t("order.arrived_vn_confirm", "Xác nhận hàng về kho VN")}
-                  </Button>
-                </div>
-              )}
-              {actions.canDelivering && (
-                <TransitionBtn
-                  label={t("order.transition_delivering")}
-                  loading={loading}
-                  onClick={() => callAction(() => manageOrdersApi.delivering(order.id, { note: transitionNote || undefined }), t("order.delivering_success"))}
-                />
-              )}
-              {actions.canComplete && (
-                <TransitionBtn
-                  label={t("order.transition_complete")}
-                  loading={loading}
-                  onClick={() => callAction(() => manageOrdersApi.complete(order.id, { note: transitionNote || undefined }), t("order.complete_success"))}
-                />
-              )}
-              {actions.canReturn && (
-                <TransitionBtn
-                  label={t("order.transition_return")}
-                  loading={loading}
-                  variant="secondary"
-                  onClick={() => callAction(() => manageOrdersApi.markReturned(order.id, { note: transitionNote || undefined }), t("order.return_success"))}
-                />
-              )}
-            </ActionCard>
-          )}
+                    onClick={() => callAction(() => manageOrdersApi.arrivedChina(order.id, { note: transitionNote || undefined }), t("order.arrived_china_success"))}
+                  />
+                )}
+                {actions.canShippingToVN && (
+                  <TransitionBtn
+                    label={t("order.transition_shipping_to_vn")}
+                    loading={loading}
+                    onClick={() => callAction(() => manageOrdersApi.shippingToVN(order.id, { note: transitionNote || undefined }), t("order.shipping_to_vn_success"))}
+                  />
+                )}
+                {actions.canArrivedVN && (
+                  <div className="mb-2 rounded-xl border border-blue-100 bg-blue-50 p-3">
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-blue-800">
+                      <Package size={15} weight="bold" />
+                      {t("order.arrived_vn_form", "Nhập thông tin hàng về kho VN")}
+                    </p>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-[11px] text-slate-500">{t("order.actual_weight_required", "Cân nặng thực (kg) *")}</label>
+                        <input type="number" min="0" step="0.01" value={weightKg} onChange={(e) => { setWeightKg(e.target.value); clearErr("weightKg"); }} placeholder="VD: 1.5" className="action-input mt-0.5" />
+                        {errors.weightKg && <p className="mt-1 text-xs text-red-500">{errors.weightKg}</p>}
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-500">{t("order.volume_optional", "Thể tích (cm³) — tuỳ chọn")}</label>
+                        <input type="number" min="0" step="1" value={volumeCm3} onChange={(e) => { setVolumeCm3(e.target.value); clearErr("volumeCm3"); }} placeholder="VD: 3000" className="action-input mt-0.5" />
+                        {errors.volumeCm3 && <p className="mt-1 text-xs text-red-500">{errors.volumeCm3}</p>}
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-500">{t("order.storage_days_over", "Ngày lưu kho vượt miễn phí")}</label>
+                        <input type="number" min="0" step="1" value={storageDays} onChange={(e) => { setStorageDays(e.target.value); clearErr("storageDays"); }} className="action-input mt-0.5" />
+                        {errors.storageDays && <p className="mt-1 text-xs text-red-500">{errors.storageDays}</p>}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="mt-3 w-full"
+                      loading={loading}
+                      onClick={submitArrivedVN}
+                    >
+                      {t("order.arrived_vn_confirm", "Xác nhận hàng về kho VN")}
+                    </Button>
+                  </div>
+                )}
+                {actions.canDelivering && (
+                  <TransitionBtn
+                    label={t("order.transition_delivering")}
+                    loading={loading}
+                    onClick={() => callAction(() => manageOrdersApi.delivering(order.id, { note: transitionNote || undefined }), t("order.delivering_success"))}
+                  />
+                )}
+                {actions.canComplete && (
+                  <TransitionBtn
+                    label={t("order.transition_complete")}
+                    loading={loading}
+                    onClick={() => callAction(() => manageOrdersApi.complete(order.id, { note: transitionNote || undefined }), t("order.complete_success"))}
+                  />
+                )}
+                {actions.canReturn && (
+                  <TransitionBtn
+                    label={t("order.transition_return")}
+                    loading={loading}
+                    variant="secondary"
+                    onClick={() => callAction(() => manageOrdersApi.markReturned(order.id, { note: transitionNote || undefined }), t("order.return_success"))}
+                  />
+                )}
+              </ActionCard>
+            )}
 
           {/* Record issue */}
           {actions.canRecordIssue && (
