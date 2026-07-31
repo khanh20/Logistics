@@ -66,8 +66,8 @@ export default function AdminVipTiersPage() {
     setLevel(record.level);
     setMinSpendVnd(record.minSpendVnd);
     setColorHex(record.colorHex || "");
-    setServiceFeeDiscountPct(record.serviceFeeDiscountPct);
-    setDepositPctOverride(record.depositPctOverride ?? undefined);
+    setServiceFeeDiscountPct(record.serviceFeeDiscountPct * 100);
+    setDepositPctOverride(record.depositPctOverride !== null && record.depositPctOverride !== undefined ? record.depositPctOverride * 100 : undefined);
     setFreeInspection(record.freeInspection);
     setPrioritySupport(record.prioritySupport);
     setFreeStorageDays(record.freeStorageDays);
@@ -104,8 +104,8 @@ export default function AdminVipTiersPage() {
         level,
         minSpendVnd,
         colorHex: colorHex.trim() ? colorHex.trim() : undefined,
-        serviceFeeDiscountPct,
-        depositPctOverride: depositPctOverride !== undefined ? depositPctOverride : undefined,
+        serviceFeeDiscountPct: serviceFeeDiscountPct / 100,
+        depositPctOverride: depositPctOverride !== undefined ? depositPctOverride / 100 : undefined,
         freeInspection,
         prioritySupport,
         freeStorageDays,
@@ -207,7 +207,7 @@ export default function AdminVipTiersPage() {
                         {record.minSpendVnd.toLocaleString()} ₫
                       </td>
                       <td className="py-3.5 px-6 font-mono font-medium text-green-700">
-                        {record.serviceFeeDiscountPct}%
+                        {record.serviceFeeDiscountPct * 100}%
                       </td>
                       <td className="py-3.5 px-6">
                         <div className="flex flex-col gap-0.5 text-xs text-green-700 font-medium">
@@ -268,12 +268,21 @@ export default function AdminVipTiersPage() {
                 {editingTier ? "Chỉnh sửa hạng VIP" : "Thêm hạng VIP mới"}
               </h3>
               <button
-                onClick={() => setIsModalVisible(false)}
+                onClick={() => {
+                  setIsModalVisible(false);
+                  setErrorMessage("");
+                }}
                 className="text-gray-400 hover:text-black transition-colors"
               >
                 <X className="text-lg" />
               </button>
             </div>
+
+            {errorMessage && (
+              <div className="mb-4 p-3 text-sm rounded-lg bg-rose-50 border border-rose-200 text-rose-700">
+                {errorMessage}
+              </div>
+            )}
 
             <form onSubmit={handleModalSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -388,7 +397,10 @@ export default function AdminVipTiersPage() {
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setIsModalVisible(false)}
+                  onClick={() => {
+                    setIsModalVisible(false);
+                    setErrorMessage("");
+                  }}
                 >
                   Hủy
                 </Button>
