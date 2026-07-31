@@ -7,14 +7,14 @@ var DEFAULTS = {
   isTranslate: true,
 };
 
-// backendHost để THẲNG localhost (extension ở máy local gọi backend trực tiếp, nhanh,
-// khỏi qua ngrok/trang cảnh báo). Riêng authHost ở preset "demo" trỏ domain NGROK vì
-// khi đăng nhập trên Vercel, cookie muaho.access bị set trên domain ngrok (host-only),
-// nên phải đọc cookie từ đó. webHost = FE để "mở giỏ / đăng nhập" trỏ đúng.
+// Preset "demo": FE trên Vercel, BE ra ngoài qua 1 URL ngrok tĩnh → nginx phân tuyến
+// theo path (xem deploy/nginx-muaho.conf): /m1 → Module1 (5066), /auth → Auth (5016).
+// Cookie muaho.access set host-only trên domain ngrok nên đọc cookie vẫn khớp host.
+// webHost = FE để "mở giỏ / đăng nhập" trỏ đúng.
 var NGROK = "https://climatologic-engrained-dann.ngrok-free.dev";
 var PRESETS = {
   local: { backendHost: "http://localhost:5066", webHost: "http://localhost:5173",      authHost: "http://localhost:5016" },
-  demo:  { backendHost: "http://localhost:5066", webHost: "https://muaho-fe.vercel.app", authHost: NGROK },
+  demo:  { backendHost: NGROK + "/m1",           webHost: "https://muaho-fe.vercel.app", authHost: NGROK + "/auth" },
 };
 
 document.addEventListener("DOMContentLoaded", function () {

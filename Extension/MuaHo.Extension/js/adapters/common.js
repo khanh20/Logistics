@@ -172,6 +172,139 @@
         .trim();
     },
 
+    // ── Liệt kê TẤT CẢ variant (không chỉ variant đang chọn) ──────────────────
+    // Nguồn: skuProps + skuMap (1688) hoặc skuBase + sku2info (Taobao/Tmall) mà
+    // getGlobalData đã bắc cầu qua window. Trả [] nếu SP không có SKU (default) —
+    // khi đó backend tự dựng 1 variant "Default" như cũ. fallbackPrice: giá gốc
+    // (CNY) adapter đã tính, dùng khi entry skuMap không kèm giá riêng.
+    buildVariants: function (page, fallbackPrice) {
+      if (!page) return [];
+      try {
+        var fromBase = Common._variantsFromSkuBase(page); // Taobao/Tmall
+        if (fromBase.length) return Common._dedupeVariants(fromBase);
+        var fromMap = Common._variantsFromSkuMap(page, fallbackPrice); // 1688
+        return Common._dedupeVariants(fromMap);
+      } catch (e) {
+        return [];
+      }
+    },
+
+    _dedupeVariants: function (list) {
+      var seen = {};
+      var out = [];
+      list.forEach(function (v) {
+        if (!v || !(v.priceOriginal > 0)) return;
+        var key = v.skuId || v.name;
+        if (!key || seen[key]) return;
+        seen[key] = true;
+        out.push(v);
+      });
+      return out.slice(0, 200); // chặn SP dị thường có hàng nghìn tổ hợp
+    },
+
+    // 1688: skuMap là object keyed "颜色>尺码" HOẶC array item có specAttrs.
+    // Token trong key là TÊN giá trị (khớp thứ tự skuProps) → ghép nhãn thành
+    // "颜色:红色;尺码:S". Bỏ qua nếu key là propPath dạng id (pvid:vid) — để
+    // nhánh skuBase (Taobao/Tmall) xử lý.
+    _variantsFromSkuMap: function (page, fallbackPrice) {
+      var skuMap = page.skuMap;
+      if (!skuMap) return [];
+      var labels = (page.skuProps || []).map(function (p) {
+        return p.prop || p.propName || p.name || "";
+      });
+
+      var entries = [];
+      if (Array.isArray(skuMap)) {
+        skuMap.forEach(function (s) {
+          if (s) entries.push({ key: s.specAttrs || s.specAttr || s.spec || "", sku: s });
+        });
+      } else {
+        Object.keys(skuMap).forEach(function (k) {
+          entries.push({ key: k, sku: skuMap[k] });
+        });
+      }
+
+      var out = [];
+      for (var i = 0; i < entries.length; i++) {
+        var sku = entries[i].sku || {};
+        var raw = String(entries[i].key || "").replace(/&gt;/g, ">").replace(/^>+/, "");
+        // propPath id-based (Taobao) → không đọc được tên ở đây, nhường skuBase.
+        if (/\d+:\d+/.test(raw)) return [];
+        var tokens = raw.split(">").map(function (t) { return t.trim(); }).filter(Boolean);
+        var parts = tokens.map(function (t, idx) {
+          return labels[idx] ? labels[idx] + ":" + t : t;
+        });
+        var name = parts.join(";") || "Default";
+
+        var priceRaw = sku.price != null && sku.price !== "" ? sku.price
+                     : (sku.discountPrice != null ? sku.discountPrice : null);
+        var price = priceRaw != null ? Common.parsePrice(priceRaw) : 0;
+        if (!(price > 0)) price = Number(fallbackPrice) || 0;
+
+        out.push(Common._mkVariant(name, sku.skuId || sku.specId, price,
+          Common._pickStock(sku), sku.imageUrl || sku.image));
+      }
+      return out;
+    },
+
+    // Taobao/Tmall: skuBase.props (pid→{name, values:[{vid,name,image}]}) +
+    // skuBase.skus (propPath "pid:vid;pid:vid") + sku2info (skuId→{price,quantity}).
+    _variantsFromSkuBase: function (page) {
+      var base = page.skuBase;
+      if (!base || !Array.isArray(base.props) || !Array.isArray(base.skus)) return [];
+      var info = page.sku2info || {};
+
+      var valMap = {};
+      base.props.forEach(function (p) {
+        (p.values || []).forEach(function (v) {
+          valMap[p.pid + ":" + v.vid] = { label: p.name, value: v.name, image: v.image };
+        });
+      });
+
+      var out = [];
+      base.skus.forEach(function (s) {
+        var pairs = String(s.propPath || "").split(";").filter(Boolean);
+        var parts = [];
+        var image = null;
+        pairs.forEach(function (pair) {
+          var m = valMap[pair];
+          if (m) {
+            parts.push(m.label ? m.label + ":" + m.value : m.value);
+            if (m.image && !image) image = m.image;
+          }
+        });
+        var name = parts.join(";") || "Default";
+
+        var meta = info[s.skuId] || {};
+        var priceObj = meta.price || {};
+        // Taobao lưu priceMoney theo "phân" (cents) → chia 100.
+        var price = priceObj.priceMoney != null
+          ? Number(priceObj.priceMoney) / 100
+          : Common.parsePrice(priceObj.price != null ? priceObj.price : (meta.priceText || ""));
+        var stock = meta.quantity != null ? Number(meta.quantity) : Common._pickStock(meta);
+
+        out.push(Common._mkVariant(name, s.skuId, price || 0, stock, image));
+      });
+      return out;
+    },
+
+    _pickStock: function (o) {
+      var s = o.canBookCount != null ? o.canBookCount
+            : (o.stock != null ? o.stock : (o.quantity != null ? o.quantity : null));
+      return s != null && !isNaN(Number(s)) ? Number(s) : null;
+    },
+
+    _mkVariant: function (name, skuId, price, stock, image) {
+      return {
+        name: name || "Default",
+        nameTranslated: MUAHO.isTranslate ? Common.translateProps(name) : null,
+        skuId: skuId != null && String(skuId) !== "" ? String(skuId) : null,
+        priceOriginal: Number(price) || 0,
+        stock: stock,
+        imageUrl: image ? Common.normalizeImage(image) : null,
+      };
+    },
+
     // Merge nhiều kết quả tier theo priority (phần tử đầu ưu tiên cao nhất).
     // Mỗi field: lấy giá trị non-empty đầu tiên theo thứ tự.
     mergePriority: function (results) {

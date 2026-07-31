@@ -306,6 +306,7 @@
         propertiesOriginal: data.propertiesOriginal,
         selectedSkuId: data.selectedSkuId,
         priceTiers: data.priceTiers,
+        variants: data.variants || [],
         categoryId: catSel && catSel.value ? catSel.value : null,
         originalUrl: data.originalUrl,
         customerNote: null,

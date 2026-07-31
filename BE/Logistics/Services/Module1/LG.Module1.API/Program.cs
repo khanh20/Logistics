@@ -159,14 +159,24 @@ builder.Services
 
         opt.Events = new JwtBearerEvents
         {
-            // Đọc JWT từ cookie nếu FE không gửi Authorization header
+            // Đọc JWT từ query ?access_token= (SignalR/WebSocket không gửi được header
+            // Authorization) cho đường /hubs, hoặc từ cookie nếu FE không gửi header.
             OnMessageReceived = ctx =>
             {
                 if (string.IsNullOrEmpty(ctx.Token))
                 {
-                    var fromCookie = ctx.Request.Cookies["muaho.access"];
-                    if (!string.IsNullOrEmpty(fromCookie))
-                        ctx.Token = fromCookie;
+                    var accessToken = ctx.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(accessToken) &&
+                        ctx.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    {
+                        ctx.Token = accessToken;
+                    }
+                    else
+                    {
+                        var fromCookie = ctx.Request.Cookies["muaho.access"];
+                        if (!string.IsNullOrEmpty(fromCookie))
+                            ctx.Token = fromCookie;
+                    }
                 }
                 return Task.CompletedTask;
             },

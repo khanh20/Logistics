@@ -54,6 +54,9 @@
         shopId: seller.shopId || null,
         shopName: seller.shopName || seller.shopTitle || seller.nick || null,
         title: typeof title === "string" ? title : null,
+        // Full SKU model để liệt kê mọi variant (không chỉ variant đang chọn).
+        skuBase: res.skuBase || (res.skuCore && res.skuCore.skuBase) || null,
+        sku2info: (res.skuCore && res.skuCore.sku2info) || res.sku2info || null,
       };
 
       // Ảnh (nếu có trong res.skuBase / res.componentsVO mainPic)
@@ -198,6 +201,8 @@
         out.sellerId = ice.sellerId || out.sellerId;
         out.shopName = ice.shopName || out.shopName;
         out.title = ice.title || out.title;
+        if (ice.skuBase) out.skuBase = ice.skuBase;
+        if (ice.sku2info) out.sku2info = ice.sku2info;
         if (ice.imageList && ice.imageList.length) {
           out.imageList = ice.imageList;
           out.image = ice.image;
@@ -216,6 +221,8 @@
           if (sku) {
             out.skuId = sku.skuId;
             if (sku.valItemInfo) out.skuMap = sku.valItemInfo.skuMap;
+            if (sku.skuBase) out.skuBase = out.skuBase || sku.skuBase;
+            if (sku.sku2info) out.sku2info = out.sku2info || sku.sku2info;
           }
           var item = window.Hub.config.get("item");
           if (item) {
@@ -315,6 +322,8 @@
         out.sellerId = ice.sellerId || out.sellerId;
         out.companyName = ice.shopName || out.companyName; // adapter Tmall đọc companyName trước
         out.title = ice.title || out.title;
+        if (ice.skuBase) out.skuBase = ice.skuBase;
+        if (ice.sku2info) out.sku2info = ice.sku2info;
         if (ice.imageList && ice.imageList.length) {
           out.imageList = ice.imageList;
           out.image = ice.image;

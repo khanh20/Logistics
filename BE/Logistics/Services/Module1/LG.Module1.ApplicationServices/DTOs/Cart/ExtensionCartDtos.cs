@@ -23,6 +23,7 @@ public record AddFromExtensionRequest(
     [MaxLength(1000)]          string? PropertiesOriginal,
     [MaxLength(200)]           string? SelectedSkuId,
                                List<ExtensionPriceTierDto>? PriceTiers,
+                               List<ExtensionVariantDto>? Variants,     // mọi tổ hợp SKU; rỗng → chỉ default
                                Guid? CategoryId,
     [Required, MaxLength(2000)] string OriginalUrl,
                                string? CustomerNote,
@@ -35,6 +36,16 @@ public record ExtensionPriceTierDto(
     [Range(1, int.MaxValue)] int MinQuantity,
                               int? MaxQuantity,
     [Range(0.01, 9_999_999)] decimal PriceOriginal           // theo Currency của request
+);
+
+// Một variant (tổ hợp SKU) do extension liệt kê từ skuMap/skuBase của trang sàn.
+public record ExtensionVariantDto(
+    [Required, MaxLength(500)] string Name,                  // "颜色:红色;尺码:S"
+    [MaxLength(500)]           string? NameTranslated,
+    [MaxLength(200)]           string? SkuId,
+    [Range(0.01, 9_999_999)]   decimal PriceOriginal,        // theo Currency của request
+                               int? Stock,
+    [MaxLength(1000)]          string? ImageUrl
 );
 
 public record AddFromExtensionResponse(

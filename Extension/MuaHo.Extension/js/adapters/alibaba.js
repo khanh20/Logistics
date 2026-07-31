@@ -87,6 +87,9 @@
       var selectedProps = this.readSelectedProps();
       var selectedSkuId = "";
 
+      // Toàn bộ variant (mọi tổ hợp SKU), không chỉ variant đang chọn.
+      var variants = C.buildVariants(page, priceOriginal);
+
       return {
         platform: "1688",
         platformProductId: this.getProductId(),
@@ -105,6 +108,7 @@
         propertiesTranslated: selectedProps ? C.translateProps(selectedProps) : null,
         selectedSkuId: selectedSkuId,
         priceTiers: priceTiers,
+        variants: variants,
         originalUrl: location.href.split("?")[0],
         confidence: priceOriginal > 0 ? confidence : "low",
       };

@@ -46,6 +46,7 @@ public record ExtensionScrapedData(
     [MaxLength(1000)]          string? PropertiesOriginal,
     [MaxLength(200)]           string? SelectedSkuId,
                                List<ExtensionPriceTierDto>? PriceTiers,
+                               List<ExtensionVariantDto>? Variants,
     [MaxLength(20)]            string? ConfidenceTier
 );
 
