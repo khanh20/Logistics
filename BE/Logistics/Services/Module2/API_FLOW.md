@@ -32,7 +32,8 @@ Khách nhận hàng ✅
 
 | Bước | Method | Endpoint | Body / Params |
 |------|--------|----------|---------------|
-| 1. Tạo package mới | `POST` | `/api/packages` | `{ customerId, platformOrderId, description, declaredValueCny, insuranceLevel, packagingType }` |
+| 0. Danh sách package cho staff | `GET` | `/api/packages?page=1&pageSize=20` | Phân trang, mới nhất trước; yêu cầu `warehouse.read` |
+| 1. Tạo package mới | `POST` | `/api/packages` | `{ customerId, orderId, packagingType, insuranceOpted, insuranceLevel? }` |
 | 2. Nhập kho TQ — cân đo | `POST` | `/api/warehouses/{warehouseId}/receive-cn` | `{ barcode, actualWeightKg, lengthCm, widthCm, heightCm, chinaWaybillCode? }` |
 | 3. Upload ảnh (tuỳ chọn) | `POST` | `/api/packages/{id}/images` | `{ imageUrl, imageType }` |
 

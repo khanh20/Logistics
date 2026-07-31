@@ -17,6 +17,8 @@ Thumbs.db
 
 .react-router
 .agents
+/.codex/
+/AGENTS.md
 
 # Mọi file .env chứa secrets (mọi cấp thư mục) — .env.example vẫn commit bình thường
 **/.env
@@ -29,9 +31,12 @@ Thumbs.db
 BE/Logistics/Services/Module1/LG.Module1.API/appsettings.json
 
 # Ghi chú cá nhân / báo cáo
+*.md
+/uml/
 note.txt
 /Note.md
 /Manual.md
+/deploy.md
 Latex/
 
 # Dữ liệu & mô hình ML (tái lập được, không commit)

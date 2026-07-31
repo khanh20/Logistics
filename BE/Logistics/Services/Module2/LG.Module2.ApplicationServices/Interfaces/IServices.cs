@@ -1,4 +1,5 @@
 using LG.Module2.ApplicationServices.DTOs.AI;
+using LG.Module2.ApplicationServices.DTOs.Common;
 using LG.Module2.ApplicationServices.DTOs.Carrier;
 using LG.Module2.ApplicationServices.DTOs.Claim;
 using LG.Module2.ApplicationServices.DTOs.Container;
@@ -215,6 +216,7 @@ public interface IAIForecastService
 // ── IPackageService ───────────────────────────────────────────────────────────
 public interface IPackageService
 {
+    Task<PagedResult<PackageSummaryResponse>> GetPagedAsync(int page = 1, int pageSize = 20, CancellationToken ct = default);
     Task<PackageSummaryResponse>  CreateAsync(CreatePackageRequest req, CancellationToken ct = default);
     Task<PackageDetailResponse>   GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<PackageDetailResponse>   GetByBarcodeAsync(string barcode, CancellationToken ct = default);

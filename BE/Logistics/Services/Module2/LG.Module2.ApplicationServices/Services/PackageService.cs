@@ -1,4 +1,5 @@
 using LG.Module2.ApplicationServices.DTOs.Package;
+using LG.Module2.ApplicationServices.DTOs.Common;
 using LG.Module2.ApplicationServices.Interfaces;
 using LG.Module2.Domain.Entities;
 using LG.Module2.Domain.Exceptions;
@@ -16,6 +17,17 @@ public class PackageService(
     ILogger<PackageService>  logger
 ) : IPackageService
 {
+    public async Task<PagedResult<PackageSummaryResponse>> GetPagedAsync(
+        int page = 1, int pageSize = 20, CancellationToken ct = default)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+
+        var (items, totalCount) = await packageRepo.GetPagedAsync(page, pageSize, ct);
+        return new PagedResult<PackageSummaryResponse>(
+            items.Select(MapToSummary).ToList(), totalCount, page, pageSize);
+    }
+
     public async Task<PackageSummaryResponse> CreateAsync(CreatePackageRequest req, CancellationToken ct = default)
     {
         var barcode = await barcodeService.GenerateAsync(ct);

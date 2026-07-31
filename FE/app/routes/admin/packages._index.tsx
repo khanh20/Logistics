@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   Button,
@@ -10,6 +10,8 @@ import {
   Alert,
   message,
   Typography,
+  Table,
+  Tag,
 } from "antd";
 import { packagesApi, domesticWaybillsApi } from "~/lib/api/logistics";
 import { BarcodeScanInput } from "~/components/admin/BarcodeScanInput";
@@ -20,10 +22,29 @@ import {
   PACKAGING_TYPE_LABEL,
   INSURANCE_LEVELS,
   INSURANCE_LEVEL_LABEL,
+  PACKAGE_STATUS_LABEL,
 } from "~/lib/constants/logistics";
+import { formatDate, formatWeight } from "~/lib/utils/format";
+import type {
+  PackageStatus,
+  PackageSummary,
+  PackagingType,
+} from "~/lib/types/logistics";
 import type { Route } from "./+types/packages._index";
 
 const { Title, Text } = Typography;
+const PAGE_SIZE = 20;
+
+const statusColor = (status: PackageStatus) => {
+  if (status === "Delivered") return "green";
+  if (status === "Lost") return "red";
+  if (status === "Returned") return "orange";
+  if (status === "InVnWarehouse") return "cyan";
+  if (status === "Dispatched") return "blue";
+  if (status === "Customs") return "gold";
+  if (status === "InTransit") return "purple";
+  return "default";
+};
 
 export function meta(_: Route.MetaArgs) {
   return [{ title: "Kiện hàng — Quản trị" }];
@@ -41,8 +62,31 @@ export default function AdminPackagesPage() {
   const [creating, setCreating] = useState(false);
   const [syncNo, setSyncNo] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [packages, setPackages] = useState<PackageSummary[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [form] = Form.useForm();
   const insuranceOpted = Form.useWatch("insuranceOpted", form);
+
+  const loadPackages = useCallback(async (targetPage: number) => {
+    setListLoading(true);
+    setListError("");
+    try {
+      const res = await packagesApi.list(targetPage, PAGE_SIZE);
+      setPackages(res.data?.items ?? []);
+      setTotalCount(res.data?.totalCount ?? 0);
+    } catch (err) {
+      setListError(normalizeError(err).message || "Không tải được danh sách kiện.");
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPackages(page);
+  }, [loadPackages, page]);
 
   const handleSearch = async (barcode: string) => {
     if (!barcode) return;
@@ -132,7 +176,7 @@ export default function AdminPackagesPage() {
         showIcon
         className="my-4"
         message="Tra cứu kiện theo mã vạch"
-        description="Hệ thống không có danh sách toàn bộ kiện cho staff — quét/nhập mã vạch để mở chi tiết kiện."
+        description="Quét/nhập mã vạch để mở nhanh chi tiết, hoặc chọn kiện trong danh sách bên dưới."
       />
 
       <div className="max-w-md">
@@ -141,6 +185,99 @@ export default function AdminPackagesPage() {
           loading={searching}
           onScan={handleSearch}
           placeholder="Quét hoặc nhập mã vạch để tra cứu..."
+        />
+      </div>
+
+      <div className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <Title level={5} className="!mb-0">
+            Danh sách kiện
+          </Title>
+          <Text type="secondary">{totalCount} kiện</Text>
+        </div>
+
+        {listError && (
+          <Alert
+            type="error"
+            showIcon
+            className="mb-3"
+            message={listError}
+            action={<Button size="small" onClick={() => void loadPackages(page)}>Thử lại</Button>}
+          />
+        )}
+
+        <Table<PackageSummary>
+          rowKey="id"
+          loading={listLoading}
+          dataSource={packages}
+          scroll={{ x: 980 }}
+          pagination={{
+            current: page,
+            pageSize: PAGE_SIZE,
+            total: totalCount,
+            showSizeChanger: false,
+            showTotal: (total) => `Tổng ${total} kiện`,
+            onChange: setPage,
+          }}
+          columns={[
+            {
+              title: "Barcode",
+              dataIndex: "barcode",
+              key: "barcode",
+              render: (barcode: string, pkg) => (
+                <Button type="link" className="!px-0 font-mono" onClick={() => navigate(`/admin/packages/${pkg.id}`)}>
+                  {barcode}
+                </Button>
+              ),
+            },
+            {
+              title: "Trạng thái",
+              dataIndex: "status",
+              key: "status",
+              render: (status: PackageStatus) => (
+                <Tag color={statusColor(status)}>{PACKAGE_STATUS_LABEL[status] ?? status}</Tag>
+              ),
+            },
+            {
+              title: "Đóng gói",
+              dataIndex: "packagingType",
+              key: "packagingType",
+              render: (type: PackagingType) =>
+                PACKAGING_TYPE_LABEL[type] ?? type,
+            },
+            {
+              title: "Khối lượng tính cước",
+              dataIndex: "chargedWeightKg",
+              key: "chargedWeightKg",
+              render: (weight: number | null) => weight != null ? formatWeight(weight) : "—",
+            },
+            {
+              title: "Order ID",
+              dataIndex: "orderId",
+              key: "orderId",
+              render: (id: string) => <Text copyable={{ text: id }} className="font-mono text-xs">{id.slice(0, 8)}…</Text>,
+            },
+            {
+              title: "Customer ID",
+              dataIndex: "customerId",
+              key: "customerId",
+              render: (id: string) => <Text copyable={{ text: id }} className="font-mono text-xs">{id.slice(0, 8)}…</Text>,
+            },
+            {
+              title: "Ngày tạo",
+              dataIndex: "createdAt",
+              key: "createdAt",
+              render: (createdAt: string) => formatDate(createdAt),
+            },
+            {
+              title: "Thao tác",
+              key: "action",
+              fixed: "right",
+              render: (_: unknown, pkg) => (
+                <Button size="small" onClick={() => navigate(`/admin/packages/${pkg.id}`)}>Xem</Button>
+              ),
+            },
+          ]}
         />
       </div>
 

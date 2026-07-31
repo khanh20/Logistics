@@ -39,6 +39,7 @@ public interface IWarehouseStaffRepository
 // ── Package ───────────────────────────────────────────────────────────────────
 public interface IPackageRepository
 {
+    Task<(List<Package> Items, int TotalCount)> GetPagedAsync(int page, int pageSize, CancellationToken ct = default);
     Task<Package?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<Package?> GetByBarcodeAsync(string barcode, CancellationToken ct = default);
     Task<List<Package>> GetByOrderAsync(Guid orderId, CancellationToken ct = default);

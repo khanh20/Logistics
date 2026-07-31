@@ -1,7 +1,8 @@
 # Báo cáo: Mô hình dự báo thời gian vận chuyển (Lead Time) Trung Quốc → Việt Nam
 
-*Module 2 — Logistics & Tracking · Nhánh `dungta/ai` · Ngày: 2026-07-08*
-*Mã nguồn: `LG.Module2.Seeder` (sinh dữ liệu), `LG.Module2.Trainer` (huấn luyện) · Nhật ký chi tiết từng bước: `LeadTime.md`*
+*Module 2 — Logistics & Tracking · Nhánh `dungta/ai` · Ngày: 2026-07-08 · Cập nhật: 2026-07-23*
+*Mã nguồn: `LG.Module2.Seeder` (sinh dữ liệu), `LG.Module2.Trainer` (huấn luyện),
+`LeadTimeModelService` (suy luận) · Nhật ký chi tiết từng bước: `LeadTime.md`*
 
 ---
 
@@ -60,6 +61,30 @@ Decision Trees — GBDT, cài đặt FastTree của ML.NET). Nguyên lý hoạt 
 - Dự báo cuối cùng = tổng đóng góp của tất cả các cây. Cấu hình sau tinh chỉnh của
   bài toán này: 200 cây × 16 lá, hệ số học 0,03.
 
+Viết dưới dạng toán học, mô hình sau \(M\) vòng boosting là:
+
+\[
+F_M(x)=F_0(x)+\eta\sum_{m=1}^{M}h_m(x)
+\]
+
+Trong đó \(F_0\) là dự báo khởi đầu, \(h_m\) là cây thứ \(m\), \(M=200\), và
+\(\eta=0{,}03\) là hệ số học. Ở vòng \(m\), cây mới học **gradient âm của hàm mất
+mát** tại dự báo hiện có:
+
+\[
+r_{im}=
+-\left.
+\frac{\partial L(y_i,F(x_i))}{\partial F(x_i)}
+\right|_{F=F_{m-1}}
+\qquad;\qquad
+F_m(x)=F_{m-1}(x)+\eta h_m(x)
+\]
+
+Với hồi quy bình phương sai số, \(r_{im}\) tương ứng với phần sai số còn lại giữa
+giá trị thực và dự báo. Vì vậy có thể hiểu cây sau đang sửa phần mà tổng các cây
+trước chưa giải thích được. Learning rate nhỏ làm mỗi cây chỉ điều chỉnh một bước
+ngắn, giúp mô hình ổn định hơn.
+
 **Sinh khoảng dự báo: phương pháp dự đoán bảo hình** (conformal prediction). Mô hình
 GBDT chỉ trả một con số (dự báo điểm), nhưng nghiệp vụ cần **một khoảng ngày kèm độ
 tin cậy** ("3–5 ngày, tin cậy 80%"). Nguyên lý conformal:
@@ -75,6 +100,40 @@ tin cậy** ("3–5 ngày, tin cậy 80%"). Nguyên lý conformal:
   (cửa khẩu × chế-độ-Tết) thay vì gộp chung, vì độ nhiễu của các nhóm khác nhau rõ
   rệt (Móng Cái mùa Tết lệch ±6,98 ngày trong khi mùa thường chỉ ±1,62). Độ tin cậy
   công bố cho khách từ đây là **con số đo được**, không phải gán cứng.
+
+Chi tiết công thức: với dự báo điểm \(\hat y_i=F_M(x_i)\), nonconformity score trên
+tập hiệu chỉnh là:
+
+\[
+r_i=|y_i-\hat y_i|
+\qquad;\qquad
+q_{0.8}=\operatorname{Quantile}_{0.8}(r_1,\ldots,r_n)
+\]
+
+Khoảng trả về trước khi làm tròn là:
+
+\[
+[L,U]=[\max(1,\hat y-q_{0.8}),\ \hat y+q_{0.8}]
+\]
+
+Khi serve, hệ thống trả ngày nguyên:
+
+\[
+\operatorname{Min}=\max(1,\lfloor L\rfloor)
+\qquad;\qquad
+\operatorname{Max}=\max(\operatorname{Min}+1,\lceil U\rceil)
+\]
+
+Code hiện lấy empirical percentile tại chỉ số
+\(\lfloor0{,}8(n-1)\rfloor\) của residual đã sắp xếp. Đây là cách hiệu chỉnh thực
+dụng và coverage đã được đo trên tập test. Nếu cần bảo chứng finite-sample bảo thủ
+hơn, có thể dùng hạng:
+
+\[
+k=\left\lceil(n+1)(1-\alpha)\right\rceil,\quad \alpha=0{,}2
+\]
+
+thay cho percentile hiện tại, đồng thời chặn \(k\) trong kích thước tập hiệu chỉnh.
 
 **Nguyên tắc chống rò rỉ dữ liệu** (data leakage) — xuyên suốt thiết kế:
 
@@ -131,6 +190,37 @@ minh (gọi là "sự thật ngầm"):
 | Đợt ùn tắc biên ngẫu nhiên | ~8 đợt/năm/cửa khẩu, kéo dài 3–10 ngày, **nhân** hệ số 1,3–2,5 |
 | Nhiễu vận hành + ngoại lệ | N(0; 0,5) + 2% số ca bị giữ hàng lẻ tẻ (+2–6 ngày) |
 
+Có thể tóm tắt công thức sinh nhãn như sau. Trước tiên lấy thời gian cơ sở theo cửa
+khẩu:
+
+\[
+D_0\sim\mathcal{N}(\mu_{\text{border}},\sigma_{\text{border}})
+\]
+
+Sau đó cộng các ảnh hưởng biết trước:
+
+\[
+D_1=D_0
++P_{\text{province}}
++C_{\text{carrier}}
++0{,}8I_{\text{bulk}}
++T_{\text{tet}}
++H_{\text{holiday}}
++S_{\text{summer}}
++W_{\text{weekend}}
+\]
+
+Nếu ngày gửi nằm trong một đợt tắc biên, toàn bộ thời gian tại thời điểm đó bị nhân
+với \(M_{\text{congestion}}\in[1{,}3;2{,}5]\). Nhãn cuối cùng là:
+
+\[
+Y=\max(1,\ D_1M_{\text{congestion}}+\epsilon+O)
+\]
+
+với \(\epsilon\sim\mathcal{N}(0;0{,}5)\), còn \(O\) là 2–6 ngày cộng thêm cho 2% ca
+ngoại lệ. Khi không tắc biên, \(M_{\text{congestion}}=1\). Cờ `alert_active` không
+bật ngay lúc tắc mà trễ 2 ngày, mô phỏng thời gian hệ thống cần tích luỹ đủ tín hiệu.
+
 Cách tiếp cận này có hai giá trị: (1) dựng và kiểm chứng toàn bộ quy trình trước khi
 có dữ liệu thật — vì đã biết "sự thật ngầm", ta kiểm tra được mô hình có học lại đúng
 các quy luật hay không (một dạng kiểm thử cho quy trình học máy); (2) khi hệ vận hành,
@@ -182,6 +272,14 @@ Kết quả khảo sát dữ liệu (EDA) trên 50.000 dòng — các con số c
    bỏ `is_tet_window` (trùng `season`).
 4. **Mã hoá one-hot** cho 4 cột phân loại (cửa khẩu, tỉnh, hãng vận chuyển, mùa);
    các cột số giữ nguyên — mô hình dạng cây không cần chuẩn hoá thang đo.
+   Với một biến phân loại có \(K\) giá trị, giá trị thứ \(k\) được biến đổi thành
+   vector chỉ báo:
+   \[
+   x_j^{(k)}=I(x_j=k),\quad k=1,\ldots,K
+   \]
+   Ví dụ `HuuNghi`, `LaoCai`, `MongCai` lần lượt thành `[1,0,0]`, `[0,1,0]`,
+   `[0,0,1]`. Vector cuối cùng ghép one-hot với `weight_kg`, `month`, `is_bulk`
+   và `alert_active`.
 5. **Chia tập theo thời gian** (hai kịch bản kiểm tra chéo tiến — walk-forward):
    - **Kịch bản 1**: huấn luyện <01/2026 (39.731 mẫu) · hiệu chỉnh quý 1/2026 (4.943)
      · kiểm tra ≥04/2026 (5.326 — toàn mùa thường).
@@ -255,19 +353,28 @@ Kiểm tra hợp lý: xáo trộn từng đặc trưng đo mức tăng sai số
 Xuất models/leadtime.zip + conformal.csv (border, regime, q80)
 ```
 
-**Quy trình vận hành dự kiến (bước tích hợp tiếp theo):**
+**Quy trình vận hành hiện tại (đã tích hợp):**
 
 ```
-Đêm: dịch vụ nền tính sẵn dự báo cho mọi tổ hợp           API khách gọi:
-(tỉnh × cửa khẩu × hãng × mùa × nhóm cân nặng)            POST /api/ai/transit-forecasts
-→ ghi bảng ai_transit_forecasts                            → tra bảng, trả ngay
-                                                           → thiếu mô hình/lỗi
-Đặc trưng alert_active lúc tính = trạng thái                  → RƠI VỀ công thức
-AIBorderAlert đang bật của cửa khẩu (dữ liệu                    kinh nghiệm (an toàn)
-bài toán cảnh báo tắc biên sinh ra)
+POST /api/ai/transit-forecasts
+   │
+   ├─ suy mùa từ thời điểm hiện tại
+   ├─ đọc AIBorderAlert đang active của cửa khẩu
+   ├─ tạo vector feature, trong đó AlertActive = 0/1
+   ├─ FastTree dự báo điểm
+   ├─ conformal.csv chọn q80 theo cửa khẩu × chế độ
+   ├─ tạo khoảng ngày nguyên + confidence 0,80
+   └─ lưu kết quả vào bảng ai_transit_forecasts
+
+Thiếu cấu hình / thiếu file / nạp model lỗi / predict lỗi
+   └─ tự động rơi về heuristic Phase 8
 ```
 
-Giao diện API giữ nguyên hoàn toàn — phần giao diện người dùng không thay đổi.
+`LeadTimeModelService` là singleton được khởi tạo lazy: đăng ký khi Module 2 startup
+nhưng chỉ nạp `leadtime.zip` và `conformal.csv` khi service AI được resolve lần đầu.
+Trainer không chạy cùng API; huấn luyện là tác vụ vận hành riêng. Background job
+precompute ban đêm vẫn là hướng nâng cấp, chưa có trong code hiện tại. Giao diện API
+giữ nguyên hoàn toàn nên phần giao diện người dùng không phải thay đổi.
 
 ---
 
@@ -286,15 +393,38 @@ Giao diện API giữ nguyên hoàn toàn — phần giao diện người dùng 
 
 Nhận xét: suy luận nhanh hơn yêu cầu thực tế nhiều bậc — một yêu cầu API thông thường
 cho phép hàng chục mili giây, mô hình chỉ cần ~0,0085 ms. Huấn luyện dưới 1 giây nghĩa
-là có thể huấn luyện lại **hàng đêm** thoải mái. Hơn nữa kiến trúc vận hành là tính
-sẵn theo lô + tra bảng, nên thời gian phản hồi API thực tế bằng một truy vấn cơ sở
-dữ liệu, không phụ thuộc mô hình.
+là có thể huấn luyện lại **hàng đêm** nếu sau này bổ sung job. Hiện API suy luận trực
+tiếp theo request rồi lưu dự báo; thời gian suy luận khoảng 8,5 µs nhỏ hơn nhiều so
+với thời gian truy vấn DB và xử lý HTTP nên không phải nút thắt.
 
 ### 5.2. Đánh giá chất lượng kết quả trả về
 
 Thước đo: **MAE** (sai số tuyệt đối trung bình, ngày — càng thấp càng tốt), **bias**
 (sai lệch hệ thống, ~0 là tốt), **PICP** (tỉ lệ ca thực tế rơi trong khoảng dự báo —
 phải khớp độ tin cậy công bố 80%), **width** (độ rộng khoảng — hẹp mà vẫn đủ phủ là tốt).
+
+Với \(y_i\) là thời gian thật, \(\hat y_i\) là dự báo điểm và
+\([L_i,U_i]\) là khoảng dự báo:
+
+\[
+\operatorname{MAE}=\frac{1}{n}\sum_{i=1}^{n}|y_i-\hat y_i|
+\]
+
+\[
+\operatorname{Bias}=\frac{1}{n}\sum_{i=1}^{n}(y_i-\hat y_i)
+\]
+
+\[
+\operatorname{PICP}=\frac{1}{n}\sum_{i=1}^{n}I(L_i\le y_i\le U_i)
+\]
+
+\[
+\operatorname{Width}=\frac{1}{n}\sum_{i=1}^{n}(U_i-L_i)
+\]
+
+Bias dương nghĩa là model có xu hướng dự báo thấp hơn thực tế; bias âm nghĩa là
+dự báo cao hơn thực tế. PICP không được xem riêng lẻ: một khoảng rất rộng có thể
+đạt coverage cao nhưng không còn giá trị nghiệp vụ.
 
 **Kịch bản 1 — kiểm tra mùa thường (5.326 mẫu):**
 
@@ -330,6 +460,17 @@ trọng mô hình học được — cửa khẩu (+0,32) ≈ cảnh báo tắc 
 ngầm"** đã mã hoá trong bộ sinh dữ liệu. Đây là bằng chứng quy trình học đúng quy luật
 chứ không học nhiễu.
 
+Với feature \(j\), permutation importance được tính bằng:
+
+\[
+\operatorname{Importance}_j=
+\operatorname{MAE}(\operatorname{shuffle}(X_j))
+-\operatorname{MAE}(X)
+\]
+
+Model được giữ nguyên; chỉ xáo trộn feature \(j\) giữa các mẫu để phá quan hệ của
+feature đó với nhãn. MAE tăng càng nhiều thì model càng phụ thuộc vào feature đó.
+
 ### 5.3. So sánh với phương pháp khác
 
 | Phương pháp | MAE mùa thường | MAE quý Tết (riêng Tết) | Nhận xét |
@@ -350,6 +491,26 @@ chế độ có tương tác**, mà đó lại chính là lúc dự báo sai gâ
 - **Mô hình ngôn ngữ lớn (LLM)**: sai công cụ cho hồi quy số — chi phí cao, kết quả
   không tái lập, không có bảo chứng khoảng tin cậy. LLM chỉ phù hợp cho nhánh khác
   của lộ trình (đọc tin tức tắc biên phi cấu trúc).
+
+---
+
+## 6. Trạng thái tích hợp và giới hạn
+
+- Model production hiện là **v3 có `AlertActive`**, xuất thành `leadtime.zip`; bảng
+  hiệu chỉnh khoảng nằm trong `conformal.csv`.
+- API không tự train khi khởi động. Trainer phải được chạy riêng, sau đó cấu hình
+  `Ai:ModelDirectory` trỏ tới thư mục chứa hai file trên.
+- Model được nạp một lần khi service AI được resolve lần đầu. Mỗi request dự báo
+  chạy inference trực tiếp, đọc cảnh báo biên đang active và lưu kết quả để audit.
+- Cảnh báo tắc biên hiện vẫn là thuật toán rule-based; chất lượng của feature
+  `AlertActive` phụ thuộc vào độ trễ và độ chính xác của thuật toán cảnh báo này.
+- Kết quả hiện tại đo trên **dữ liệu tổng hợp**, vì vậy chứng minh pipeline và tính
+  đúng kỹ thuật chứ chưa chứng minh độ chính xác ngoài thực tế.
+- Coverage riêng mùa Tết trong fold khó chỉ đạt 67,5%. Khi có dữ liệu thật, tập
+  calibration nên dùng cửa sổ trượt 12–14 tháng để luôn chứa ít nhất một mùa Tết.
+- Cần lưu ground truth khi kiện nhập kho VN, theo dõi MAE/bias/PICP theo thời gian,
+  phát hiện drift và retrain bằng dữ liệu vận hành thật trước khi dùng kết quả cho
+  cam kết SLA với khách hàng.
 
 ---
 

@@ -43,6 +43,13 @@ export interface PackageSummary {
   createdAt: string;
 }
 
+export interface PackagePage {
+  items: PackageSummary[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
 // ── TrackingEventResponse (GET /api/my/packages/{id}/tracking) ────────────────
 // Lưu ý: field BE là `occuredAt` (đúng theo DTO, không phải occurredAt).
 export interface TrackingEvent {
