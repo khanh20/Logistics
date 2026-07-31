@@ -496,7 +496,7 @@ function OrderDetailInner({
                 size="sm"
                 className="mt-2 w-full"
                 loading={loading}
-                onClick={() => callAction(() => manageOrdersApi.assign(order.id, assignStaffId), t("order.assign_success"))}
+                onClick={() => callAction(() => staffAssignmentsApi.manualAssign(order.id, assignStaffId), t("order.assign_success"))}
                 disabled={!assignStaffId.trim()}
               >
                 {t("order.assign_btn")}
