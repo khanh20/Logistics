@@ -12,6 +12,16 @@ public class PackagesController(
     IPackageService packageService,
     IFeeCalculationService feeService) : Module2BaseController
 {
+    // GET /api/packages?page=1&pageSize=20
+    [HttpGet]
+    [Authorize(Policy = Permissions.WarehouseRead)]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+    {
+        var result = await packageService.GetPagedAsync(page, pageSize, ct);
+        return Ok(ApiResponse<object>.Ok(result));
+    }
+
     // POST /api/packages
     [HttpPost]
     [Authorize(Policy = Permissions.WarehouseManage)]

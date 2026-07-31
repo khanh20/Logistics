@@ -1,5 +1,6 @@
 # Visual Studio
 .vs/
+.idea/
 *.suo
 *.user
 
@@ -13,39 +14,40 @@ obj/
 # OS
 .DS_Store
 Thumbs.db
-# Mọi file .env chứa secrets (mọi cấp thư mục) — .env.example thì vẫn commit bình thường
-**/.env
-/BE/Logistics/Services/Authentication/LG.Authentication.API/.env
-/BE/Logistics/Services/Module1/LG.Module1.API/.env
-/BE/Logistics/Services/Module2/LG.Module2.API/.env
-
 
 .react-router
 .agents
+/.codex/
+/AGENTS.md
 
-# Ignore all .env files anywhere in the project
+# Mọi file .env chứa secrets (mọi cấp thư mục) — .env.example vẫn commit bình thường
 **/.env
 .env
-
-/BE/Logistics/Services/Core/LG.Core.Infrastructure/CoreDbContextFactory.cs
+/BE/Logistics/Services/Authentication/LG.Authentication.API/.env
+/BE/Logistics/Services/Module1/LG.Module1.API/.env
+/BE/Logistics/Services/Module2/LG.Module2.API/.env
 /BE/Logistics/Services/Core/LG.Core.API/.env
+/BE/Logistics/Services/Core/LG.Core.Infrastructure/CoreDbContextFactory.cs
+BE/Logistics/Services/Module1/LG.Module1.API/appsettings.json
+
+# Ghi chú cá nhân / báo cáo
+*.md
+/uml/
 note.txt
 /Note.md
 /Manual.md
+/deploy.md
+Latex/
 
-# Dataset sinh từ seeder (tái lập được bằng --seed, không commit)
+# Dữ liệu & mô hình ML (tái lập được, không commit)
 /BE/Logistics/Services/Module2/LG.Module2.Seeder/data/
-# Model artifacts (tái lập được bằng Trainer)
 /BE/Logistics/Services/Module2/LG.Module2.Trainer/models/
+
+# Khác
 BE/Logistics/search_indexes_mod1.sql
 .claude/launch.json
-
 backup_db/
-<<<<<<< HEAD
-=======
 docs/
 docs.zip
->>>>>>> 3801181a5372d0f3def41658286ea99e4ea7cd2b
-BE/Logistics/Services/Module1/LG.Module1.API/appsettings.json
 *.xlsx
 **.yml

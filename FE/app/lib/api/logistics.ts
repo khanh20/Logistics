@@ -2,6 +2,7 @@ import { apiModule2Client } from "./client";
 import type { ApiResponse } from "~/lib/types/common";
 import type {
   PackageSummary,
+  PackagePage,
   PackageDetail,
   TrackingEvent,
   PackageFee,
@@ -121,6 +122,13 @@ export const warehouseApi = {
 
 // ── Package (staff — tra cứu, tạo, ảnh, tính cước) ────────────────────────────
 export const packagesApi = {
+  // GET /api/packages — danh sách kiện cho staff, phân trang
+  list: (page = 1, pageSize = 20) =>
+    apiModule2Client.get<unknown, ApiResponse<PackagePage>>(
+      "/api/packages",
+      { params: { page, pageSize } }
+    ),
+
   // POST /api/packages
   create: (body: CreatePackageBody) =>
     apiModule2Client.post<unknown, ApiResponse<PackageDetail>>(

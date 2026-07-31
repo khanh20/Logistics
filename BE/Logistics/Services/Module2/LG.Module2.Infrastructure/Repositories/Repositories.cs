@@ -98,6 +98,20 @@ public class WarehouseStaffRepository(Module2DbContext db) : IWarehouseStaffRepo
 // ── Package ───────────────────────────────────────────────────────────────────
 public class PackageRepository(Module2DbContext db) : IPackageRepository
 {
+    public async Task<(List<Package> Items, int TotalCount)> GetPagedAsync(
+        int page, int pageSize, CancellationToken ct = default)
+    {
+        var query = db.Packages.AsNoTracking();
+        var totalCount = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+        return (items, totalCount);
+    }
+
     public Task<Package?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         db.Packages
           .Include(x => x.Items)
