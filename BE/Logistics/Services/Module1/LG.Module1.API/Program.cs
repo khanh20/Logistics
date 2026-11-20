@@ -302,8 +302,18 @@ var app = builder.Build();
 // ── Auto migrate ───────────────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<Module1DbContext>();
-    await db.Database.MigrateAsync();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        logger.LogInformation("Applying migrations for Module1 database...");
+        var db = scope.ServiceProvider.GetRequiredService<Module1DbContext>();
+        await db.Database.MigrateAsync();
+        logger.LogInformation("Module1 migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating Module1 database.");
+    }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

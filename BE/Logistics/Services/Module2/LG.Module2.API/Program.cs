@@ -204,8 +204,18 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<Module2DbContext>();
-    await db.Database.MigrateAsync();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        logger.LogInformation("Applying migrations for Module2 database...");
+        var db = scope.ServiceProvider.GetRequiredService<Module2DbContext>();
+        await db.Database.MigrateAsync();
+        logger.LogInformation("Module2 migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating Module2 database.");
+    }
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────

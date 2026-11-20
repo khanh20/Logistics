@@ -274,10 +274,17 @@ var app = builder.Build();
 // ── Seed database ─────────────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    await DataSeeder.SeedAsync(db, hasher, logger);
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        await DataSeeder.SeedAsync(db, hasher, logger);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while seeding Authentication database.");
+    }
 }
 
 // 4. MIDDLEWARE PIPELINE (thứ tự quan trọng)
