@@ -227,14 +227,21 @@ builder.Services.AddAuthorization(opt =>
 });
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-              ?? ["http://localhost:3000", "http://localhost:5173"];
-
 // Chrome Extension origin có format chrome-extension://{id}
 builder.Services.AddCors(opt => opt.AddPolicy("FE", p =>
     p.SetIsOriginAllowed(origin =>
-        origin.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase) ||
-        origins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+    {
+        if (string.IsNullOrEmpty(origin)) return false;
+        if (origin.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase)) return true;
+        try
+        {
+            var uri = new Uri(origin);
+            return uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase) ||
+                   uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                   uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
+    })
      .AllowAnyHeader()
      .AllowAnyMethod()
      .AllowCredentials()

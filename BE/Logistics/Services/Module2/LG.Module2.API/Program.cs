@@ -150,10 +150,22 @@ builder.Services.AddAuthorization(opt =>
 });
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-              ?? ["http://localhost:3000", "http://localhost:5173"];
 builder.Services.AddCors(opt => opt.AddPolicy("FE", p =>
-    p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()
+    p.SetIsOriginAllowed(origin =>
+    {
+        if (string.IsNullOrEmpty(origin)) return false;
+        try
+        {
+            var uri = new Uri(origin);
+            return uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase) ||
+                   uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                   uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return false; }
+    })
+     .AllowAnyHeader()
+     .AllowAnyMethod()
+     .AllowCredentials()
      .SetPreflightMaxAge(TimeSpan.FromMinutes(10))
      .WithExposedHeaders("x-token-expired", "Retry-After")));
 
